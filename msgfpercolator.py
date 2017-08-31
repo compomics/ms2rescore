@@ -1,52 +1,54 @@
 import sys
 import os
-
 import argparse
-import tempfile
 
-import globals
+"""
+Run MSGFPlus and percolator
+"""
 
+parser = argparse.ArgumentParser(description='Run MSGF+ and Percolator')
+parser.add_argument('spec_file', metavar='spectrum-file',
+                    help='file containing MS2 spectra (MGF,PKL,DTA,mzXML,mzDATA or mzML)')
+parser.add_argument('fasta_file', metavar='FASTA-file',
+                    help='file containing protein sequences')
+parser.add_argument('-m', '--mods', metavar='FILE', action="store",
+                    dest='modsfile', help='Mods.txt file for MSGF+')
+
+args = parser.parse_args()
+
+# Path to MSGFPlus
 msgfdir = "/home/compomics/local/MSGFPlus"
 
-
 def run_MSGFplusHCD(outfile, mgffile, fastafile, modsfile):
-
-
+    """
+    Runs MSGFPlus with HCD configs
+    """
     msgf_command = "java -Xmx8000M -jar %s/MSGFPlus.jar -mod %s -s %s -d %s \
             -o %s -t 10ppm -tda 1 -m 3 -inst 1 -minLength 8 \
             -minCharge 2 -maxCharge 4 -n 1 -addFeatures 1 -protocol 0 -thread 23" \
             % (msgfdir, modsfile, mgffile, fastafile, outfile + ".mzid")
-
     os.system(msgf_command)
 
-
 def run_MSGFplusCID(outfile, mgffile, fastafile, modsfile):
-
-
+    """
+    Runs MSGFPlus with CID configs
+    """
     msgf_command = "java -Xmx8000M -jar %s/MSGFPlus.jar -mod %s -s %s -d %s \
             -o %s -t 10ppm -tda 1 -m 1 -inst 0 -minLength 8 \
             -minCharge 2 -maxCharge 4 -n 1 -addFeatures 1 -protocol 0 -thread 23" \
             % (msgfdir, modsfile, mgffile, fastafile, outfile + ".mzid")
     os.system(msgf_command)
 
+# Run MSGF+
+# Should have something to choose between HCD and CID
+run_MSGFplusHCD(args.spec_file + ".target", args.spec_file, args.fasta_file, args.modsfile)
 
-parser = argparse.ArgumentParser(description='MSGF+')
-parser.add_argument('spec_file', metavar='spectrum-file',
-                    help='file containing MS2 spectra (MGF,PKL,DTA,mzXML,mzDATA or mzML)')
-parser.add_argument('fasta_file', metavar='FASTA-file',
-                    help='file containing protein sequences')
-parser.add_argument('-m', '--mods', metavar='FILE', action="store",
-                    dest='modsfile',
-                    help='Mods.txt file for MSGF+')
-
-args = parser.parse_args()
-
-run_MSGFplusHCD(args.spec_file + ".target", args.spec_file,
-                args.fasta_file, args.modsfile)
-convert_command = "msgf2pin -P XXX %s.mzid > %s.pin" %
-(args.spec_file + ".target", args.spec_file + ".target")
+# Convert .mzid to pin, for percolator
+convert_command = "msgf2pin -P XXX %s.mzid > %s.pin" % (args.spec_file + ".target", args.spec_file + ".target")
 os.system(convert_command)
 
+# Maps mgf spectrum to pin
+# This can perhaps be replaced with a call to mapper
 id_map = {}
 tid = ""
 with open(args.spec_file + ".target.mzid") as f:
@@ -68,7 +70,7 @@ with open("%s" % (args.spec_file + ".target.pin")) as f:
         l = row.rstrip().split('\t')
         pin_map[l[0]] = l[0:len(header)]
 
-
+# Run Percolator
 command = "percolator -U %s > %s.out" % (args.spec_file + ".target.pin", args.spec_file + ".target.pin")
 os.system(command)
 
