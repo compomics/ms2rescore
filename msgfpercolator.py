@@ -11,37 +11,37 @@ parser.add_argument('spec_file', metavar='spectrum-file',
                     help='file containing MS2 spectra (MGF,PKL,DTA,mzXML,mzDATA or mzML)')
 parser.add_argument('fasta_file', metavar='FASTA-file',
                     help='file containing protein sequences')
-parser.add_argument('-m', '--mods', metavar='FILE', action="store",
+parser.add_argument('-m', '--mods', metavar='FILE', action="store", default='',
                     dest='modsfile', help='Mods.txt file for MSGF+')
+parser.add_argument('-f', '--frag', metavar='frag_method', action="store", default='HCD',
+                    dest='frag', help='fragmentation method (CID or HCD), default HCD')
 
 args = parser.parse_args()
 
 # Path to MSGFPlus
-msgfdir = "/home/compomics/local/MSGFPlus"
+msgfdir = "/home/compomics/software/MSGFPlus"
 
-def run_MSGFplusHCD(outfile, mgffile, fastafile, modsfile):
+def run_MSGFplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
     """
-    Runs MSGFPlus with HCD configs
+    Runs MSGFPlus
     """
-    msgf_command = "java -Xmx8000M -jar %s/MSGFPlus.jar -mod %s -s %s -d %s \
-            -o %s -t 10ppm -tda 1 -m 3 -inst 1 -minLength 8 \
-            -minCharge 2 -maxCharge 4 -n 1 -addFeatures 1 -protocol 0 -thread 23" \
-            % (msgfdir, modsfile, mgffile, fastafile, outfile + ".mzid")
-    os.system(msgf_command)
-
-def run_MSGFplusCID(outfile, mgffile, fastafile, modsfile):
-    """
-    Runs MSGFPlus with CID configs
-    """
-    msgf_command = "java -Xmx8000M -jar %s/MSGFPlus.jar -mod %s -s %s -d %s \
-            -o %s -t 10ppm -tda 1 -m 1 -inst 0 -minLength 8 \
-            -minCharge 2 -maxCharge 4 -n 1 -addFeatures 1 -protocol 0 -thread 23" \
-            % (msgfdir, modsfile, mgffile, fastafile, outfile + ".mzid")
+    if frag == 'HCD':
+        m = 3
+        inst = 1
+    elif frag == 'CID':
+        m = 1
+        inst = 0
+    if modsfile != '':
+        mods = '-mod {} '.format(modsfile)
+    else:
+        mods = ''
+    msgf_command = "java -Xmx8000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t 10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n 1 -addFeatures 1 -protocol 0 -thread 23".format(
+        msgfdir, mods, mgffile, fastafile, outfile + ".mzid", m, inst)
+    print(msgf_command)
     os.system(msgf_command)
 
 # Run MSGF+
-# Should have something to choose between HCD and CID
-run_MSGFplusHCD(args.spec_file + ".target", args.spec_file, args.fasta_file, args.modsfile)
+run_MSGFplus(args.spec_file + ".target", args.spec_file, args.fasta_file, args.modsfile, args.frag)
 
 # Convert .mzid to pin, for percolator
 convert_command = "msgf2pin -P XXX %s.mzid > %s.pin" % (args.spec_file + ".target", args.spec_file + ".target")
