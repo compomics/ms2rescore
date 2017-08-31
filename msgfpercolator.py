@@ -43,50 +43,17 @@ def run_MSGFplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
 # Run MSGF+
 run_MSGFplus(args.spec_file + ".target", args.spec_file, args.fasta_file, args.modsfile, args.frag)
 
-# Convert .mzid to pin, for percolator
+# Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
 convert_command = "msgf2pin -P XXX %s.mzid > %s.pin" % (args.spec_file + ".target", args.spec_file + ".target")
+print(convert_command)
 os.system(convert_command)
 
-# Maps mgf spectrum to pin
-# This can perhaps be replaced with a call to mapper
-id_map = {}
-tid = ""
-with open(args.spec_file + ".target.mzid") as f:
-    for row in f:
-        if "<SpectrumIdentificationItem" in row:
-            l = row.rstrip().split('id=')
-            tid = l[1][1:-2]
-        if 'name="spectrum title"' in row:
-            l = row.rstrip().split('value=')[1].split(' ')[0]
-            #id_map[tid] = l[1:-1]
-            id_map[tid] = l[1:]
-
-pin_map = {}
-header = ""
-with open("%s" % (args.spec_file + ".target.pin")) as f:
-    row = f.readline()
-    header = row.split('\t')[0:-1]
-    for row in f:
-        l = row.rstrip().split('\t')
-        pin_map[l[0]] = l[0:len(header)]
+# Add mgf TITLE column to pin file
+command = "python mapper -m {} -p {}".format(args.spec_file + '.target.mzid', args.spec_file + '.target.pin')
+print(command)
+os.system(command)
 
 # Run Percolator
 command = "percolator -U %s > %s.out" % (args.spec_file + ".target.pin", args.spec_file + ".target.pin")
+print(command)
 os.system(command)
-
-fout2 = open(args.spec_file + ".msgfout", "w")
-with open("%s.out" % (args.spec_file + ".target.pin")) as f:
-    row = f.readline()
-    fout2.write('\t'.join(header) + '\t' + row)
-    for row in f:
-        l = row.rstrip().split('\t')
-        l0 = l[0]
-        tmp = '_'.join(l[0].split('_')[-6:-3])
-        if tmp in id_map:
-            l[0] = id_map[tmp]
-            prot = l[5]
-            if len(l) > 6:
-                for i in range(6, len(l)):
-                    prot += "|" + l[i]
-                l[5] = prot
-                fout2.write('\t'.join(pin_map[l0]) + '\t' + '\t'.join(l[:6]) + '\n')
