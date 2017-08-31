@@ -41,8 +41,10 @@ def run_msgfplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
         mods = '-mod {} '.format(modsfile)
     else:
         mods = ''
-    msgf_command = "java -Xmx8000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t 10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n 1 -addFeatures 1 -protocol 0 -thread 23".format(
-        msgfdir, mods, mgffile, fastafile, outfile + ".mzid", m, inst)
+    msgf_command = "java -Xmx8000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t \
+        10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n \
+        1 -addFeatures 1 -protocol 0 -thread 23".format(msgfdir, mods, mgffile,
+        fastafile, outfile + ".mzid", m, inst)
     print(msgf_command)
     os.system(msgf_command)
 
