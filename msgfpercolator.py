@@ -1,10 +1,15 @@
-import sys
+"""
+Run MSGF+ and percolator.
+First MSGF+ is used to search <spec_file> against <fasta_file>. For now this
+will be a concatenated search, i.e. MSGF+ generates a decoy database and searches
+ the spectra against both at the same time (one PSM per spectrum).
+Second, the resulting mzid fileis converted into a pin file. Then a column with
+the correspondence to mgf TITLE is added to the pin file. Finally, Percolator is
+ ran on the pin file.
+"""
+
 import os
 import argparse
-
-"""
-Run MSGFPlus and percolator
-"""
 
 parser = argparse.ArgumentParser(description='Run MSGF+ and Percolator')
 parser.add_argument('spec_file', metavar='spectrum-file',
@@ -21,7 +26,8 @@ args = parser.parse_args()
 # Path to MSGFPlus
 msgfdir = "/home/compomics/software/MSGFPlus"
 
-def run_MSGFplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
+
+def run_msgfplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
     """
     Runs MSGFPlus
     """
@@ -40,20 +46,25 @@ def run_MSGFplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
     print(msgf_command)
     os.system(msgf_command)
 
+
 # Run MSGF+
-run_MSGFplus(args.spec_file + ".target", args.spec_file, args.fasta_file, args.modsfile, args.frag)
+run_msgfplus(args.spec_file + ".target", args.spec_file,
+             args.fasta_file, args.modsfile, args.frag)
 
 # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
-convert_command = "msgf2pin -P XXX %s.mzid > %s.pin" % (args.spec_file + ".target", args.spec_file + ".target")
+convert_command = "msgf2pin -P XXX %s.mzid > %s.pin" % (
+    args.spec_file + ".target", args.spec_file + ".target")
 print(convert_command)
 os.system(convert_command)
 
 # Add mgf TITLE column to pin file
-command = "python mapper -m {} -p {}".format(args.spec_file + '.target.mzid', args.spec_file + '.target.pin')
+command = "python mapper -m {} -p {}".format(
+    args.spec_file + '.target.mzid', args.spec_file + '.target.pin')
 print(command)
 os.system(command)
 
 # Run Percolator
-command = "percolator -U %s > %s.out" % (args.spec_file + ".target.pin", args.spec_file + ".target.pin")
+command = "percolator -U %s > %s.out" % (
+    args.spec_file + ".target.pin", args.spec_file + ".target.pin")
 print(command)
 os.system(command)
