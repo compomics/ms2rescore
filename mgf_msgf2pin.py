@@ -10,6 +10,7 @@ the correspondence to mgf TITLE is added to the pin file.
 import subprocess
 import sys
 import argparse
+from mapper import mapper # shouldn't have to do this, check __init__.py
 
 def run_msgfplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
     """
@@ -60,8 +61,7 @@ sys.stdout.flush()
 subprocess.run(convert_command, shell=True)
 
 # Add mgf TITLE column to pin file
-command = "python mapper/mapper.py -m {} -p {}".format(
-    args.spec_file + '.target.mzid', args.spec_file + '.target.pin')
-sys.stdout.write("Adding sepctrum TITLE to pin file: {}".format(command))
-sys.stdout.flush()
-subprocess.run(command, shell=True)
+pin = mapper.lazy_pin_parser(args.spec_file + ".target.pin")
+pin = mapper.map_mgf_title(pin, args.spec_file + ".target")
+
+pin.to_csv(args.spec_file + ".target.titles.pin", sep='\t', index=False)
