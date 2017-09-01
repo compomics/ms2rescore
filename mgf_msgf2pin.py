@@ -6,7 +6,7 @@ will be a concatenated search, i.e. MSGF+ generates a decoy database and searche
 Second, the resulting mzid fileis converted into a pin file. Then a column with
 the correspondence to mgf TITLE is added to the pin file.
 """
-#TODO this should run msgf+ (concat or not concat) and msgf2pin and mapper.
+
 import subprocess
 import sys
 import argparse
@@ -14,7 +14,8 @@ from mapper import mapper # shouldn't have to do this, check __init__.py
 
 def run_msgfplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
     """
-    Runs MSGFPlus
+    Runs MSGFPlus with some fixed settings. Requires path to output file, mgf,
+    fasta and modifications file.
     """
     if frag == 'HCD':
         m = 3
@@ -34,34 +35,35 @@ def run_msgfplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
     sys.stdout.flush
     subprocess.run(msgf_command, shell=True)
 
-parser = argparse.ArgumentParser(description='Run MSGF+ and Percolator')
-parser.add_argument('spec_file', metavar='spectrum-file',
-                    help='file containing MS2 spectra (MGF,PKL,DTA,mzXML,mzDATA or mzML)')
-parser.add_argument('fasta_file', metavar='FASTA-file',
-                    help='file containing protein sequences')
-parser.add_argument('-m', '--mods', metavar='FILE', action="store", default='',
-                    dest='modsfile', help='Mods.txt file for MSGF+')
-parser.add_argument('-f', '--frag', metavar='frag_method', action="store", default='HCD',
-                    dest='frag', help='fragmentation method (CID or HCD), default HCD')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Run MSGF+ and Percolator')
+    parser.add_argument('spec_file', metavar='spectrum-file',
+                        help='file containing MS2 spectra (MGF,PKL,DTA,mzXML,mzDATA or mzML)')
+    parser.add_argument('fasta_file', metavar='FASTA-file',
+                        help='file containing protein sequences')
+    parser.add_argument('-m', '--mods', metavar='FILE', action="store", default='',
+                        dest='modsfile', help='Mods.txt file for MSGF+')
+    parser.add_argument('-f', '--frag', metavar='frag_method', action="store", default='HCD',
+                        dest='frag', help='fragmentation method (CID or HCD), default HCD')
 
-args = parser.parse_args()
+    args = parser.parse_args()
 
-# Path to MSGFPlus - this should come from a config file
-MSGF_DIR = "/home/compomics/software/MSGFPlus"
+    # Path to MSGFPlus - this should come from a config file
+    MSGF_DIR = "/home/compomics/software/MSGFPlus"
 
-# Run MSGF+
-run_msgfplus(args.spec_file + ".target", args.spec_file,
-             args.fasta_file, args.modsfile, args.frag)
+    # Run MSGF+
+    run_msgfplus(args.spec_file + ".target", args.spec_file,
+                 args.fasta_file, args.modsfile, args.frag)
 
-# Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
-convert_command = "msgf2pin -P XXX %s.mzid > %s.pin" % (
-    args.spec_file + ".target", args.spec_file + ".target")
-sys.stdout.write("Converting .mzid file to pin file: {}".format(convert_command))
-sys.stdout.flush()
-subprocess.run(convert_command, shell=True)
+    # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
+    convert_command = "msgf2pin -P XXX %s.mzid > %s.pin" % (
+        args.spec_file + ".target", args.spec_file + ".target")
+    sys.stdout.write("Converting .mzid file to pin file: {}".format(convert_command))
+    sys.stdout.flush()
+    subprocess.run(convert_command, shell=True)
 
-# Add mgf TITLE column to pin file
-pin = mapper.lazy_pin_parser(args.spec_file + ".target.pin")
-pin = mapper.map_mgf_title(pin, args.spec_file + ".target")
+    # Add mgf TITLE column to pin file
+    pin = mapper.lazy_pin_parser(args.spec_file + ".target.pin")
+    pin = mapper.map_mgf_title(pin, args.spec_file + ".target")
 
-pin.to_csv(args.spec_file + ".target.titles.pin", sep='\t', index=False)
+    pin.to_csv(args.spec_file + ".target.titles.pin", sep='\t', index=False)
