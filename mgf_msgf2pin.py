@@ -8,6 +8,7 @@ the correspondence to mgf TITLE is added to the pin file.
 """
 #TODO this should run msgf+ (concat or not concat) and msgf2pin and mapper.
 import subprocess
+import sys
 import argparse
 
 def run_msgfplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
@@ -28,8 +29,9 @@ def run_msgfplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
         10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n \
         1 -addFeatures 1 -protocol 0 -thread 23".format(MSGF_DIR, mods, mgffile,
         fastafile, outfile + ".mzid", m, inst)
-    print(msgf_command)
-    subprocess.run(msgf_command)
+    sys.stdout.write("Running search with MSGF+: {}".format(msgf_command))
+    sys.stdout.flush
+    subprocess.run(msgf_command, shell=True)
 
 parser = argparse.ArgumentParser(description='Run MSGF+ and Percolator')
 parser.add_argument('spec_file', metavar='spectrum-file',
@@ -53,11 +55,13 @@ run_msgfplus(args.spec_file + ".target", args.spec_file,
 # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
 convert_command = "msgf2pin -P XXX %s.mzid > %s.pin" % (
     args.spec_file + ".target", args.spec_file + ".target")
-print(convert_command)
-subprocess.run(convert_command)
+sys.stdout.write("Converting .mzid file to pin file: {}".format(convert_command))
+sys.stdout.flush()
+subprocess.run(convert_command, shell=True)
 
 # Add mgf TITLE column to pin file
-command = "python mapper -m {} -p {}".format(
+command = "python mapper/mapper.py -m {} -p {}".format(
     args.spec_file + '.target.mzid', args.spec_file + '.target.pin')
-print(command)
-subprocess.run(command)
+sys.stdout.write("Adding sepctrum TITLE to pin file: {}".format(command))
+sys.stdout.flush()
+subprocess.run(command, shell=True)
