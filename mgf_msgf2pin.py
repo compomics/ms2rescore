@@ -12,7 +12,7 @@ import sys
 import argparse
 from mapper import mapper # shouldn't have to do this, check __init__.py
 
-def run_msgfplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
+def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
     """
     Runs MSGFPlus with some fixed settings. Requires path to output file, mgf,
     fasta and modifications file.
@@ -29,7 +29,7 @@ def run_msgfplus(outfile, mgffile, fastafile, modsfile, frag='HCD'):
         mods = ''
     msgf_command = "java -Xmx8000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t \
         10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n \
-        1 -addFeatures 1 -protocol 0 -thread 23".format(MSGF_DIR, mods, mgffile,
+        1 -addFeatures 1 -protocol 0 -thread 23".format(msgf_dir, mods, mgffile,
         fastafile, outfile + ".mzid", m, inst)
     sys.stdout.write("Running search with MSGF+: {}".format(msgf_command))
     sys.stdout.flush
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     MSGF_DIR = "/home/compomics/software/MSGFPlus"
 
     # Run MSGF+
-    run_msgfplus(args.spec_file + ".target", args.spec_file,
+    run_msgfplus(MSGF_DIR, args.spec_file + ".target", args.spec_file,
                  args.fasta_file, args.modsfile, args.frag)
 
     # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
