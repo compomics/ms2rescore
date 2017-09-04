@@ -15,6 +15,7 @@ import features2pin
 # TODO call ms2pip and Percolator from this script
 # Path to MSGFPlus - this should come from a config file
 MSGF_DIR = "/home/compomics/software/MSGFPlus"
+MS2PIP_DIR = "ms2pip_c"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run MSGF+ and Percolator')
@@ -52,6 +53,10 @@ if __name__ == '__main__':
     pin2pepfile.write_PEPREC(peprec, args.spec_file + ".titles.pin")
 
     # Run ms2pip_rescore
+    ms2pip_command = "python {}/ms2pipC.py {} -c {someconfigfile} -s {}".format(MS2PIP_DIR, args.spec_file + ".titles.pin.PEPREC", config, args.spec_file, -R)
+    sys.stdout.write("Running ms2pip with the rescore option: {}".format(ms2pip_command))
+    sys.stdout.flush()
+    subprocess.run(ms2pip_command, shell=True)
 
     features = join_features(args.pep_file + '.titles.pin.PEPREC_rescore_features.csv', args.pin)
     write_pin_files(features)
