@@ -6,14 +6,16 @@ import argparse
 import sys
 import subprocess
 
-import mgf_msgf2pin
 from mapper import mapper
+# TODO join all these guys in one py file
+import mgf_msgf2pin
 import pin2pepfile
 import features2pin
 
 # TODO better file names
-# TODO call ms2pip and Percolator from this script
-# Path to MSGFPlus - this should come from a config file
+# TODO call Percolator from this script
+# TODO ms2pip config file - set a default?
+# Path to MSGFPlus & ms2pip - these should come from a config file
 MSGF_DIR = "/home/compomics/software/MSGFPlus"
 MS2PIP_DIR = "ms2pip_c"
 
