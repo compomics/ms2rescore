@@ -8,6 +8,8 @@ import subprocess
 
 import mgf_msgf2pin
 from mapper import mapper
+import pin2pepfile
+import features2pin
 
 # Path to MSGFPlus - this should come from a config file
 MSGF_DIR = "/home/compomics/software/MSGFPlus"
@@ -41,3 +43,13 @@ if __name__ == '__main__':
     pin = mapper.map_mgf_title(pin, args.spec_file + ".target")
 
     pin.to_csv(args.spec_file + ".target.titles.pin", sep='\t', index=False)
+
+    peprec = pin2pepfile.make_pepfile(args.spec_file + ".target.titles.pin")
+    pin2pepfile.write_PEPREC(peprec, args.spec_file + ".target.titles.pin")
+
+    # Run ms2pip_rescore
+
+    features = join_features(args.pep_file + '.target.titles.pin.PEPREC_rescore_features.csv', args.pin)
+    write_pin_files(features)
+
+    # Run Percolator
