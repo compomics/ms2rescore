@@ -29,10 +29,10 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
         mods = ''
     msgf_command = "java -Xmx8000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t \
         10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n \
-        1 -addFeatures 1 -protocol 0 -thread 23".format(msgf_dir, mods, mgffile,
+        1 -addFeatures 1 -protocol 0 -thread 23 \n".format(msgf_dir, mods, mgffile,
         fastafile, outfile + ".mzid", m, inst)
     sys.stdout.write("Running search with MSGF+: {}".format(msgf_command))
-    sys.stdout.flush
+    sys.stdout.flush()
     subprocess.run(msgf_command, shell=True)
 
 if __name__ == "__main__":
