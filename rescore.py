@@ -115,26 +115,18 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
     """
 
     if concat:
-        pepfile_tosave = pepfile[[
-            'TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
-        pepfile_tosave.columns = [
-            'spec_id', 'modifications', 'peptide', 'charge', 'Label']
+        pepfile_tosave = pepfile[['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
+        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
         pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep=' ', index=False)
 
     else:
-        pepfile_tosave = pepfile[pepfile.Label == 1][[
-            'TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
-        pepfile_tosave.columns = [
-            'spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(
-            path_to_pep + '.targets.PEPREC', sep=' ', index=False)
+        pepfile_tosave = pepfile[pepfile.Label == 1][['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
+        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
+        pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep=' ', index=False)
 
-        pepfile_tosave = pepfile[pepfile.Label == -1][['TITLE',
-                                                       'modifications', 'peptide', 'Charge', 'Label']]
-        pepfile_tosave.columns = [
-            'spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(
-            path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
+        pepfile_tosave = pepfile[pepfile.Label == -1][['TITLE', 'modifications','peptide', 'Charge', 'Label']]
+        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
+        pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
 
     return None
 
@@ -169,8 +161,7 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
         all_features = pd.concat([rescore_decoys.merge(pin[pin.Label == -1], left_on='spec_id', right_on='TITLE'),
                                   rescore_targets.merge(pin[pin.Label == 1], left_on='spec_id', right_on='TITLE')])
     else:
-        all_features = rescore_targets.merge(
-            pin, left_on='spec_id', right_on='TITLE')
+        all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
 
     return all_features
 
