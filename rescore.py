@@ -5,11 +5,11 @@ concatenated searches.
 
 import subprocess
 import sys
-import argparse
 import re
 import pandas as pd
 
-from mapper import mapper #TODO shouldn't have to do this, check __init__.py
+from mapper import mapper  # TODO shouldn't have to do this, check __init__.py
+
 
 def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
     """
@@ -46,6 +46,7 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
 
     return None
 
+
 def make_pepfile(path_to_pin, modsfile=None):
     """
     Read a pin file and create the corresponding pepfile dataframe, which will
@@ -59,7 +60,12 @@ def make_pepfile(path_to_pin, modsfile=None):
     """
     pin = mapper.lazy_pin_parser(path_to_pin)
 
-    pin.loc[:, 'Charge'] = [2 if r[1].Charge2 == '1' else 3 if r[1].Charge3 == '1' else 4 if r[1].Charge4 == '1' else 5 if r[1].Charge5 == '1' else 6 if r[1].Charge6 == '1' else 0 for r in pin.iterrows()]
+    pin.loc[:, 'Charge'] = [2 if r[1].Charge2 == '1'
+                            else 3 if r[1].Charge3 == '1'
+                            else 4 if r[1].Charge4 == '1'
+                            else 5 if r[1].Charge5 == '1'
+                            else 6 if r[1].Charge6 == '1'
+                            else 0 for r in pin.iterrows()]
 
     pepfile = pin[['TITLE', 'Peptide', 'Charge', 'Label']]
 
@@ -76,7 +82,8 @@ def make_pepfile(path_to_pin, modsfile=None):
             modstring = ''
             for mod in mods:
                 mod = '[' + mod + ']'
-                modstring += str(pep.find(mod)) + '|' + modifications[mod.split(':')[1].rstrip(']')] + '|'
+                modstring += str(pep.find(mod)) + '|' + \
+                    modifications[mod.split(':')[1].rstrip(']')] + '|'
                 pep = pep.replace(mod, '', 1)
             modlist.append(modstring.rstrip('|'))
         else:
@@ -97,6 +104,7 @@ def make_pepfile(path_to_pin, modsfile=None):
 
     return pepfile
 
+
 def write_PEPREC(pepfile, path_to_pep, concat=True):
     """
     Write the PEPREC file, which will be the input to MS2PIP.
@@ -107,20 +115,29 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
     """
 
     if concat:
-        pepfile_tosave = pepfile[['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
-        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
+        pepfile_tosave = pepfile[[
+            'TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
+        pepfile_tosave.columns = [
+            'spec_id', 'modifications', 'peptide', 'charge', 'Label']
         pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep=' ', index=False)
 
     else:
-        pepfile_tosave = pepfile[pepfile.Label == 1][['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
-        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep=' ', index=False)
+        pepfile_tosave = pepfile[pepfile.Label == 1][[
+            'TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
+        pepfile_tosave.columns = [
+            'spec_id', 'modifications', 'peptide', 'charge', 'Label']
+        pepfile_tosave.to_csv(
+            path_to_pep + '.targets.PEPREC', sep=' ', index=False)
 
-        pepfile_tosave = pepfile[pepfile.Label == -1][['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
-        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
+        pepfile_tosave = pepfile[pepfile.Label == -1][['TITLE',
+                                                       'modifications', 'peptide', 'Charge', 'Label']]
+        pepfile_tosave.columns = [
+            'spec_id', 'modifications', 'peptide', 'charge', 'Label']
+        pepfile_tosave.to_csv(
+            path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
 
     return None
+
 
 def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=None):
     """
@@ -135,7 +152,8 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
     Returns
     :pd.DataFrame all_features, includes all the Percolator and MS2PIP features
     """
-    # read pin file - should not need the lazy pin parser as this pin already has the TITLE which means it was processed by mapper
+    # read pin file - should not need the lazy pin parser as this pin already
+    # has the TITLE which means it was processed by mapper
     pin = pd.read_csv(path_to_pin, sep='\t')
 
     # Read rescore_features.csv file and fillna
@@ -144,15 +162,18 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
 
     # If not concat searches, do that for target and decoy files
     if path_to_decoy_features != None:
-        rescore_decoys = pd.read_csv(args.decoys)
+        rescore_decoys = pd.read_csv(path_to_decoy_features)
         rescore_decoys = rescore_decoys.fillna(0)
 
         # join target and decoy tables
-        all_features = pd.concat([rescore_decoys.merge(pin[pin.Label == -1], left_on='spec_id', right_on='TITLE'), rescore_targets.merge(pin[pin.Label == 1], left_on='spec_id', right_on='TITLE')])
+        all_features = pd.concat([rescore_decoys.merge(pin[pin.Label == -1], left_on='spec_id', right_on='TITLE'),
+                                  rescore_targets.merge(pin[pin.Label == 1], left_on='spec_id', right_on='TITLE')])
     else:
-        all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
+        all_features = rescore_targets.merge(
+            pin, left_on='spec_id', right_on='TITLE')
 
     return all_features
+
 
 def write_pin_files(all_features, savepath):
     """
@@ -171,10 +192,15 @@ def write_pin_files(all_features, savepath):
     percolator_default = percolator_features[:27]
 
     # Writing files with appropriate columns
-    all_features[['SpecId', 'Label', 'ScanNr'] + rescore_features + ['Peptide', 'Proteins']].to_csv('{}_only_rescore.pin'.format(savepath), sep='\t', index=False)
-    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_features + ['Peptide', 'Proteins']].to_csv('{}_all_percolator.pin'.format(savepath), sep='\t', index=False)
-    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_default + ['Peptide', 'Proteins']].to_csv('{}_percolator_default.pin'.format(savepath), sep='\t', index=False)
-    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features + ['Peptide', 'Proteins']].to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
-    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_default + rescore_features + ['Peptide', 'Proteins']].to_csv('{}_default_and_rescore.pin'.format(savepath), sep='\t', index=False)
+    all_features[['SpecId', 'Label', 'ScanNr'] + rescore_features + ['Peptide',
+                'Proteins']].to_csv('{}_only_rescore.pin'.format(savepath), sep='\t', index=False)
+    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_features + ['Peptide',
+                'Proteins']].to_csv('{}_all_percolator.pin'.format(savepath), sep='\t', index=False)
+    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_default + ['Peptide', 'Proteins']
+                 ].to_csv('{}_percolator_default.pin'.format(savepath), sep='\t', index=False)
+    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features +
+                 ['Peptide', 'Proteins']].to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
+    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_default + rescore_features + ['Peptide',
+                 'Proteins']].to_csv('{}_default_and_rescore.pin'.format(savepath), sep='\t', index=False)
 
     return None
