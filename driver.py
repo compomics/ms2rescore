@@ -5,16 +5,16 @@ Module that calls the necessary functions and run the re-scoring algorithm.
 import argparse
 import sys
 import subprocess
+import pandas as pd
 
 from mapper import mapper
 import rescore
 
 # TODO better file names
-# TODO call Percolator from this script
-# TODO ms2pip config file - set a default?
-# Path to MSGFPlus & ms2pip - these should come from a config file
+# TODO ms2pip could be updated to python3
+# Path to MSGFPlus & ms2pip
 MSGF_DIR = "/home/compomics/software/MSGFPlus"
-MS2PIP_DIR = "ms2pip_c" # redundant bc when you clone this, you clone ms2pip_c
+# MS2PIP_DIR = "/home/compomics/local/rescore-ms2pip/ms2pip_c"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run MSGF+ and Percolator')
@@ -41,32 +41,42 @@ if __name__ == '__main__':
     subprocess.run(convert_command, shell=True)
 
     # Add mgf TITLE column to pin file
-    sys.stdout.write("Lazily parsing pin file: {} \n".format(args.spec_file + ".msgf_out.pin"))
+    sys.stdout.write('Fixing tabs on pin file... ')
     sys.stdout.flush()
-    pin = mapper.lazy_pin_parser(args.spec_file + ".msgf_out.pin")
+    mapper.fix_pin_tabs(args.spec_file + ".msgf_out.pin")
+    sys.stdout.write('Done! \n')
+    sys.stdout.flush()
 
-    sys.stdout.write("Adding TITLE to pin file \n")
+    sys.stdout.write('Parsing pin file... ')
     sys.stdout.flush()
-    pin = mapper.map_mgf_title(pin, args.spec_file + ".msgf_out.pin")
+    pin = pd.read_csv(args.spec_file + ".msgf_out_fixed.pin", header=0, skiprows=[1], sep='\t')
+    sys.stdout.write('Done! \n')
+    sys.stdout.flush()
 
-    # Write pin file
-    sys.stdout.write("Writing pin file \n")
+    sys.stdout.write("Adding TITLE to pin file... ")
     sys.stdout.flush()
+    # now YOU are the bottleneck!
+    pin = mapper.map_mgf_title(pin, args.spec_file + ".msgf_out.mzid")
     pin.to_csv(args.spec_file + ".titles.pin", sep='\t', index=False)
+    sys.stdout.write('Done! \n')
+    sys.stdout.flush()
 
     # Create & write PEPREC file from the pin file
-    sys.stdout.write("Generating PEPREC files \n")
+    sys.stdout.write("Generating PEPREC files... ")
     sys.stdout.flush()
     peprec = rescore.make_pepfile(args.spec_file + ".titles.pin")
     rescore.write_PEPREC(peprec, args.spec_file + ".titles.pin")
-
-    # Run ms2pip_rescore
-    ms2pip_command = "python {}/ms2pipC.py {} -c {someconfigfile} -s {}".format(MS2PIP_DIR, args.spec_file + ".titles.pin.PEPREC", config, args.spec_file, -R)
-    sys.stdout.write("Running ms2pip with the rescore option: {}".format(ms2pip_command))
+    sys.stdout.write('Done! \n')
     sys.stdout.flush()
-    subprocess.run(ms2pip_command, shell=True)
 
-    features = rescore.join_features(args.pep_file + '.titles.pin.PEPREC_rescore_features.csv', args.pin)
-    rescore.write_pin_files(features)
+    # Run ms2pip_rescore: ms2pip is written in python 2!!!
+    ms2pip_command = "python {}/ms2pipC.py {} -c {} -s {} -R".format(MS2PIP_DIR, args.spec_file + ".titles.pin.PEPREC", MS2PIP_DIR + '/config.file', args.spec_file)
+    # sys.stdout.write("Running ms2pip with the rescore option: {} \n".format(ms2pip_command))
+    sys.stdout.write('Please run ms2pip with the following command: {}'.format(ms2pip_command))
+    sys.stdout.flush()
+    # subprocess.run(ms2pip_command, shell=True)
+
+    # features = rescore.join_features(args.spec_file + '.titles.pin.PEPREC_rescore_features.csv', args.spec_file + ".titles.pin")
+    # rescore.write_pin_files(features, args.spec_file)
 
     # Run Percolator
