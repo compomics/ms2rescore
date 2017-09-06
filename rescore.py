@@ -25,6 +25,7 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
     :param modsfile: string, path to the file with modifications
     :param frag: fragmentation method (HCD or CID) on which some settings depend
     """
+    # TODO pipe the output somewhere to make the terminal look cleaner
     if frag == 'HCD':
         m = 3
         inst = 1
@@ -58,7 +59,7 @@ def make_pepfile(path_to_pin, modsfile=None):
     :pd.DataFrame pepfile, columns ['TITLE', 'Peptide', 'Charge', 'Label',
         'modifications']
     """
-    pin = mapper.lazy_pin_parser(path_to_pin)
+    pin = pd.read_csv(path_to_pin, sep='\t')
 
     pin.loc[:, 'Charge'] = [2 if r[1].Charge2 == '1'
                             else 3 if r[1].Charge3 == '1'
