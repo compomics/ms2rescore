@@ -14,7 +14,7 @@ import rescore
 # TODO ms2pip could be updated to python3
 # Path to MSGFPlus & ms2pip
 MSGF_DIR = "/home/compomics/software/MSGFPlus"
-# MS2PIP_DIR = "/home/compomics/local/rescore-ms2pip/ms2pip_c"
+MS2PIP_DIR = "/home/compomics/local/rescore-ms2pip/ms2pip_c"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run MSGF+ and Percolator')
