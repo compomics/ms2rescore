@@ -59,14 +59,15 @@ def make_pepfile(path_to_pin, modsfile=None):
     :pd.DataFrame pepfile, columns ['TITLE', 'Peptide', 'Charge', 'Label',
         'modifications']
     """
-    pin = pd.read_csv(path_to_pin, sep='\t')
+    pin = pd.read_csv(path_to_pin, sep='\t', header=0, skiprows=[1])
 
-    pin.loc[:, 'Charge'] = [2 if r[1].Charge2 == '1'
-                            else 3 if r[1].Charge3 == '1'
-                            else 4 if r[1].Charge4 == '1'
-                            else 5 if r[1].Charge5 == '1'
-                            else 6 if r[1].Charge6 == '1'
-                            else 0 for r in pin.iterrows()]
+    pin.loc[:, 'Charge'] = [1 if r[1].Charge1 == 1
+                            else 2 if r[1].Charge2 == 1
+                            else 3 if r[1].Charge3 == 1
+                            else 4 if r[1].Charge4 == 1
+                            else 5 if r[1].Charge5 == 1
+                            else 6 if r[1].Charge6 == 1
+                            else 'X' for r in pin.iterrows()]
 
     pepfile = pin[['TITLE', 'Peptide', 'Charge', 'Label']]
 
