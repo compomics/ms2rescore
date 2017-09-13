@@ -60,9 +60,8 @@ def make_pepfile(path_to_pin, modsfile=None):
         'modifications']
     """
     pin = pd.read_csv(path_to_pin, sep='\t', header=0, skiprows=[1])
-
-    pin.loc[:, 'Charge'] = [1 if r[1].Charge1 == 1
-                            else 2 if r[1].Charge2 == 1
+    # TODO these columns depend on the file, so should not be hard coded
+    pin.loc[:, 'Charge'] = [2 if r[1].Charge2 == 1
                             else 3 if r[1].Charge3 == 1
                             else 4 if r[1].Charge4 == 1
                             else 5 if r[1].Charge5 == 1
@@ -153,7 +152,6 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
     # Read rescore_features.csv file and fillna
     rescore_targets = pd.read_csv(path_to_target_features)
     rescore_targets = rescore_targets.fillna(0)
-
     # If not concat searches, do that for target and decoy files
     if path_to_decoy_features != None:
         rescore_decoys = pd.read_csv(path_to_decoy_features)

@@ -28,7 +28,7 @@ if __name__ == '__main__':
                         dest='frag', help='fragmentation method (CID or HCD), default HCD')
 
     args = parser.parse_args()
-
+    
     # Run MSGF+
     rescore.run_msgfplus(MSGF_DIR, args.spec_file + ".msgf_out", args.spec_file,
                  args.fasta_file, args.modsfile, args.frag)
@@ -72,11 +72,13 @@ if __name__ == '__main__':
     # Run ms2pip_rescore: ms2pip is written in python 2!!!
     ms2pip_command = "python {}/ms2pipC.py {} -c {} -s {} -R".format(MS2PIP_DIR, args.spec_file + ".titles.pin.PEPREC", MS2PIP_DIR + '/config.file', args.spec_file)
     # sys.stdout.write("Running ms2pip with the rescore option: {} \n".format(ms2pip_command))
-    sys.stdout.write('Please run ms2pip with the following command: {}'.format(ms2pip_command))
+    sys.stdout.write('Please run ms2pip with the following command: {} \n'.format(ms2pip_command))
     sys.stdout.flush()
     # subprocess.run(ms2pip_command, shell=True)
-
-    # features = rescore.join_features(args.spec_file + '.titles.pin.PEPREC_rescore_features.csv', args.spec_file + ".titles.pin")
-    # rescore.write_pin_files(features, args.spec_file)
+    """
+    features = rescore.join_features(args.spec_file + '.titles.pin.PEPREC_rescore_features.csv', args.spec_file + ".titles.pin")
+    print(features.head())
+    rescore.write_pin_files(features, args.spec_file)
 
     # Run Percolator
+    """
