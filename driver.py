@@ -28,7 +28,7 @@ if __name__ == '__main__':
                         dest='frag', help='fragmentation method (CID or HCD), default HCD')
 
     args = parser.parse_args()
-    
+
     # Run MSGF+
     rescore.run_msgfplus(MSGF_DIR, args.spec_file + ".msgf_out", args.spec_file,
                  args.fasta_file, args.modsfile, args.frag)
@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     sys.stdout.write('Parsing pin file... ')
     sys.stdout.flush()
-    pin = pd.read_csv(args.spec_file + ".msgf_out_fixed.pin", header=0, skiprows=[1], sep='\t')
+    pin = pd.read_csv(args.spec_file + ".msgf_out.pin", header=0, skiprows=[1], sep='\t')
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
@@ -57,20 +57,20 @@ if __name__ == '__main__':
     sys.stdout.flush()
     # now YOU are the bottleneck!
     pin = mapper.map_mgf_title(pin, args.spec_file + ".msgf_out.mzid")
-    pin.to_csv(args.spec_file + ".titles.pin", sep='\t', index=False)
+    pin.to_csv(args.spec_file + ".msgf_out.pin", sep='\t', index=False)
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
     # Create & write PEPREC file from the pin file
     sys.stdout.write("Generating PEPREC files... ")
     sys.stdout.flush()
-    peprec = rescore.make_pepfile(args.spec_file + ".titles.pin")
-    rescore.write_PEPREC(peprec, args.spec_file + ".titles.pin")
+    peprec = rescore.make_pepfile(args.spec_file + ".msgf_out.pin")
+    rescore.write_PEPREC(peprec, args.spec_file + ".msgf_out.pin")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
     # Run ms2pip_rescore: ms2pip is written in python 2!!!
-    ms2pip_command = "python {}/ms2pipC.py {} -c {} -s {} -R".format(MS2PIP_DIR, args.spec_file + ".titles.pin.PEPREC", MS2PIP_DIR + '/config.file', args.spec_file)
+    ms2pip_command = "python {}/ms2pipC.py {} -c {} -s {} -R".format(MS2PIP_DIR, args.spec_file + ".pin.PEPREC", MS2PIP_DIR + '/config.file', args.spec_file)
     # sys.stdout.write("Running ms2pip with the rescore option: {} \n".format(ms2pip_command))
     sys.stdout.write('Please run ms2pip with the following command: {} \n'.format(ms2pip_command))
     sys.stdout.flush()
