@@ -76,7 +76,7 @@ if __name__ == '__main__':
     sys.stdout.flush()
     # subprocess.run(ms2pip_command, shell=True)
     """
-    features = rescore.join_features(args.spec_file + '.titles.pin.PEPREC_rescore_features.csv', args.spec_file + ".titles.pin")
+    features = rescore.join_features(args.spec_file + '.pin.PEPREC_rescore_features.csv', args.spec_file + ".pin")
     print(features.head())
     rescore.write_pin_files(features, args.spec_file)
 
