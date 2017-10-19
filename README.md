@@ -36,7 +36,7 @@ python driver.py <mgf file> <fasta file> -m <mods file> -f <frag method>
 
 - `<mgf file>` is the spectrum file
 - `<fasta file>` is the database file
-- `<mods file>` is a file with modifications as per the MSGFPlus specifications (optional)
+- `<mods file>` is a file with modifications as per the MS-GF+ specifications (optional)
 - `<frag method>` is the fragmentation method (optional, HCD by default)
 
 If you want to use a different search engine and re-score the obtained identifications, you can use the helper functions in `rescore.py` and `mapper.py` to get the necessary files to run MS2PIP, which are a `PEPREC` file and the spectrum file, and to generate the pin files with the different subset of features. Afterwards you can run Percolator as normal.
