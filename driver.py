@@ -17,9 +17,10 @@ MSGF_DIR = "/home/compomics/software/MSGFPlus"
 MS2PIP_DIR = "ms2pip_c/"
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Run MSGF+ and Percolator')
+    parser = argparse.ArgumentParser(
+        description='Run MSGF+ to get PSMs, MS2PIP to extract spectral features, and Percolator to rescore PSMs')
     parser.add_argument('spec_file', metavar='spectrum-file',
-                        help='file containing MS2 spectra (MGF,PKL,DTA,mzXML,mzDATA or mzML)')
+                        help='file containing MS2 spectra (MGF)')
     parser.add_argument('fasta_file', metavar='FASTA-file',
                         help='file containing protein sequences')
     parser.add_argument('-m', '--mods', metavar='FILE', action="store", default='',
@@ -28,14 +29,16 @@ if __name__ == '__main__':
                         dest='frag', help='fragmentation method (CID or HCD), default HCD')
 
     args = parser.parse_args()
-    
+
     # Run MSGF+
     rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.spec_file,
-                 args.fasta_file, args.modsfile, args.frag)
+                         args.fasta_file, args.modsfile, args.frag)
 
     # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
-    convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(args.spec_file, args.spec_file)
-    sys.stdout.write("Converting .mzid file to pin file: {} \n".format(convert_command))
+    convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(
+        args.spec_file, args.spec_file)
+    sys.stdout.write(
+        "Converting .mzid file to pin file: {} \n".format(convert_command))
     sys.stdout.flush()
     subprocess.run(convert_command, shell=True)
 
@@ -51,7 +54,8 @@ if __name__ == '__main__':
 
     sys.stdout.write('Parsing pin file... ')
     sys.stdout.flush()
-    pin = pd.read_csv(args.spec_file + ".pin", header=0, skiprows=[1], sep='\t')
+    pin = pd.read_csv(args.spec_file + ".pin",
+                      header=0, skiprows=[1], sep='\t')
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
@@ -59,7 +63,6 @@ if __name__ == '__main__':
     # file's TITLE.
     sys.stdout.write("Adding TITLE to pin file... ")
     sys.stdout.flush()
-    # now YOU are the bottleneck!
     pin = mapper.map_mgf_title(pin, args.spec_file + ".mzid")
     pin.to_csv(args.spec_file + ".pin", sep='\t', index=False)
     sys.stdout.write('Done! \n')
@@ -73,20 +76,23 @@ if __name__ == '__main__':
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
-    # Run ms2pip_rescore: ms2pip is written in python 2!!!
-    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {} -R".format(MS2PIP_DIR, args.spec_file + ".pin.PEPREC", MS2PIP_DIR + 'config.file', args.spec_file)
-    sys.stdout.write("Running ms2pip with the rescore option: {} \n".format(ms2pip_command))
-    # sys.stdout.write('Please run ms2pip with the following command: {} \n'.format(ms2pip_command))
+    # Run ms2pip_rescore
+    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {} -R".format(
+        MS2PIP_DIR, args.spec_file + ".pin.PEPREC", MS2PIP_DIR + 'config.file', args.spec_file)
+    sys.stdout.write(
+        "Running ms2pip with the rescore option: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)
 
-    features = rescore.join_features(args.spec_file + '.pin.PEPREC_rescore_features.csv', args.spec_file + ".pin")
+    features = rescore.join_features(
+        args.spec_file + '.pin.PEPREC_rescore_features.csv', args.spec_file + ".pin")
     rescore.write_pin_files(features, args.spec_file)
 
-    # Run Percolator
+    # Run Percolator with different feature subsets
     for subset in ['_only_rescore', '_all_percolator', '_percolator_default', '_all_features', '_default_and_rescore']:
         fname = args.spec_file + subset
-        percolator_cmd = "percolator {} -m {} -M {} -v 0 -U\n".format(fname + ".pin", fname + ".pout", fname + ".pout_dec")
+        percolator_cmd = "percolator {} -m {} -M {} -v 0 -U\n".format(
+            fname + ".pin", fname + ".pout", fname + ".pout_dec")
         sys.stdout.write("Running Percolator: {} \n".format(percolator_cmd))
         subprocess.run(percolator_cmd, shell=True)
         sys.stdout.flush()
