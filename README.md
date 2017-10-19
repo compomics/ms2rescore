@@ -11,7 +11,6 @@ Use features calculated from comparing experimental spectra with computationally
   - pandas==0.20.3
   - scikit-learn==0.19.0
   - scipy==0.19.1
-  - sklearn==0.0
   - xmltodict==0.11.0
 
 ### Installing
