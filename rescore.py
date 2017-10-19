@@ -114,7 +114,7 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
     :param path_to_pep: string, path where to save the PEPREC file(s)
     :param concat: boolean, True if the search was concatenated
     """
-
+    # TODO SettingWithoutCopyWarning Try using .iloc instead bla bla
     if concat:
         pepfile_tosave = pepfile[['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
