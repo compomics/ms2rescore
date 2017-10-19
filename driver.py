@@ -28,11 +28,11 @@ if __name__ == '__main__':
                         dest='frag', help='fragmentation method (CID or HCD), default HCD')
 
     args = parser.parse_args()
-    """
+    
     # Run MSGF+
     rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.spec_file,
                  args.fasta_file, args.modsfile, args.frag)
-    """
+
     # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
     convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(args.spec_file, args.spec_file)
     sys.stdout.write("Converting .mzid file to pin file: {} \n".format(convert_command))
