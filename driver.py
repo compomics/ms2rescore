@@ -73,20 +73,22 @@ if __name__ == '__main__':
     sys.stdout.flush()
     peprec = rescore.make_pepfile(args.spec_file + ".pin")
     rescore.write_PEPREC(peprec, args.spec_file + ".pin")
+    os.rename(args.spec_file + ".pin.PEPREC", args.spec_file + ".PEPREC")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
     # Run ms2pip_rescore
     ms2pip_command = "python {}ms2pipC.py {} -c {} -s {} -R".format(
-        MS2PIP_DIR, args.spec_file + ".pin.PEPREC", MS2PIP_DIR + 'config.file', args.spec_file)
+        MS2PIP_DIR, args.spec_file + ".PEPREC", MS2PIP_DIR + 'config.file', args.spec_file)
     sys.stdout.write(
         "Running ms2pip with the rescore option: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)
 
     features = rescore.join_features(
-        args.spec_file + '.pin.PEPREC_rescore_features.csv', args.spec_file + ".pin")
+        args.spec_file + '.PEPREC_rescore_features.csv', args.spec_file + ".pin")
     rescore.write_pin_files(features, args.spec_file)
+    os.remove(args.spec_file + ".pin")
 
     # Run Percolator with different feature subsets
     for subset in ['_only_rescore', '_all_percolator', '_percolator_default', '_all_features', '_default_and_rescore']:
