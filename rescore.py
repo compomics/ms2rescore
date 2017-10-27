@@ -73,7 +73,7 @@ def make_pepfile(path_to_pin, modsfile=None):
     # Add modifications column to PEPREC file
     # TODO: read modifications from MSGF+ modifications file
     # the keys correspond to the UNIMOD keys for each modification
-    modifications = {'4': 'Cam', '35': 'Oxidation'}
+    modifications = {'1': 'Acetylation', '4': 'Cam', '35': 'Oxidation'}
 
     modlist = []
     for _, row in pepfile.iterrows():
@@ -83,9 +83,12 @@ def make_pepfile(path_to_pin, modsfile=None):
             modstring = ''
             for mod in mods:
                 mod = '[' + mod + ']'
-                modstring += str(pep.find(mod)) + '|' + \
-                    modifications[mod.split(':')[1].rstrip(']')] + '|'
-                pep = pep.replace(mod, '', 1)
+                key = mod.split(':')[1].rstrip(']')
+                try:
+                    modstring += str(pep.find(mod)) + '|' + modifications[key] + '|'
+                    pep = pep.replace(mod, '', 1)
+                except:
+                    print('Modification not expected: {}'.format(mod))
             modlist.append(modstring.rstrip('|'))
         else:
             modlist.append('')
