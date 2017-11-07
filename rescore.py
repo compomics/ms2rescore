@@ -25,7 +25,7 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
     :param modsfile: string, path to the file with modifications
     :param frag: fragmentation method (HCD or CID) on which some settings depend
     """
-    # TODO pipe the output somewhere to make the terminal look cleaner
+    
     if frag == 'HCD':
         m = 3
         inst = 1
@@ -38,8 +38,8 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
         mods = ''
     msgf_command = "java -Xmx8000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t \
         10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n \
-        1 -addFeatures 1 -protocol 0 -thread 23 \n".format(msgf_dir, mods,
-        mgffile, fastafile, outfile + ".mzid", m, inst)
+        1 -addFeatures 1 -protocol 0 -thread 23 > {}.log\n".format(msgf_dir, mods,
+        mgffile, fastafile, outfile + ".mzid", m, inst, outfile)
 
     sys.stdout.write("Running search with MSGF+: {}".format(msgf_command))
     sys.stdout.flush()
@@ -60,7 +60,7 @@ def make_pepfile(path_to_pin, modsfile=None):
         'modifications']
     """
     pin = pd.read_csv(path_to_pin, sep='\t', header=0, skiprows=[1])
-    
+
     charge_states = []
     for a in pin.columns:
         if a.startswith('Charge'): charge_states.append(a)
