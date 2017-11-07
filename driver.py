@@ -67,7 +67,7 @@ if __name__ == '__main__':
     pin.to_csv(args.spec_file + ".pin", sep='\t', index=False)
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
-
+    
     # Create & write PEPREC file from the pin file
     sys.stdout.write("Generating PEPREC files... ")
     sys.stdout.flush()
