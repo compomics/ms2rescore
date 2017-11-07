@@ -25,7 +25,7 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
     :param modsfile: string, path to the file with modifications
     :param frag: fragmentation method (HCD or CID) on which some settings depend
     """
-    
+
     if frag == 'HCD':
         m = 3
         inst = 1
@@ -66,16 +66,17 @@ def make_pepfile(path_to_pin, modsfile=None):
         if a.startswith('Charge'): charge_states.append(a)
         else: continue
 
-    pin['Charge'] = [None] * len(pin)
+    pin.loc[:, 'Charge'] = [None] * len(pin)
 
     for ch in charge_states:
         value = int(ch.lstrip('Charge'))
         pin.loc[pin[ch]==1, 'Charge'] = value
 
-    pepfile = pin[['TITLE', 'Peptide', 'Charge', 'Label']]
+    pepfile = pin.loc[:, ['TITLE', 'Peptide', 'Charge', 'Label']]
 
     # Add modifications column to PEPREC file
-    # TODO: read modifications from MSGF+ modifications file
+    # TODO: read modifications from MSGF+ modifications file OR write dict with
+    # all UNIMOD modifications
     # the keys correspond to the UNIMOD keys for each modification
     modifications = {'1': 'Acetylation', '4': 'Cam', '35': 'Oxidation'}
 
@@ -121,18 +122,18 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
     :param path_to_pep: string, path where to save the PEPREC file(s)
     :param concat: boolean, True if the search was concatenated
     """
-    # TODO SettingWithoutCopyWarning Try using .iloc instead bla bla
+
     if concat:
-        pepfile_tosave = pepfile[['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
+        pepfile_tosave = pepfile.loc[:, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
         pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep=' ', index=False)
 
     else:
-        pepfile_tosave = pepfile[pepfile.Label == 1][['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
+        pepfile_tosave = pepfile.loc[pepfile.Label == 1, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
         pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep=' ', index=False)
 
-        pepfile_tosave = pepfile[pepfile.Label == -1][['TITLE', 'modifications','peptide', 'Charge', 'Label']]
+        pepfile_tosave = pepfile.loc[pepfile.Label == -1, ['TITLE', 'modifications','peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
         pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
 
