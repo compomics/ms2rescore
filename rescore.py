@@ -36,7 +36,7 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
         mods = '-mod {} '.format(modsfile)
     else:
         mods = ''
-    msgf_command = "java -Xmx8000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t \
+    msgf_command = "java -Xmx28000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t \
         10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n \
         1 -addFeatures 1 -protocol 0 -thread 23 > {}.log\n".format(msgf_dir, mods,
         mgffile, fastafile, outfile + ".mzid", m, inst, outfile)
@@ -170,7 +170,6 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
                                   rescore_targets.merge(pin[pin.Label == 1], left_on='spec_id', right_on='TITLE')])
     else:
         all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
-
     return all_features
 
 
@@ -189,7 +188,6 @@ def write_pin_files(all_features, savepath):
     rescore_features = list(all_features.columns[4:42])
     percolator_features = list(all_features.columns[45:-5])
     percolator_default = percolator_features[:27]
-
     # Writing files with appropriate columns
     all_features[['SpecId', 'Label', 'ScanNr'] + rescore_features + ['Peptide',
                 'Proteins']].to_csv('{}_only_rescore.pin'.format(savepath), sep='\t', index=False)
