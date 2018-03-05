@@ -35,10 +35,8 @@ if __name__ == '__main__':
                          args.fasta_file, args.modsfile, args.frag)
 
     # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
-    convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(
-        args.spec_file, args.spec_file)
-    sys.stdout.write(
-        "Converting .mzid file to pin file: {} \n".format(convert_command))
+    convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(args.spec_file, args.spec_file)
+    sys.stdout.write("Converting .mzid file to pin file: {} \n".format(convert_command))
     sys.stdout.flush()
     subprocess.run(convert_command, shell=True)
 
@@ -52,22 +50,14 @@ if __name__ == '__main__':
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
-    sys.stdout.write('Parsing pin file... ')
-    sys.stdout.flush()
-    pin = pd.read_csv(args.spec_file + ".pin",
-                      header=0, skiprows=[1], sep='\t')
-    sys.stdout.write('Done! \n')
-    sys.stdout.flush()
-
     # Percolator generates its own spectrum ID, but we want it to match the mgf
     # file's TITLE.
     sys.stdout.write("Adding TITLE to pin file... ")
     sys.stdout.flush()
-    pin = mapper.map_mgf_title(pin, args.spec_file + ".mzid")
-    pin.to_csv(args.spec_file + ".pin", sep='\t', index=False)
+    mapper.map_mgf_title(args.spec_file + "pin", args.spec_file + ".mzid")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
-    
+
     # Create & write PEPREC file from the pin file
     sys.stdout.write("Generating PEPREC files... ")
     sys.stdout.flush()
@@ -78,12 +68,14 @@ if __name__ == '__main__':
     sys.stdout.flush()
 
     # Run ms2pip_rescore
-    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {} -R".format(
+    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(
         MS2PIP_DIR, args.spec_file + ".PEPREC", MS2PIP_DIR + 'config.file', args.spec_file)
     sys.stdout.write(
-        "Running ms2pip with the rescore option: {} \n".format(ms2pip_command))
+        "Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)
+
+    rescore.calculate_features(args.spec_file + "_pred_and_emp.csv")
 
     features = rescore.join_features(
         args.spec_file + '.PEPREC_rescore_features.csv', args.spec_file + ".pin")
