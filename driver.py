@@ -54,7 +54,7 @@ if __name__ == '__main__':
     # file's TITLE.
     sys.stdout.write("Adding TITLE to pin file... ")
     sys.stdout.flush()
-    mapper.map_mgf_title(args.spec_file + "pin", args.spec_file + ".mzid")
+    mapper.map_mgf_title(args.spec_file + ".pin", args.spec_file + ".mzid")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
@@ -68,22 +68,27 @@ if __name__ == '__main__':
     sys.stdout.flush()
 
     # Run ms2pip_rescore
-    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(
-        MS2PIP_DIR, args.spec_file + ".PEPREC", MS2PIP_DIR + 'config.file', args.spec_file)
-    sys.stdout.write(
-        "Running ms2pip: {} \n".format(ms2pip_command))
+    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, args.spec_file + ".PEPREC", MS2PIP_DIR + 'config.file', args.spec_file)
+    sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)
 
+    sys.stdout.write("Calculating features from predicted spectra...")
+    sys.stdout.flush()
     rescore.calculate_features(args.spec_file + "_pred_and_emp.csv")
+    sys.stdout.write('Done! \n')
+    sys.stdout.flush()
 
-    features = rescore.join_features(
-        args.spec_file + '.PEPREC_rescore_features.csv', args.spec_file + ".pin")
+    sys.stdout.write("Generating pin files with different features... ")
+    sys.stdout.flush()
+    features = rescore.join_features(args.spec_file + '_features.csv', args.spec_file + ".pin")
     rescore.write_pin_files(features, args.spec_file)
     os.remove(args.spec_file + ".pin")
+    sys.stdout.write('Done! \n')
+    sys.stdout.flush()
 
     # Run Percolator with different feature subsets
-    for subset in ['_only_rescore', '_all_percolator', '_percolator_default', '_all_features', '_default_and_rescore']:
+    for subset in ['_only_rescore', '_all_percolator', '_all_features']:
         fname = args.spec_file + subset
         percolator_cmd = "percolator {} -m {} -M {} -v 0 -U\n".format(
             fname + ".pin", fname + ".pout", fname + ".pout_dec")
@@ -92,4 +97,4 @@ if __name__ == '__main__':
         sys.stdout.flush()
 
     # TODO combine results from Percolator, MSGF+ in one file.
-    sys.stdout.write('Done!\n')
+    sys.stdout.write('All done!\n')
