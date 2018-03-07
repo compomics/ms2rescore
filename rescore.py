@@ -172,7 +172,7 @@ def compute_features(df):
         'dotprod_iony', 'cos', 'cos_ionb', 'cos_iony'])
 
     for peptide in df.spec_id.unique():
-        tmp = df[df.spec_id == peptide]
+        tmp = df[df.spec_id == peptide].copy()
         # print(tmp)
         tmp.loc[tmp.prediction < np.log2(0.001), 'prediction'] = np.log2(0.001)
         tmp.loc[:,"abs_diff"] = np.abs(tmp["target"] - tmp["prediction"])
@@ -344,10 +344,10 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
     else:
         all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
     all_features = all_features.drop(all_features.loc[:,all_features.columns.str.endswith('.1')], axis=1)
-    return all_features
+    all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features.tsv', sep='\t', index=False)
 
 
-def write_pin_files(all_features, savepath):
+def write_pin_files(path_to_all_features, savepath):
     """
     Given a dataframe with all the features, writes five different pin files:
     _only_rescore.pin with only the rescore features
@@ -360,7 +360,7 @@ def write_pin_files(all_features, savepath):
     """
     # columns to save
     pd.options.display.max_columns = 200
-    all_features.to_csv("test.csv", index=False)
+    all_features = pd.read_csv(path_to_all_features, sep='\t')
     rescore_features = list(all_features.columns[3:79])
     percolator_features = list(all_features.columns[82:-3])
     # percolator_default = percolator_features[:27]
