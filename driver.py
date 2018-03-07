@@ -81,9 +81,10 @@ if __name__ == '__main__':
 
     sys.stdout.write("Generating pin files with different features... ")
     sys.stdout.flush()
-    features = rescore.join_features(args.spec_file + '_features.csv', args.spec_file + ".pin")
-    rescore.write_pin_files(features, args.spec_file)
+    rescore.join_features(args.spec_file + '_features.csv', args.spec_file + ".pin")
+    rescore.write_pin_files(args.spec_file + '_all_features.tsv', args.spec_file)
     os.remove(args.spec_file + ".pin")
+    os.remove(args.spec_file + "_all_features.csv")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
