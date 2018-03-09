@@ -9,7 +9,8 @@ import sys
 import re
 import pandas as pd
 import numpy as np
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -377,3 +378,45 @@ def write_pin_files(path_to_all_features, savepath):
     #              'Proteins']].to_csv('{}_default_and_rescore.pin'.format(savepath), sep='\t', index=False)
 
     return None
+
+def format_output(path_to_pout, path_to_pout_decoys, savepath):
+    out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout_decoys, sep='\t')])
+    # MSGF+ decoy pattern
+    out['Label'] = [-1 if p.startswith('XXX') else 1 for p in out.proteinIds]
+
+    f, axes = plt.subplots(3,3, figsize=(16,17))
+
+    sns.boxplot(data=out, y='score', x='Label', ax=axes[0][0])
+
+    sns.distplot(out.loc[out.Label == 1, 'score'], kde=False, ax=axes[0][1])
+    sns.distplot(out.loc[out.Label == -1, 'score'], kde=False, ax=axes[0][1])
+
+    sns.distplot(out.loc[out.Label == 1, 'score'], hist=False, ax=axes[0][2])
+    sns.distplot(out.loc[out.Label == -1, 'score'], hist=False, ax=axes[0][2])
+
+    sns.boxplot(data=out, y='q-value', x='Label', ax=axes[1][0])
+
+    sns.distplot(out.loc[out.Label == 1, 'q-value'], kde=False, ax=axes[1][1])
+    sns.distplot(out.loc[out.Label == -1, 'q-value'], kde=False, ax=axes[1][1])
+
+    sns.distplot(out.loc[out.Label == 1, 'q-value'], hist=False, ax=axes[1][2])
+    sns.distplot(out.loc[out.Label == -1, 'q-value'], hist=False, ax=axes[1][2])
+
+    sns.boxplot(data=out, y='posterior_error_prob', x='Label', ax=axes[2][0])
+
+    sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], kde=False, ax=axes[2][1])
+    sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], kde=False, ax=axes[2][1])
+
+    sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], hist=False, ax=axes[2][2])
+    sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], hist=False, ax=axes[2][2])
+
+    axes[0][1].set_xlim([np.min(out['score']), np.max(out['score'])])
+    axes[0][2].set_xlim([np.min(out['score']), np.max(out['score'])])
+
+    axes[1][1].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
+    axes[1][2].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
+
+    axes[2][1].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
+    axes[2][2].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
+
+    f.savefig(savepath)
