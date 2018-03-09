@@ -84,18 +84,17 @@ if __name__ == '__main__':
     rescore.join_features(args.spec_file + '_features.csv', args.spec_file + ".pin")
     rescore.write_pin_files(args.spec_file + '_all_features.tsv', args.spec_file)
     os.remove(args.spec_file + ".pin")
-    os.remove(args.spec_file + "_all_features.csv")
+    os.remove(args.spec_file + "_all_features.tsv")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
     # Run Percolator with different feature subsets
     for subset in ['_only_rescore', '_all_percolator', '_all_features']:
         fname = args.spec_file + subset
-        percolator_cmd = "percolator {} -m {} -M {} -v 0 -U\n".format(
-            fname + ".pin", fname + ".pout", fname + ".pout_dec")
+        percolator_cmd = "percolator {} -r {} -M {} -v 0 -U\n".format(fname + ".pin", fname + ".pout", fname + ".pout_dec")
         sys.stdout.write("Running Percolator: {} \n".format(percolator_cmd))
         subprocess.run(percolator_cmd, shell=True)
+        rescore.format_output(fname+".pout", fname+".pout_dec", fname+"_output_plots.png")
         sys.stdout.flush()
 
-    # TODO combine results from Percolator, MSGF+ in one file.
     sys.stdout.write('All done!\n')
