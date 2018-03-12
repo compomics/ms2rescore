@@ -67,7 +67,8 @@ if __name__ == '__main__':
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
-    # Run ms2pip_rescore
+    # Run ms2pip
+    # TODO change config file to use CID or HCD models based on args.frag
     ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, args.spec_file + ".PEPREC", MS2PIP_DIR + 'config.file', args.spec_file)
     sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
@@ -75,14 +76,14 @@ if __name__ == '__main__':
 
     sys.stdout.write("Calculating features from predicted spectra...")
     sys.stdout.flush()
-    rescore.calculate_features(args.spec_file + "_pred_and_emp.csv")
+    rescore.calculate_features(args.spec_file + "_pred_and_emp.csv", args.spec_file + "_all_features.tsv")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
     sys.stdout.write("Generating pin files with different features... ")
     sys.stdout.flush()
-    rescore.join_features(args.spec_file + '_features.csv', args.spec_file + ".pin")
-    rescore.write_pin_files(args.spec_file + '_all_features.tsv', args.spec_file)
+    rescore.join_features(args.spec_file + "_all_features.tsv", args.spec_file + ".pin")
+    rescore.write_pin_files(args.spec_file + ".pin", args.spec_file)
     os.remove(args.spec_file + ".pin")
     os.remove(args.spec_file + "_all_features.tsv")
     sys.stdout.write('Done! \n')

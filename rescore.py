@@ -287,7 +287,7 @@ def compute_features(df):
         rescore_features = rescore_features.append(feats, ignore_index=True)
     return rescore_features
 
-def calculate_features(path_to_pred_and_emp):
+def calculate_features(path_to_pred_and_emp, path_to_out):
     num_cpu = 20
     myPool = multiprocessing.Pool(num_cpu)
 
@@ -310,8 +310,7 @@ def calculate_features(path_to_pred_and_emp):
         all_results.append(r.get())
     all_results = pd.concat(all_results)
 
-    out = path_to_pred_and_emp.split('_')[0] + "_features.csv"
-    all_results.to_csv(out, index=False)
+    all_results.to_csv(path_to_out, index=False)
 
 
 def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=None):
