@@ -6,6 +6,7 @@ concatenated searches.
 import subprocess
 import multiprocessing
 import sys
+import os
 import re
 import pandas as pd
 import numpy as np
@@ -46,7 +47,7 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
     msgf_command = "java -Xmx28000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t \
         10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n \
         1 -addFeatures 1 -protocol 0 -thread 23 > {}.log\n".format(msgf_dir, mods,
-        mgffile, fastafile, outfile + ".mzid", m, inst, outfile)
+        mgffile, fastafile, outfile.rstrip(".mgf") + ".mzid", m, inst, outfile.rstrip(".mgf"))
 
     sys.stdout.write("Running search with MSGF+: {}".format(msgf_command))
     sys.stdout.flush()
@@ -118,7 +119,7 @@ def make_pepfile(path_to_pin, modsfile=None):
         pep_list.append(pep)
     pepfile.loc[:, 'peptide'] = pep_list
 
-    return pepfile
+    write_PEPREC(pepfile, path_to_pin)
 
 
 def write_PEPREC(pepfile, path_to_pep, concat=True):
@@ -344,78 +345,106 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
     else:
         all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
     all_features = all_features.drop(all_features.loc[:,all_features.columns.str.endswith('.1')], axis=1)
-    all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features.tsv', sep='\t', index=False)
+    all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features.csv', sep=',', index=False)
 
 
-def write_pin_files(path_to_all_features, savepath):
+def write_pin_files(path_to_features, savepath):
     """
-    Given a dataframe with all the features, writes five different pin files:
+    Given a dataframe with all the features, writes three different pin files:
     _only_rescore.pin with only the rescore features
     _all_percolator.pin with all the percolator features
-    _percolator_default.pin with only the default percolator features
     _all_features.pin with all the rescore and percolator features
-    _default_and_rescore.pin with the rescore and the default percolator features
 
-    :param all_features: pd.DataFrame obtained from rescore.join_features()
+    :param path_to_features: pd.DataFrame obtained from rescore.join_features()
+    :param savepath: path to save the pin files
     """
     # columns to save
-    pd.options.display.max_columns = 200
-    all_features = pd.read_csv(path_to_all_features, sep='\t')
-    rescore_features = list(all_features.columns[3:79])
-    percolator_features = list(all_features.columns[82:-3])
-    # percolator_default = percolator_features[:27]
+    percolator_features = ['ExpMass', 'CalcMass', 'RawScore', 'DeNovoScore', 'ScoreRatio',
+        'Energy', 'lnEValue', 'IsotopeError', 'lnExplainedIonCurrentRatio',
+        'lnNTermIonCurrentRatio', 'lnCTermIonCurrentRatio', 'lnMS2IonCurrent',
+        'Mass', 'PepLen', 'dM', 'absdM', 'MeanErrorTop7', 'sqMeanErrorTop7',
+        'StdevErrorTop7', 'Charge2', 'Charge3', 'Charge4', 'Charge5', 'Charge6',
+        'enzN', 'enzC', 'enzInt', 'ptm', 'A-Freq', 'C-Freq', 'D-Freq', 'E-Freq',
+        'F-Freq', 'G-Freq', 'H-Freq', 'I-Freq', 'K-Freq', 'L-Freq', 'M-Freq',
+        'N-Freq', 'P-Freq', 'Q-Freq', 'R-Freq', 'S-Freq', 'T-Freq', 'V-Freq',
+        'W-Freq', 'Y-Freq', 'B-Freq', 'Z-Freq', 'J-Freq', 'X-Freq', 'U-Freq', 'O-Freq']
+
+    rescore_features = ['peplen', 'charge',
+        'spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
+        'spec_spearman_norm', 'ionb_spearman_norm', 'iony_spearman_norm',
+        'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm', 'min_abs_diff_iontype_norm',
+        'max_abs_diff_iontype_norm', 'min_abs_diff_norm', 'max_abs_diff_norm',
+        'abs_diff_Q1_norm', 'abs_diff_Q2_norm', 'abs_diff_Q3_norm', 'mean_abs_diff_norm',
+        'std_abs_diff_norm', 'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
+        'ionb_abs_diff_Q1_norm', 'ionb_abs_diff_Q2_norm', 'ionb_abs_diff_Q3_norm',
+        'ionb_mean_abs_diff_norm', 'ionb_std_abs_diff_norm', 'iony_min_abs_diff_norm',
+        'iony_max_abs_diff_norm', 'iony_abs_diff_Q1_norm', 'iony_abs_diff_Q2_norm',
+        'iony_abs_diff_Q3_norm', 'iony_mean_abs_diff_norm', 'iony_std_abs_diff_norm',
+        'dotprod_norm', 'dotprod_ionb_norm', 'dotprod_iony_norm', 'cos_norm',
+        'cos_ionb_norm', 'cos_iony_norm', 'spec_pearson', 'ionb_pearson', 'iony_pearson',
+        'spec_spearman', 'ionb_spearman', 'iony_spearman', 'spec_mse', 'ionb_mse',
+        'iony_mse', 'min_abs_diff_iontype', 'max_abs_diff_iontype', 'min_abs_diff',
+        'max_abs_diff', 'abs_diff_Q1', 'abs_diff_Q2', 'abs_diff_Q3', 'mean_abs_diff',
+        'std_abs_diff', 'ionb_min_abs_diff', 'ionb_max_abs_diff', 'ionb_abs_diff_Q1',
+        'ionb_abs_diff_Q2', 'ionb_abs_diff_Q3', 'ionb_mean_abs_diff', 'ionb_std_abs_diff',
+        'iony_min_abs_diff', 'iony_max_abs_diff', 'iony_abs_diff_Q1', 'iony_abs_diff_Q2',
+        'iony_abs_diff_Q3', 'iony_mean_abs_diff', 'iony_std_abs_diff', 'dotprod', 'dotprod_ionb',
+        'dotprod_iony', 'cos', 'cos_ionb', 'cos_iony']
+
+    all_features = pd.read_csv(path_to_features, sep=',')
+
     # Writing files with appropriate columns
-    all_features[['SpecId', 'Label', 'ScanNr'] + rescore_features + ['Peptide',
-                'Proteins']].to_csv('{}_only_rescore.pin'.format(savepath), sep='\t', index=False)
-    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_features + ['Peptide',
-                'Proteins']].to_csv('{}_all_percolator.pin'.format(savepath), sep='\t', index=False)
-    # all_features[['SpecId', 'Label', 'ScanNr'] + percolator_default + ['Peptide', 'Proteins']
-    #              ].to_csv('{}_percolator_default.pin'.format(savepath), sep='\t', index=False)
-    all_features[['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features +
-                 ['Peptide', 'Proteins']].to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
-    # all_features[['SpecId', 'Label', 'ScanNr'] + percolator_default + rescore_features + ['Peptide',
-    #              'Proteins']].to_csv('{}_default_and_rescore.pin'.format(savepath), sep='\t', index=False)
+    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + rescore_features + ['Peptide',
+                'Proteins']].fillna(value=0).to_csv('{}_rescore.pin'.format(savepath), sep='\t', index=False)
+    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + ['Peptide',
+                'Proteins']].fillna(value=0).to_csv('{}_percolator.pin'.format(savepath), sep='\t', index=False)
+    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features +
+                 ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
 
     return None
 
-def format_output(path_to_pout, path_to_pout_decoys, savepath):
+def format_output(path_to_pout, path_to_pout_decoys, savepath, fig=True):
     out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout_decoys, sep='\t')])
     # MSGF+ decoy pattern
     out['Label'] = [-1 if p.startswith('XXX') else 1 for p in out.proteinIds]
+    out.to_csv(savepath.rstrip("plots.png") + ".out", sep='\t', index=False)
+    os.remove(path_to_pout)
+    os.remove(path_to_pout_decoys)
 
-    f, axes = plt.subplots(3,3, figsize=(16,17))
+    if fig:
+        f, axes = plt.subplots(3,3, figsize=(16,17))
 
-    sns.boxplot(data=out, y='score', x='Label', ax=axes[0][0])
+        sns.boxplot(data=out, y='score', x='Label', ax=axes[0][0])
 
-    sns.distplot(out.loc[out.Label == 1, 'score'], kde=False, ax=axes[0][1])
-    sns.distplot(out.loc[out.Label == -1, 'score'], kde=False, ax=axes[0][1])
+        sns.distplot(out.loc[out.Label == 1, 'score'], kde=False, ax=axes[0][1])
+        sns.distplot(out.loc[out.Label == -1, 'score'], kde=False, ax=axes[0][1])
 
-    sns.distplot(out.loc[out.Label == 1, 'score'], hist=False, ax=axes[0][2])
-    sns.distplot(out.loc[out.Label == -1, 'score'], hist=False, ax=axes[0][2])
+        sns.distplot(out.loc[out.Label == 1, 'score'], hist=False, ax=axes[0][2])
+        sns.distplot(out.loc[out.Label == -1, 'score'], hist=False, ax=axes[0][2])
 
-    sns.boxplot(data=out, y='q-value', x='Label', ax=axes[1][0])
+        sns.boxplot(data=out, y='q-value', x='Label', ax=axes[1][0])
 
-    sns.distplot(out.loc[out.Label == 1, 'q-value'], kde=False, ax=axes[1][1])
-    sns.distplot(out.loc[out.Label == -1, 'q-value'], kde=False, ax=axes[1][1])
+        sns.distplot(out.loc[out.Label == 1, 'q-value'], kde=False, ax=axes[1][1])
+        sns.distplot(out.loc[out.Label == -1, 'q-value'], kde=False, ax=axes[1][1])
 
-    sns.distplot(out.loc[out.Label == 1, 'q-value'], hist=False, ax=axes[1][2])
-    sns.distplot(out.loc[out.Label == -1, 'q-value'], hist=False, ax=axes[1][2])
+        sns.distplot(out.loc[out.Label == 1, 'q-value'], hist=False, ax=axes[1][2])
+        sns.distplot(out.loc[out.Label == -1, 'q-value'], hist=False, ax=axes[1][2])
 
-    sns.boxplot(data=out, y='posterior_error_prob', x='Label', ax=axes[2][0])
+        sns.boxplot(data=out, y='posterior_error_prob', x='Label', ax=axes[2][0])
 
-    sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], kde=False, ax=axes[2][1])
-    sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], kde=False, ax=axes[2][1])
+        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], kde=False, ax=axes[2][1])
+        sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], kde=False, ax=axes[2][1])
 
-    sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], hist=False, ax=axes[2][2])
-    sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], hist=False, ax=axes[2][2])
+        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], hist=False, ax=axes[2][2])
+        sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], hist=False, ax=axes[2][2])
 
-    axes[0][1].set_xlim([np.min(out['score']), np.max(out['score'])])
-    axes[0][2].set_xlim([np.min(out['score']), np.max(out['score'])])
+        axes[0][1].set_xlim([np.min(out['score']), np.max(out['score'])])
+        axes[0][2].set_xlim([np.min(out['score']), np.max(out['score'])])
 
-    axes[1][1].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
-    axes[1][2].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
+        axes[1][1].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
+        axes[1][2].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
 
-    axes[2][1].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
-    axes[2][2].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
+        axes[2][1].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
+        axes[2][2].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
 
-    f.savefig(savepath)
+        f.savefig(savepath)
