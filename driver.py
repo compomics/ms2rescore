@@ -29,7 +29,7 @@ if __name__ == '__main__':
                         dest='frag', help='fragmentation method (CID or HCD), default HCD')
 
     args = parser.parse_args()
-
+    """
     # Run MSGF+
     rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.spec_file,
                          args.fasta_file, args.modsfile, args.frag)
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     mapper.map_mgf_title(args.spec_file.rstrip(".mgf") + ".pin", args.spec_file.rstrip(".mgf") + ".mzid")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
-
+    """
     # Create & write PEPREC file from the pin file
     sys.stdout.write("Generating PEPREC files... ")
     sys.stdout.flush()
