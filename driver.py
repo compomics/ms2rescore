@@ -29,7 +29,7 @@ if __name__ == '__main__':
                         dest='frag', help='fragmentation method (CID or HCD), default HCD')
 
     args = parser.parse_args()
-    """
+
     # Run MSGF+
     rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.spec_file,
                          args.fasta_file, args.modsfile, args.frag)
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     mapper.map_mgf_title(args.spec_file.rstrip(".mgf") + ".pin", args.spec_file.rstrip(".mgf") + ".mzid")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
-    """
+
     # Create & write PEPREC file from the pin file
     sys.stdout.write("Generating PEPREC files... ")
     sys.stdout.flush()
@@ -83,8 +83,6 @@ if __name__ == '__main__':
     sys.stdout.flush()
     rescore.join_features(args.spec_file.rstrip(".mgf") + "_all_features.csv", args.spec_file.rstrip(".mgf") + ".pin")
     rescore.write_pin_files(args.spec_file.rstrip(".mgf") + "_all_features.csv", args.spec_file.rstrip(".mgf"))
-    # os.remove(args.spec_file + ".pin")
-    # os.remove(args.spec_file + "_all_features.csv")
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
@@ -94,7 +92,10 @@ if __name__ == '__main__':
         percolator_cmd = "percolator {} -r {} -M {} -v 0 -U\n".format(fname + ".pin", fname + ".pout", fname + ".pout_dec")
         sys.stdout.write("Running Percolator: {} \n".format(percolator_cmd))
         subprocess.run(percolator_cmd, shell=True)
-        rescore.format_output(fname+".pout", fname+".pout_dec", fname+"_output_plots.png", fig=False)
+        if os.path.isfile(fname + ".pout"):
+            rescore.format_output(fname+".pout", fname+".pout_dec", fname+"_output_plots.png", fig=False)
+        else:
+            sys.stdout.write("Error running Percolator \n")
         sys.stdout.flush()
 
     sys.stdout.write('All done!\n')

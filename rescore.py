@@ -69,6 +69,7 @@ def make_pepfile(path_to_pin, modsfile=None):
     """
     pin = pd.read_csv(path_to_pin, sep='\t', header=0, skiprows=[1])
 
+    # TODO these are inputs to msgf+
     charge_states = []
     for a in pin.columns:
         if a.startswith('Charge'): charge_states.append(a)
@@ -134,16 +135,16 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
     if concat:
         pepfile_tosave = pepfile.loc[:, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep=' ', index=False)
+        pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep='\t', index=False)
 
     else:
         pepfile_tosave = pepfile.loc[pepfile.Label == 1, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep=' ', index=False)
+        pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep='\t', index=False)
 
         pepfile_tosave = pepfile.loc[pepfile.Label == -1, ['TITLE', 'modifications','peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
+        pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep='\t', index=False)
 
     return None
 
@@ -175,7 +176,6 @@ def compute_features(df):
 
     for peptide in df.spec_id.unique():
         tmp = df[df.spec_id == peptide].copy()
-        # print(tmp)
         tmp.loc[tmp.prediction < np.log2(0.001), 'prediction'] = np.log2(0.001)
         tmp.loc[:,"abs_diff"] = np.abs(tmp["target"] - tmp["prediction"])
 
@@ -394,13 +394,9 @@ def write_pin_files(path_to_features, savepath):
     all_features = pd.read_csv(path_to_features, sep=',')
 
     # Writing files with appropriate columns
-    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + rescore_features + ['Peptide',
-                'Proteins']].fillna(value=0).to_csv('{}_rescore.pin'.format(savepath), sep='\t', index=False)
-    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + ['Peptide',
-                'Proteins']].fillna(value=0).to_csv('{}_percolator.pin'.format(savepath), sep='\t', index=False)
-    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features +
-                 ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
-
+    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + rescore_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_rescore.pin'.format(savepath), sep='\t', index=False)
+    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_percolator.pin'.format(savepath), sep='\t', index=False)
+    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
     return None
 
 def format_output(path_to_pout, path_to_pout_decoys, savepath, fig=True):
