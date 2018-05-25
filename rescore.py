@@ -87,9 +87,10 @@ def make_pepfile(path_to_pin, modsfile=None):
     # TODO: read modifications from MSGF+ modifications file OR write dict with
     # all UNIMOD modifications
     # the keys correspond to the UNIMOD keys for each modification
-    modifications = {'1': 'Acetylation', '4': 'Cam', '35': 'Oxidation'}
+    modifications = {'1': 'Acetylation', '4': 'Cam', '35': 'Oxidation', '21': 'Phospho'}
 
     modlist = []
+    # TODO get rid of iterrows!
     for _, row in pepfile.iterrows():
         if 'UNIMOD' in row['Peptide']:
             pep = row['Peptide'].split('.')[1]
@@ -99,8 +100,14 @@ def make_pepfile(path_to_pin, modsfile=None):
                 mod = '[' + mod + ']'
                 key = mod.split(':')[1].rstrip(']')
                 try:
-                    modstring += str(pep.find(mod)) + '|' + modifications[key] + '|'
-                    pep = pep.replace(mod, '', 1)
+                    if key == '21':
+                        phospholoc = pep[pep.find(mod)-1]
+                        modstring += str(pep.find(mod)) + '|' + modifications[key] + phospholoc + '|'
+                        pep = pep.replace(mod, '', 1)
+                        # TODO try different phosphosites (prolly not here)
+                    else:
+                        modstring += str(pep.find(mod)) + '|' + modifications[key] + '|'
+                        pep = pep.replace(mod, '', 1)
                 except:
                     print('Modification not expected: {}'.format(mod))
             modlist.append(modstring.rstrip('|'))
