@@ -12,12 +12,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import warnings
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
 from sklearn.metrics import mean_squared_error
 from mapper import mapper  # TODO shouldn't have to do this, check __init__.py
-
 
 def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
     """
@@ -104,7 +100,6 @@ def make_pepfile(path_to_pin, modsfile=None):
                         phospholoc = pep[pep.find(mod)-1]
                         modstring += str(pep.find(mod)) + '|' + modifications[key] + phospholoc + '|'
                         pep = pep.replace(mod, '', 1)
-                        # TODO try different phosphosites (prolly not here)
                     else:
                         modstring += str(pep.find(mod)) + '|' + modifications[key] + '|'
                         pep = pep.replace(mod, '', 1)
@@ -127,7 +122,12 @@ def make_pepfile(path_to_pin, modsfile=None):
         pep_list.append(pep)
     pepfile.loc[:, 'peptide'] = pep_list
 
+    pepfile = try_phospho_locs(pepfile)
+
     write_PEPREC(pepfile, path_to_pin)
+
+def try_phospho_locs(pepfile):
+    return pepfile
 
 
 def write_PEPREC(pepfile, path_to_pep, concat=True):
