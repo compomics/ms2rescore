@@ -34,12 +34,14 @@ if __name__ == "__main__":
     with open(args.config_file) as f:
         config = json.load(f)
 
+    fname = args.spec_file.rstrip(".mgf")
+
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
         MSGF_DIR = config["search_engine"]["dir"]
         rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.fasta_file, config["search_engine_options"])
         # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
-        convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(args.spec_file.rstrip(".mgf"), args.spec_file.rstrip(".mgf"))
+        convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(fname, fname)
         sys.stdout.write("Converting .mzid file to pin file: {} \n".format(convert_command))
         sys.stdout.flush()
         subprocess.run(convert_command, shell=True)
@@ -47,61 +49,61 @@ if __name__ == "__main__":
         sys.stdout.write("Unsupported search engine for automatic processing\n")
         sys.exit(0)
 
-    # "Proteins" column has tab-separated values which makes the file cumbersome
-    #  to read. mapper.fix_pin_tabs replaces those tabs with ";"
+    # PIN FILE: "Proteins" column has tab-separated values which makes the file
+    # cumbersome to read. mapper.fix_pin_tabs replaces those tabs with ";"
     sys.stdout.write("Fixing tabs on pin file... ")
     sys.stdout.flush()
-    mapper.fix_pin_tabs(args.spec_file.rstrip(".mgf") + ".pin")
-    os.remove(args.spec_file.rstrip(".mgf") + ".pin")
-    os.rename(args.spec_file.rstrip(".mgf") + "_fixed.pin", args.spec_file.rstrip(".mgf") + ".pin")
+    mapper.fix_pin_tabs(fname + ".pin")
+    os.remove(fname + ".pin")
+    os.rename(fname + "_fixed.pin", fname + ".pin")
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
-    # Percolator generates its own spectrum ID, but we want it to match the mgf
-    # file's TITLE.
+    # Percolator generates its own spectrum ID, so we must match it to the mgf
+    # file's TITLE field.
     sys.stdout.write("Adding TITLE to pin file... ")
     sys.stdout.flush()
-    mapper.map_mgf_title(args.spec_file.rstrip(".mgf") + ".pin", args.spec_file.rstrip(".mgf") + ".mzid")
+    mapper.map_mgf_title(fname + ".pin", fname + ".mzid")
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
     # Create & write PEPREC file from the pin file
     sys.stdout.write("Generating PEPREC files... ")
     sys.stdout.flush()
-    rescore.make_pepfile(args.spec_file.rstrip(".mgf") + ".pin")
-    os.rename(args.spec_file.rstrip(".mgf") + ".pin.PEPREC", args.spec_file.rstrip(".mgf") + ".PEPREC")
+    rescore.make_pepfile(fname + ".pin")
+    os.rename(fname + ".pin.PEPREC", fname + ".PEPREC")
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
     # Run ms2pip
     # TODO change config file to use CID or HCD models based on args.frag
     MS2PIP_DIR = config["ms2pip"]["dir"]
-    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, args.spec_file.rstrip(".mgf") + ".PEPREC", MS2PIP_DIR + "config.file", args.spec_file)
+    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, fname + ".PEPREC", MS2PIP_DIR + "config.file", args.spec_file)
     sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)
 
     sys.stdout.write("Calculating features from predicted spectra... ")
     sys.stdout.flush()
-    rescore.calculate_features(args.spec_file.rstrip(".mgf") + "_pred_and_emp.csv", args.spec_file.rstrip(".mgf") + "_all_features.csv")
+    rescore.calculate_features(fname + "_pred_and_emp.csv", fname + "_all_features.csv")
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
     sys.stdout.write("Generating pin files with different features... ")
     sys.stdout.flush()
-    rescore.join_features(args.spec_file.rstrip(".mgf") + "_all_features.csv", args.spec_file.rstrip(".mgf") + ".pin")
-    rescore.write_pin_files(args.spec_file.rstrip(".mgf") + "_all_features.csv", args.spec_file.rstrip(".mgf"))
+    rescore.join_features(fname + "_all_features.csv", fname + ".pin")
+    rescore.write_pin_files(fname + "_all_features.csv", fname)
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
     # Run Percolator with different feature subsets
     for subset in ["_rescore", "_percolator", "_all_features"]:
-        fname = args.spec_file.rstrip(".mgf") + subset
-        percolator_cmd = "percolator {} -r {} -M {} -v 0 -U\n".format(fname + ".pin", fname + ".pout", fname + ".pout_dec")
+        name = fname + subset
+        percolator_cmd = "percolator {} -r {} -M {} -v 0 -U\n".format(name + ".pin", name + ".pout", name + ".pout_dec")
         sys.stdout.write("Running Percolator: {} \n".format(percolator_cmd))
         subprocess.run(percolator_cmd, shell=True)
-        if os.path.isfile(fname + ".pout"):
-            rescore.format_output(fname+".pout", fname+".pout_dec", fname+"_output_plots.png", fig=False)
+        if os.path.isfile(name + ".pout"):
+            rescore.format_output(name+".pout", name+".pout_dec", name+"_output_plots.png", fig=False)
         else:
             sys.stdout.write("Error running Percolator \n")
         sys.stdout.flush()
