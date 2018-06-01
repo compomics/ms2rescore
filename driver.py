@@ -12,11 +12,6 @@ import pandas as pd
 from mapper import mapper
 import rescore
 
-# TODO config file for msgf+ -> config file for ms2pip
-# Path to MSGFPlus & ms2pip
-MSGF_DIR = "/home/compomics/software/MSGFPlus"
-MS2PIP_DIR = "ms2pip_c/"
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run MSGF+ to get PSMs, MS2PIP to extract spectral features, and Percolator to rescore PSMs")
@@ -41,6 +36,7 @@ if __name__ == "__main__":
 
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
+        MSGF_DIR = config["search_engine"]["dir"]
         rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.fasta_file, config["search_engine_options"])
     else:
         sys.stdout.write("Unsupported search engine for automatic processing\n")
@@ -80,6 +76,7 @@ if __name__ == "__main__":
 
     # Run ms2pip
     # TODO change config file to use CID or HCD models based on args.frag
+    MS2PIP_DIR = config["ms2pip"]["dir"]
     ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, args.spec_file.rstrip(".mgf") + ".PEPREC", MS2PIP_DIR + "config.file", args.spec_file)
     sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
