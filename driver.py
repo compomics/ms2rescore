@@ -38,15 +38,14 @@ if __name__ == "__main__":
     if config["search_engine"] == "MSGFPlus":
         MSGF_DIR = config["search_engine"]["dir"]
         rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.fasta_file, config["search_engine_options"])
+        # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
+        convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(args.spec_file.rstrip(".mgf"), args.spec_file.rstrip(".mgf"))
+        sys.stdout.write("Converting .mzid file to pin file: {} \n".format(convert_command))
+        sys.stdout.flush()
+        subprocess.run(convert_command, shell=True)
     else:
         sys.stdout.write("Unsupported search engine for automatic processing\n")
         sys.exit(0)
-
-    # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
-    convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(args.spec_file.rstrip(".mgf"), args.spec_file.rstrip(".mgf"))
-    sys.stdout.write("Converting .mzid file to pin file: {} \n".format(convert_command))
-    sys.stdout.flush()
-    subprocess.run(convert_command, shell=True)
 
     # "Proteins" column has tab-separated values which makes the file cumbersome
     #  to read. mapper.fix_pin_tabs replaces those tabs with ";"
