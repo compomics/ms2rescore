@@ -1,0 +1,20 @@
+{
+  "search_engine": "MSGFPlus",
+  "search_engine_options": {
+    "dir": "/home/compomics/software/MSGFPlus",
+    "frag": "HCD",
+    "path_to_modsfile": "modification.txt",
+    "min_length": 8,
+    "min_charge": 2,
+    "max_charge": 4
+  },
+  "ms2pip": {
+    "dir": "ms2pip_c",
+    "config_file": "ms2pip_c/config.file",
+    "phospho": 1,
+    "frag": "HCD"
+  },
+  "percolator": {
+    "trainFDR": 0.01
+  }
+}

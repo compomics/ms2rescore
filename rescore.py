@@ -12,14 +12,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import warnings
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
 from sklearn.metrics import mean_squared_error
 from mapper import mapper  # TODO shouldn't have to do this, check __init__.py
 
-
-def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
+def run_msgfplus(msgf_dir, mgffile, fastafile, options):
     """
     Runs MSGF+ with some fixed settings: 10ppm precursor mass tolerance,
     concatenated search, minimum peptide length of 8aa, minimum charge is 2 and
@@ -27,27 +23,29 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
     and use 23 threads. MSGF+ is called with subprocess.
 
     :param msgfdir: string, path to MSGFPlus.jar
-    :param outfile: string, path where to store the search results (.mzid)
     :param mgffile: string, spectrum file (MGF,PKL,DTA,mzXML,mzDATA or mzML)
     :param fastafile: string, the database to search against in .fasta format
-    :param modsfile: string, path to the file with modifications
-    :param frag: fragmentation method (HCD or CID) on which some settings depend
+    :param options: dictionary, contains search engine options
     """
 
-    if frag == 'HCD':
+    if options["frag"] == 'HCD':
         m = 3
         inst = 1
-    elif frag == 'CID':
+    elif options["frag"] == 'CID':
         m = 1
         inst = 0
-    if modsfile != '':
-        mods = '-mod {} '.format(modsfile)
+    if options["path_to_modsfile"] != '':
+        mods = '-mod {} '.format(options["path_to_modsfile"])
     else:
         mods = ''
+
+    outfile = mgffile.rstrip(".mgf") + ".mzid"
+
     msgf_command = "java -Xmx28000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t \
-        10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n \
+        10ppm -tda 1 -m {} -inst {} -minLength {} -minCharge {} -maxCharge {} -n \
         1 -addFeatures 1 -protocol 0 -thread 23 > {}.log\n".format(msgf_dir, mods,
-        mgffile, fastafile, outfile.rstrip(".mgf") + ".mzid", m, inst, outfile.rstrip(".mgf"))
+        mgffile, fastafile, outfile, m, inst, options["min_length"], options["min_charge"],
+        options["max_charge"], mgffile.rstrip(".mgf"))
 
     sys.stdout.write("Running search with MSGF+: {}".format(msgf_command))
     sys.stdout.flush()
@@ -87,9 +85,10 @@ def make_pepfile(path_to_pin, modsfile=None):
     # TODO: read modifications from MSGF+ modifications file OR write dict with
     # all UNIMOD modifications
     # the keys correspond to the UNIMOD keys for each modification
-    modifications = {'1': 'Acetylation', '4': 'Cam', '35': 'Oxidation'}
+    modifications = {'1': 'Acetylation', '4': 'Cam', '35': 'Oxidation', '21': 'Phospho'}
 
     modlist = []
+    # TODO get rid of iterrows!
     for _, row in pepfile.iterrows():
         if 'UNIMOD' in row['Peptide']:
             pep = row['Peptide'].split('.')[1]
@@ -99,8 +98,13 @@ def make_pepfile(path_to_pin, modsfile=None):
                 mod = '[' + mod + ']'
                 key = mod.split(':')[1].rstrip(']')
                 try:
-                    modstring += str(pep.find(mod)) + '|' + modifications[key] + '|'
-                    pep = pep.replace(mod, '', 1)
+                    if key == '21':
+                        phospholoc = pep[pep.find(mod)-1]
+                        modstring += str(pep.find(mod)) + '|' + modifications[key] + phospholoc + '|'
+                        pep = pep.replace(mod, '', 1)
+                    else:
+                        modstring += str(pep.find(mod)) + '|' + modifications[key] + '|'
+                        pep = pep.replace(mod, '', 1)
                 except:
                     print('Modification not expected: {}'.format(mod))
             modlist.append(modstring.rstrip('|'))
@@ -120,7 +124,16 @@ def make_pepfile(path_to_pin, modsfile=None):
         pep_list.append(pep)
     pepfile.loc[:, 'peptide'] = pep_list
 
+    pepfile = try_phospho_locs(pepfile)
+
     write_PEPREC(pepfile, path_to_pin)
+
+def try_phospho_locs(pepfile):
+    """
+    This should check every peptide with a phospho and add rows to the pepfile
+    with the phospho on a different position.
+    """
+    return pepfile
 
 
 def write_PEPREC(pepfile, path_to_pep, concat=True):
@@ -399,13 +412,10 @@ def write_pin_files(path_to_features, savepath):
     all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
     return None
 
-def format_output(path_to_pout, path_to_pout_decoys, savepath, fig=True):
-    out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout_decoys, sep='\t')])
-    # MSGF+ decoy pattern
-    out['Label'] = [-1 if p.startswith('XXX') else 1 for p in out.proteinIds]
-    out.to_csv(savepath.rstrip("plots.png") + ".out", sep='\t', index=False)
-    os.remove(path_to_pout)
-    os.remove(path_to_pout_decoys)
+def format_output(path_to_pout, search_engine, savepath, fig=True):
+    out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout+"_dec", sep='\t')])
+    if search_engine == "MSGFPlus":
+        out['Label'] = [-1 if p.startswith('XXX') else 1 for p in out.proteinIds]
 
     if fig:
         f, axes = plt.subplots(3,3, figsize=(16,17))
