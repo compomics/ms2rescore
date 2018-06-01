@@ -127,6 +127,10 @@ def make_pepfile(path_to_pin, modsfile=None):
     write_PEPREC(pepfile, path_to_pin)
 
 def try_phospho_locs(pepfile):
+    """
+    This should check every peptide with a phospho and add rows to the pepfile
+    with the phospho on a different position.
+    """
     return pepfile
 
 
