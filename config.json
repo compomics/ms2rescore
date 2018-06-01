@@ -1,0 +1,17 @@
+{
+  "frag": "HCD",
+  "search_engine": "MSGFPlus",
+  "search_engine_options": {
+    "path_to_modsfile": "modifications.txt",
+    "min_length": 8,
+    "min_charge": 2,
+    "max_charge": 4
+  },
+  "ms2pip": {
+    "config_file": "../ms2pip_c/config.file",
+    "phospho": 1
+  },
+  "percolator": {
+    "trainFDR": 0.01
+  }
+}
