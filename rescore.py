@@ -15,7 +15,7 @@ import seaborn as sns
 from sklearn.metrics import mean_squared_error
 from mapper import mapper  # TODO shouldn't have to do this, check __init__.py
 
-def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
+def run_msgfplus(msgf_dir, mgffile, fastafile, options):
     """
     Runs MSGF+ with some fixed settings: 10ppm precursor mass tolerance,
     concatenated search, minimum peptide length of 8aa, minimum charge is 2 and
@@ -23,27 +23,29 @@ def run_msgfplus(msgf_dir, outfile, mgffile, fastafile, modsfile, frag='HCD'):
     and use 23 threads. MSGF+ is called with subprocess.
 
     :param msgfdir: string, path to MSGFPlus.jar
-    :param outfile: string, path where to store the search results (.mzid)
     :param mgffile: string, spectrum file (MGF,PKL,DTA,mzXML,mzDATA or mzML)
     :param fastafile: string, the database to search against in .fasta format
-    :param modsfile: string, path to the file with modifications
-    :param frag: fragmentation method (HCD or CID) on which some settings depend
+    :param options: dictionary, contains search engine options
     """
 
-    if frag == 'HCD':
+    if options["frag"] == 'HCD':
         m = 3
         inst = 1
-    elif frag == 'CID':
+    elif options["frag"] == 'CID':
         m = 1
         inst = 0
-    if modsfile != '':
-        mods = '-mod {} '.format(modsfile)
+    if options["path_to_modsfile"] != '':
+        mods = '-mod {} '.format(options["path_to_modsfile"])
     else:
         mods = ''
+
+    outfile = mgffile.rstrip(".mgf") + ".mzid"
+
     msgf_command = "java -Xmx28000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t \
-        10ppm -tda 1 -m {} -inst {} -minLength 8 -minCharge 2 -maxCharge 4 -n \
+        10ppm -tda 1 -m {} -inst {} -minLength {} -minCharge {} -maxCharge {} -n \
         1 -addFeatures 1 -protocol 0 -thread 23 > {}.log\n".format(msgf_dir, mods,
-        mgffile, fastafile, outfile.rstrip(".mgf") + ".mzid", m, inst, outfile.rstrip(".mgf"))
+        mgffile, fastafile, outfile, m, inst, options["min_length"], options["min_charge"],
+        options["max_charge"], mgffile.rstrip(".mgf"))
 
     sys.stdout.write("Running search with MSGF+: {}".format(msgf_command))
     sys.stdout.flush()
