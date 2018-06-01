@@ -35,14 +35,14 @@ if __name__ == "__main__":
         config = json.load(f)
 
     fname = args.spec_file.rstrip(".mgf")
-    
+    """
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
         MSGF_DIR = config["search_engine_options"]["dir"]
         rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.fasta_file, config["search_engine_options"])
         # Convert .mzid to pin. XXX is the decoy pattern from MSGF+
         convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(fname, fname)
-        sys.stdout.write("Converting .mzid file to pin file: {} \n".format(convert_command))
+        sys.stdout.write("Converting .mzid file to pin file:")
         sys.stdout.flush()
         subprocess.run(convert_command, shell=True)
     else:
@@ -74,10 +74,10 @@ if __name__ == "__main__":
     os.rename(fname + ".pin.PEPREC", fname + ".PEPREC")
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
-
+    """
     # Run ms2pip
     MS2PIP_DIR = config["ms2pip"]["dir"]
-    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, fname + ".PEPREC", config["ms2pip"]["config.file"], args.spec_file)
+    ms2pip_command = "python {}/ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, fname + ".PEPREC", config["ms2pip"]["config_file"], args.spec_file)
     sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)

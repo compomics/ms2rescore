@@ -9,8 +9,8 @@
     "max_charge": 4
   },
   "ms2pip": {
-    "dir": "../ms2pip_c",
-    "config_file": "../ms2pip_c/config.file",
+    "dir": "ms2pip_c",
+    "config_file": "ms2pip_c/config.file",
     "phospho": 1,
     "frag": "HCD"
   },
