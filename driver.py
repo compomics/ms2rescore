@@ -35,12 +35,12 @@ if __name__ == "__main__":
         config = json.load(f)
 
     fname = args.spec_file.rstrip(".mgf")
-
+    
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
-        MSGF_DIR = config["search_engine"]["dir"]
+        MSGF_DIR = config["search_engine_options"]["dir"]
         rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.fasta_file, config["search_engine_options"])
-        # Convert .mzid to pin, for percolator. XXX is the decoy pattern from MSGF+
+        # Convert .mzid to pin. XXX is the decoy pattern from MSGF+
         convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(fname, fname)
         sys.stdout.write("Converting .mzid file to pin file: {} \n".format(convert_command))
         sys.stdout.flush()
@@ -76,9 +76,8 @@ if __name__ == "__main__":
     sys.stdout.flush()
 
     # Run ms2pip
-    # TODO change config file to use CID or HCD models based on args.frag
     MS2PIP_DIR = config["ms2pip"]["dir"]
-    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, fname + ".PEPREC", MS2PIP_DIR + "config.file", args.spec_file)
+    ms2pip_command = "python {}ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, fname + ".PEPREC", config["ms2pip"]["config.file"], args.spec_file)
     sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)
@@ -98,12 +97,15 @@ if __name__ == "__main__":
 
     # Run Percolator with different feature subsets
     for subset in ["_rescore", "_percolator", "_all_features"]:
-        name = fname + subset
-        percolator_cmd = "percolator {} -r {} -M {} -v 0 -U\n".format(name + ".pin", name + ".pout", name + ".pout_dec")
+        subname = fname + subset
+        percolator_cmd = "percolator "
+        for op in config["percolator"].keys():
+            percolator_cmd = percolator_cmd + "--{} {} ".format(op, config["percolator"][op])
+        percolator_cmd = percolator_cmd + "{} -m {} -M {} -v 0 -U\n".format(subname + ".pin", subname + ".pout", subname + ".pout_dec")
         sys.stdout.write("Running Percolator: {} \n".format(percolator_cmd))
         subprocess.run(percolator_cmd, shell=True)
-        if os.path.isfile(name + ".pout"):
-            rescore.format_output(name+".pout", name+".pout_dec", name+"_output_plots.png", fig=False)
+        if os.path.isfile(subname + ".pout"):
+            rescore.format_output(subname+".pout", config["search_engine"], subname+"_output_plots.png")#, fig=False)
         else:
             sys.stdout.write("Error running Percolator \n")
         sys.stdout.flush()

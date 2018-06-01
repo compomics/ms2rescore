@@ -412,13 +412,10 @@ def write_pin_files(path_to_features, savepath):
     all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
     return None
 
-def format_output(path_to_pout, path_to_pout_decoys, savepath, fig=True):
-    out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout_decoys, sep='\t')])
-    # MSGF+ decoy pattern
-    out['Label'] = [-1 if p.startswith('XXX') else 1 for p in out.proteinIds]
-    out.to_csv(savepath.rstrip("plots.png") + ".out", sep='\t', index=False)
-    os.remove(path_to_pout)
-    os.remove(path_to_pout_decoys)
+def format_output(path_to_pout, search_engine, savepath, fig=True):
+    out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout+"_dec", sep='\t')])
+    if search_engine == "MSGFPlus":
+        out['Label'] = [-1 if p.startswith('XXX') else 1 for p in out.proteinIds]
 
     if fig:
         f, axes = plt.subplots(3,3, figsize=(16,17))
