@@ -21,12 +21,6 @@ if __name__ == "__main__":
                         help="file containing protein sequences")
     parser.add_argument("config_file", metavar="config-file",
                         help="json file containing configurable variables")
-    """
-    parser.add_argument("-m", "--mods", metavar="FILE", action="store", default="",
-                        dest="modsfile", help="Mods.txt file for MSGF+")
-    parser.add_argument("-f", "--frag", metavar="frag_method", action="store", default="HCD",
-                        dest="frag", help="fragmentation method (CID or HCD), default HCD")
-    """
 
     args = parser.parse_args()
 
@@ -35,7 +29,7 @@ if __name__ == "__main__":
         config = json.load(f)
 
     fname = args.spec_file.rstrip(".mgf")
-    """
+
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
         MSGF_DIR = config["search_engine_options"]["dir"]
@@ -74,7 +68,7 @@ if __name__ == "__main__":
     os.rename(fname + ".pin.PEPREC", fname + ".PEPREC")
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
-    """
+
     # Run ms2pip
     MS2PIP_DIR = config["ms2pip"]["dir"]
     ms2pip_command = "python {}/ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, fname + ".PEPREC", config["ms2pip"]["config_file"], args.spec_file)
