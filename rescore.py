@@ -124,17 +124,7 @@ def make_pepfile(path_to_pin, modsfile=None):
         pep_list.append(pep)
     pepfile.loc[:, 'peptide'] = pep_list
 
-    pepfile = try_phospho_locs(pepfile)
-
     write_PEPREC(pepfile, path_to_pin)
-
-def try_phospho_locs(pepfile):
-    """
-    This should check every peptide with a phospho and add rows to the pepfile
-    with the phospho on a different position.
-    """
-    return pepfile
-
 
 def write_PEPREC(pepfile, path_to_pep, concat=True):
     """
@@ -160,6 +150,33 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
         pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep='\t', index=False)
 
     return None
+
+def make_ms2pip_config(options):
+    """
+    write configuration file for ms2pip based on what's on the rescore config file.
+    """
+
+    ms2pip_config = open(options["dir"] + "ms2pip.config", 'wt')
+
+    if options["frag"] == "CID":
+        ms2pip_config.write("frag_method=CID\n")
+        ms2pip_config.write("frag_error=0.8\n")
+    elif options["frag"] == "phospho":
+        ms2pip_config.write("frag_method=phospho\n")
+        ms2pip_config.write("frag_error=0.02\n")
+    else:
+        ms2pip_config.write("frag_method=HCD\n")
+        ms2pip_config.write("frag_error=0.02\n")
+
+    ms2pip_config.write("\n")
+    ms2pip_config.write("ptm=PhosphoS,79.966331,opt,S\n")
+    ms2pip_config.write("ptm=PhosphoT,79.966331,opt,T\n")
+    ms2pip_config.write("ptm=PhosphoY,79.966331,opt,Y\n")
+    ms2pip_config.write("ptm=Oxidation,15.994915,opt,M\n")
+    ms2pip_config.write("ptm=Cam,57.021464,opt,C\n")
+    ms2pip_config.write("ptm=Acetylation,42.010565,opt,K\n")
+
+    ms2pip_config.close()
 
 def compute_features(df):
     conv = {}
@@ -413,44 +430,58 @@ def write_pin_files(path_to_features, savepath):
     return None
 
 def format_output(path_to_pout, search_engine, savepath, fig=True):
-    out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout+"_dec", sep='\t')])
+    out = pd.concat([pd.read_csv(path_to_pout+".pout", sep='\t'), pd.read_csv(path_to_pout+".pout_dec", sep='\t')])
+    inp = pd.read_csv(path_to_pout+".pin", sep='\t')
+
     if search_engine == "MSGFPlus":
         out['Label'] = [-1 if p.startswith('XXX') else 1 for p in out.proteinIds]
+        score = 'RawScore'
 
     if fig:
-        f, axes = plt.subplots(3,3, figsize=(16,17))
+        f, axes = plt.subplots(4,3, figsize=(16,21))
 
-        sns.boxplot(data=out, y='score', x='Label', ax=axes[0][0])
+        sns.boxplot(data=inp, y=score, x='Label', ax=axes[0][0])
 
-        sns.distplot(out.loc[out.Label == 1, 'score'], kde=False, ax=axes[0][1])
-        sns.distplot(out.loc[out.Label == -1, 'score'], kde=False, ax=axes[0][1])
+        sns.distplot(inp.loc[inp.Label == 1, score], kde=False, ax=axes[0][1])
+        sns.distplot(inp.loc[inp.Label == -1, score], kde=False, ax=axes[0][1])
 
-        sns.distplot(out.loc[out.Label == 1, 'score'], hist=False, ax=axes[0][2])
-        sns.distplot(out.loc[out.Label == -1, 'score'], hist=False, ax=axes[0][2])
+        sns.distplot(inp.loc[inp.Label == 1, score], hist=False, ax=axes[0][2])
+        sns.distplot(inp.loc[inp.Label == -1, score], hist=False, ax=axes[0][2])
 
-        sns.boxplot(data=out, y='q-value', x='Label', ax=axes[1][0])
+        sns.boxplot(data=out, y='score', x='Label', ax=axes[1][0])
 
-        sns.distplot(out.loc[out.Label == 1, 'q-value'], kde=False, ax=axes[1][1])
-        sns.distplot(out.loc[out.Label == -1, 'q-value'], kde=False, ax=axes[1][1])
+        sns.distplot(out.loc[out.Label == 1, 'score'], kde=False, ax=axes[1][1])
+        sns.distplot(out.loc[out.Label == -1, 'score'], kde=False, ax=axes[1][1])
 
-        sns.distplot(out.loc[out.Label == 1, 'q-value'], hist=False, ax=axes[1][2])
-        sns.distplot(out.loc[out.Label == -1, 'q-value'], hist=False, ax=axes[1][2])
+        sns.distplot(out.loc[out.Label == 1, 'score'], hist=False, ax=axes[1][2])
+        sns.distplot(out.loc[out.Label == -1, 'score'], hist=False, ax=axes[1][2])
 
-        sns.boxplot(data=out, y='posterior_error_prob', x='Label', ax=axes[2][0])
+        sns.boxplot(data=out, y='q-value', x='Label', ax=axes[2][0])
 
-        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], kde=False, ax=axes[2][1])
-        sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], kde=False, ax=axes[2][1])
+        sns.distplot(out.loc[out.Label == 1, 'q-value'], kde=False, ax=axes[2][1])
+        sns.distplot(out.loc[out.Label == -1, 'q-value'], kde=False, ax=axes[2][1])
 
-        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], hist=False, ax=axes[2][2])
-        sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], hist=False, ax=axes[2][2])
+        sns.distplot(out.loc[out.Label == 1, 'q-value'], hist=False, ax=axes[2][2])
+        sns.distplot(out.loc[out.Label == -1, 'q-value'], hist=False, ax=axes[2][2])
 
-        axes[0][1].set_xlim([np.min(out['score']), np.max(out['score'])])
-        axes[0][2].set_xlim([np.min(out['score']), np.max(out['score'])])
+        sns.boxplot(data=out, y='posterior_error_prob', x='Label', ax=axes[3][0])
 
-        axes[1][1].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
-        axes[1][2].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
+        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], kde=False, ax=axes[3][1])
+        sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], kde=False, ax=axes[3][1])
 
-        axes[2][1].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
-        axes[2][2].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
+        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], hist=False, ax=axes[3][2])
+        sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], hist=False, ax=axes[3][2])
+
+        axes[0][1].set_xlim([np.min(inp[score]), np.max(inp[score])])
+        axes[0][2].set_xlim([np.min(inp[score]), np.max(inp[score])])
+
+        axes[1][1].set_xlim([np.min(out['score']), np.max(out['score'])])
+        axes[1][2].set_xlim([np.min(out['score']), np.max(out['score'])])
+
+        axes[2][1].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
+        axes[2][2].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
+
+        axes[3][1].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
+        axes[3][2].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
 
         f.savefig(savepath)
