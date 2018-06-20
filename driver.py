@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     # Run ms2pip
     MS2PIP_DIR = config["ms2pip"]["dir"]
-    ms2pip_command = "python {}/ms2pipC.py {} -c {} -s {}".format(MS2PIP_DIR, fname + ".PEPREC", config["ms2pip"]["config_file"], args.spec_file)
+    ms2pip_command = "python {}/ms2pipC.py {} -c {}/ms2pip.config -s {}".format(MS2PIP_DIR, fname + ".PEPREC", MS2PIP_DIR, args.spec_file)
     sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)
@@ -85,6 +85,7 @@ if __name__ == "__main__":
     sys.stdout.write("Generating pin files with different features... ")
     sys.stdout.flush()
     rescore.join_features(fname + "_all_features.csv", fname + ".pin")
+
     rescore.write_pin_files(fname + "_all_features.csv", fname)
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
@@ -95,11 +96,11 @@ if __name__ == "__main__":
         percolator_cmd = "percolator "
         for op in config["percolator"].keys():
             percolator_cmd = percolator_cmd + "--{} {} ".format(op, config["percolator"][op])
-        percolator_cmd = percolator_cmd + "{} -m {} -M {} -v 0 -U\n".format(subname + ".pin", subname + ".pout", subname + ".pout_dec")
+        percolator_cmd = percolator_cmd + "{} -m {} -M {} -w {} -v 0 -U\n".format(subname + ".pin", subname + ".pout", subname + ".pout_dec", subname + ".weights")
         sys.stdout.write("Running Percolator: {} \n".format(percolator_cmd))
         subprocess.run(percolator_cmd, shell=True)
         if os.path.isfile(subname + ".pout"):
-            rescore.format_output(subname+".pout", config["search_engine"], subname+"_output_plots.png")#, fig=False)
+            rescore.format_output(subname+".pout", config["search_engine"], subname+"_output_plots.png", fname)#, fig=False)
         else:
             sys.stdout.write("Error running Percolator \n")
         sys.stdout.flush()

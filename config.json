@@ -10,7 +10,6 @@
   },
   "ms2pip": {
     "dir": "ms2pip_c",
-    "config_file": "ms2pip_c/config.file",
     "frag": "HCD"
   },
   "percolator": {

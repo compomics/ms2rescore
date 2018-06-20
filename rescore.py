@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
 from mapper import mapper  # TODO shouldn't have to do this, check __init__.py
 
 def run_msgfplus(msgf_dir, mgffile, fastafile, options):
@@ -375,6 +376,29 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
     else:
         all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
     all_features = all_features.drop(all_features.loc[:,all_features.columns.str.endswith('.1')], axis=1)
+    norm_cols = ['peplen', 'charge',
+        'spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
+        'spec_spearman_norm', 'ionb_spearman_norm', 'iony_spearman_norm',
+        'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm', 'min_abs_diff_iontype_norm',
+        'max_abs_diff_iontype_norm', 'min_abs_diff_norm', 'max_abs_diff_norm',
+        'abs_diff_Q1_norm', 'abs_diff_Q2_norm', 'abs_diff_Q3_norm', 'mean_abs_diff_norm',
+        'std_abs_diff_norm', 'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
+        'ionb_abs_diff_Q1_norm', 'ionb_abs_diff_Q2_norm', 'ionb_abs_diff_Q3_norm',
+        'ionb_mean_abs_diff_norm', 'ionb_std_abs_diff_norm', 'iony_min_abs_diff_norm',
+        'iony_max_abs_diff_norm', 'iony_abs_diff_Q1_norm', 'iony_abs_diff_Q2_norm',
+        'iony_abs_diff_Q3_norm', 'iony_mean_abs_diff_norm', 'iony_std_abs_diff_norm',
+        'dotprod_norm', 'dotprod_ionb_norm', 'dotprod_iony_norm', 'cos_norm',
+        'cos_ionb_norm', 'cos_iony_norm', 'spec_pearson', 'ionb_pearson', 'iony_pearson',
+        'spec_spearman', 'ionb_spearman', 'iony_spearman', 'spec_mse', 'ionb_mse',
+        'iony_mse', 'min_abs_diff_iontype', 'max_abs_diff_iontype', 'min_abs_diff',
+        'max_abs_diff', 'abs_diff_Q1', 'abs_diff_Q2', 'abs_diff_Q3', 'mean_abs_diff',
+        'std_abs_diff', 'ionb_min_abs_diff', 'ionb_max_abs_diff', 'ionb_abs_diff_Q1',
+        'ionb_abs_diff_Q2', 'ionb_abs_diff_Q3', 'ionb_mean_abs_diff', 'ionb_std_abs_diff',
+        'iony_min_abs_diff', 'iony_max_abs_diff', 'iony_abs_diff_Q1', 'iony_abs_diff_Q2',
+        'iony_abs_diff_Q3', 'iony_mean_abs_diff', 'iony_std_abs_diff', 'dotprod', 'dotprod_ionb',
+        'dotprod_iony', 'cos', 'cos_ionb', 'cos_iony']
+    norm_features = pd.DataFrame(StandardScaler().fit_transform(X=all_features.loc[:, norm_cols]), columns=norm_cols)
+    all_features.loc[:, norm_features.columns] = norm_features
     all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features.csv', sep=',', index=False)
 
 
@@ -421,56 +445,62 @@ def write_pin_files(path_to_features, savepath):
         'iony_abs_diff_Q3', 'iony_mean_abs_diff', 'iony_std_abs_diff', 'dotprod', 'dotprod_ionb',
         'dotprod_iony', 'cos', 'cos_ionb', 'cos_iony']
 
-    all_features = pd.read_csv(path_to_features, sep=',')
+    sel_features = ['IsotopeError', 'lnExplainedIonCurrentRatio', 'Charge2',
+        'Charge4', 'enzN', 'enzC', 'enzInt', 'peplen', 'spec_pearson_norm',
+        'iony_pearson_norm', 'std_abs_diff_norm', 'ionb_max_abs_diff_norm',
+        'iony_abs_diff_Q3_norm', 'cos_ionb_norm', 'spec_pearson',
+        'iony_pearson', 'ionb_mse', 'ionb_mean_abs_diff', 'cos']
 
+
+    all_features = pd.read_csv(path_to_features, sep=',')
     # Writing files with appropriate columns
-    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + rescore_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_rescore.pin'.format(savepath), sep='\t', index=False)
+    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + sel_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_rescore.pin'.format(savepath), sep='\t', index=False)
     all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_percolator.pin'.format(savepath), sep='\t', index=False)
     all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
     return None
 
-def format_output(path_to_pout, search_engine, savepath, fig=True):
-    out = pd.concat([pd.read_csv(path_to_pout+".pout", sep='\t'), pd.read_csv(path_to_pout+".pout_dec", sep='\t')])
-    inp = pd.read_csv(path_to_pout+".pin", sep='\t')
+def format_output(path_to_pout, search_engine, savepath, fname, fig=True):
+    out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout+"_dec", sep='\t')])
+    inp = pd.read_csv(fname + '_all_features.csv')
 
     if search_engine == "MSGFPlus":
         out['Label'] = [-1 if p.startswith('XXX') else 1 for p in out.proteinIds]
-        score = 'RawScore'
+        score = 'lnEValue'
 
     if fig:
         f, axes = plt.subplots(4,3, figsize=(16,21))
 
         sns.boxplot(data=inp, y=score, x='Label', ax=axes[0][0])
 
-        sns.distplot(inp.loc[inp.Label == 1, score], kde=False, ax=axes[0][1])
         sns.distplot(inp.loc[inp.Label == -1, score], kde=False, ax=axes[0][1])
+        sns.distplot(inp.loc[inp.Label == 1, score], kde=False, ax=axes[0][1])
 
-        sns.distplot(inp.loc[inp.Label == 1, score], hist=False, ax=axes[0][2])
         sns.distplot(inp.loc[inp.Label == -1, score], hist=False, ax=axes[0][2])
+        sns.distplot(inp.loc[inp.Label == 1, score], hist=False, ax=axes[0][2])
 
         sns.boxplot(data=out, y='score', x='Label', ax=axes[1][0])
 
-        sns.distplot(out.loc[out.Label == 1, 'score'], kde=False, ax=axes[1][1])
         sns.distplot(out.loc[out.Label == -1, 'score'], kde=False, ax=axes[1][1])
+        sns.distplot(out.loc[out.Label == 1, 'score'], kde=False, ax=axes[1][1])
 
-        sns.distplot(out.loc[out.Label == 1, 'score'], hist=False, ax=axes[1][2])
         sns.distplot(out.loc[out.Label == -1, 'score'], hist=False, ax=axes[1][2])
+        sns.distplot(out.loc[out.Label == 1, 'score'], hist=False, ax=axes[1][2])
 
         sns.boxplot(data=out, y='q-value', x='Label', ax=axes[2][0])
 
-        sns.distplot(out.loc[out.Label == 1, 'q-value'], kde=False, ax=axes[2][1])
         sns.distplot(out.loc[out.Label == -1, 'q-value'], kde=False, ax=axes[2][1])
+        sns.distplot(out.loc[out.Label == 1, 'q-value'], kde=False, ax=axes[2][1])
 
-        sns.distplot(out.loc[out.Label == 1, 'q-value'], hist=False, ax=axes[2][2])
         sns.distplot(out.loc[out.Label == -1, 'q-value'], hist=False, ax=axes[2][2])
+        sns.distplot(out.loc[out.Label == 1, 'q-value'], hist=False, ax=axes[2][2])
 
         sns.boxplot(data=out, y='posterior_error_prob', x='Label', ax=axes[3][0])
 
-        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], kde=False, ax=axes[3][1])
         sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], kde=False, ax=axes[3][1])
+        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], kde=False, ax=axes[3][1])
 
-        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], hist=False, ax=axes[3][2])
         sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], hist=False, ax=axes[3][2])
+        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], hist=False, ax=axes[3][2])
 
         axes[0][1].set_xlim([np.min(inp[score]), np.max(inp[score])])
         axes[0][2].set_xlim([np.min(inp[score]), np.max(inp[score])])
