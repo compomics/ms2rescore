@@ -139,16 +139,16 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
     if concat:
         pepfile_tosave = pepfile.loc[:, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep='\t', index=False)
+        pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep=' ', index=False)
 
     else:
         pepfile_tosave = pepfile.loc[pepfile.Label == 1, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep='\t', index=False)
+        pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep=' ', index=False)
 
         pepfile_tosave = pepfile.loc[pepfile.Label == -1, ['TITLE', 'modifications','peptide', 'Charge', 'Label']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label']
-        pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep='\t', index=False)
+        pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
 
     return None
 
@@ -376,11 +376,9 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
     else:
         all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
     all_features = all_features.drop(all_features.loc[:,all_features.columns.str.endswith('.1')], axis=1)
-    norm_cols = ['peplen', 'charge',
-        'spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
+    norm_cols = ['spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
         'spec_spearman_norm', 'ionb_spearman_norm', 'iony_spearman_norm',
-        'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm', 'min_abs_diff_iontype_norm',
-        'max_abs_diff_iontype_norm', 'min_abs_diff_norm', 'max_abs_diff_norm',
+        'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm', 'min_abs_diff_norm', 'max_abs_diff_norm',
         'abs_diff_Q1_norm', 'abs_diff_Q2_norm', 'abs_diff_Q3_norm', 'mean_abs_diff_norm',
         'std_abs_diff_norm', 'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
         'ionb_abs_diff_Q1_norm', 'ionb_abs_diff_Q2_norm', 'ionb_abs_diff_Q3_norm',
@@ -390,8 +388,7 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
         'dotprod_norm', 'dotprod_ionb_norm', 'dotprod_iony_norm', 'cos_norm',
         'cos_ionb_norm', 'cos_iony_norm', 'spec_pearson', 'ionb_pearson', 'iony_pearson',
         'spec_spearman', 'ionb_spearman', 'iony_spearman', 'spec_mse', 'ionb_mse',
-        'iony_mse', 'min_abs_diff_iontype', 'max_abs_diff_iontype', 'min_abs_diff',
-        'max_abs_diff', 'abs_diff_Q1', 'abs_diff_Q2', 'abs_diff_Q3', 'mean_abs_diff',
+        'iony_mse', 'min_abs_diff', 'max_abs_diff', 'abs_diff_Q1', 'abs_diff_Q2', 'abs_diff_Q3', 'mean_abs_diff',
         'std_abs_diff', 'ionb_min_abs_diff', 'ionb_max_abs_diff', 'ionb_abs_diff_Q1',
         'ionb_abs_diff_Q2', 'ionb_abs_diff_Q3', 'ionb_mean_abs_diff', 'ionb_std_abs_diff',
         'iony_min_abs_diff', 'iony_max_abs_diff', 'iony_abs_diff_Q1', 'iony_abs_diff_Q2',
