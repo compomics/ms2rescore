@@ -12,7 +12,7 @@ Use features calculated from comparing experimental spectra with computationally
   - pandas
   - scikit-learn
   - scipy
-  - pyteomics
+  - xmltodict
   - matplotlib
   - seaborn
 
