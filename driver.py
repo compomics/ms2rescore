@@ -35,7 +35,7 @@ if __name__ == "__main__":
         rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.fasta_file, config["search_engine_options"])
         # Convert .mzid to pin. XXX is the decoy pattern from MSGF+
         convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(fname, fname)
-        sys.stdout.write("Converting .mzid file to pin file:")
+        sys.stdout.write("\nConverting .mzid file to pin file:")
         sys.stdout.flush()
         subprocess.run(convert_command, shell=True)
     else:
