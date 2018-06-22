@@ -7,9 +7,8 @@ import sys
 import subprocess
 import os
 import json
-import pandas as pd
 
-from mapper import mapper
+import mapper
 import rescore
 
 if __name__ == "__main__":
