@@ -93,7 +93,7 @@ def make_pepfile(path_to_pin):
                         pep = pep.replace(mod, '', 1)
                 except:
                         print('Modification not expected: {}'.format(mod))
-                        modstring = modstring.rstrip('|')
+            modstring = modstring.rstrip('|')
         else:
             modstring = ''
         return modstring
