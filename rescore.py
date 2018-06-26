@@ -64,6 +64,52 @@ def make_pepfile(path_to_pin):
     :pd.DataFrame pepfile, columns ['TITLE', 'Peptide', 'Charge', 'Label',
         'modifications']
     """
+
+    def parse_mods(modseq):
+        """
+        function to parse modifications from pin file and write them in
+        PEPREC column
+        """
+        # TODO additional modifications must be added here
+        # the keys correspond to the UNIMOD keys for each modification
+        modifications = {'1': 'Acetylation',
+                      '4': 'Cam',
+                      '35': 'Oxidation',
+                      '21': 'Phospho'}
+        if 'UNIMOD' in modseq:
+            pep = modseq.split('.')[1]
+            mods = re.findall(r'\[([^]]*)\]', pep)
+            modstring = ''
+            for mod in mods:
+                mod = '[' + mod + ']'
+                key = mod.split(':')[1].rstrip(']')
+                try:
+                    if key == '21':
+                        phospholoc = pep[pep.find(mod)-1]
+                        modstring += str(pep.find(mod)) + '|' + modifications[key] + phospholoc + '|'
+                        pep = pep.replace(mod, '', 1)
+                    else:
+                        modstring += str(pep.find(mod)) + '|' + modifications[key] + '|'
+                        pep = pep.replace(mod, '', 1)
+                except:
+                        print('Modification not expected: {}'.format(mod))
+                        modstring = modstring.rstrip('|')
+        else:
+            modstring = ''
+        return modstring
+
+    def parse_pepseq(modseq):
+        """
+        function to parse unmodified peptide sequence from pin file and write
+        to PEPREC file
+        """
+        pep = modseq.split('.')[1]
+        if 'UNIMOD' in pep:
+            mods = re.findall(r'\[([^]]*)\]', pep)
+            for mod in mods:
+                pep = pep.replace('[' + mod + ']', '', 1)
+        return pep
+
     pin = pd.read_csv(path_to_pin, sep='\t', header=0, skiprows=[1])
 
     charge_states = []
@@ -80,50 +126,11 @@ def make_pepfile(path_to_pin):
     pepfile = pin.loc[:, ['TITLE', 'Peptide', 'Charge', 'Label']]
 
     # Add modifications column to PEPREC file
-    # TODO: read modifications from MSGF+ modifications file OR write dict with
-    # all UNIMOD modifications
-    # the keys correspond to the UNIMOD keys for each modification
-    modifications = {'1': 'Acetylation',
-                     '4': 'Cam',
-                     '35': 'Oxidation',
-                     '21': 'Phospho'}
-
-    modlist = []
-    # TODO get rid of iterrows!
-    for _, row in pepfile.iterrows():
-        if 'UNIMOD' in row['Peptide']:
-            pep = row['Peptide'].split('.')[1]
-            mods = re.findall(r'\[([^]]*)\]', pep)
-            modstring = ''
-            for mod in mods:
-                mod = '[' + mod + ']'
-                key = mod.split(':')[1].rstrip(']')
-                try:
-                    if key == '21':
-                        phospholoc = pep[pep.find(mod)-1]
-                        modstring += str(pep.find(mod)) + '|' + modifications[key] + phospholoc + '|'
-                        pep = pep.replace(mod, '', 1)
-                    else:
-                        modstring += str(pep.find(mod)) + '|' + modifications[key] + '|'
-                        pep = pep.replace(mod, '', 1)
-                except:
-                    print('Modification not expected: {}'.format(mod))
-            modlist.append(modstring.rstrip('|'))
-        else:
-            modlist.append('')
-    pepfile.loc[:, 'modifications'] = modlist
+    pepfile.loc[:, 'modifications'] = pepfile.Peptide.apply(parse_mods)
+    pepfile.modifications.fillna('', inplace=True)
 
     # Rewrite peptide sequences without the UNIMOD modification ids
-    pep_list = []
-    for _, row in pepfile.iterrows():
-        pep = row['Peptide']
-        pep = pep.split('.')[1]
-        if 'UNIMOD' in pep:
-            mods = re.findall(r'\[([^]]*)\]', pep)
-            for mod in mods:
-                pep = pep.replace('[' + mod + ']', '', 1)
-        pep_list.append(pep)
-    pepfile.loc[:, 'peptide'] = pep_list
+    pepfile.loc[:, 'peptide'] = pepfile.Peptide.apply(parse_pepseq)
 
     write_PEPREC(pepfile, path_to_pin)
 
