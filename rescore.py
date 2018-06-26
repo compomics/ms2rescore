@@ -3,14 +3,9 @@ Functions necessary to run the rescore algorithm. Currently supports MSGF+ with
 concatenated searches.
 """
 
-import subprocess
 import multiprocessing
-import sys
-import re
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
 
