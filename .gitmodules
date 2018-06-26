@@ -1,6 +1,3 @@
 [submodule "ms2pip_c"]
 	path = ms2pip_c
 	url = https://github.com/anasilviacs/ms2pip_c.git
-[submodule "mapper"]
-	path = mapper
-	url = https://github.com/anasilviacs/mapper.git
