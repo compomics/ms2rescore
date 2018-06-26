@@ -32,7 +32,8 @@ if __name__ == "__main__":
 
     # Run ms2pip
     MS2PIP_DIR = config["ms2pip"]["dir"]
-    ms2pip_command = "python {}/ms2pipC.py {} -c {}/ms2pip.config -s {}".format(MS2PIP_DIR, fname + ".PEPREC", MS2PIP_DIR, args.spec_file)
+    rescore.make_ms2pip_config(config)
+    ms2pip_command = "python {}/ms2pipC.py {} -c {}/ms2pip.config -s {}".format(MS2PIP_DIR, args.peprec, MS2PIP_DIR, args.spec_file)
     sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)
@@ -45,10 +46,9 @@ if __name__ == "__main__":
 
     sys.stdout.write("Generating pin file... ")
     sys.stdout.flush()
-    # TODO change this to reflect absence of default pin file
-    rescore.join_features(fname + "_all_features.csv", fname + ".pin")
+    rescore.norm_features(fname + "_all_features.csv")
 
-    rescore.write_pin_files(fname + "_all_features.csv", fname)
+    rescore.write_pin_files(fname + "_all_features.csv", args.peprec, fname)
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
