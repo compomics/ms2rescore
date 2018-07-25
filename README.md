@@ -20,7 +20,7 @@ Clone this repository. This includes the submodule  [MS2PIP](https://github.com/
 git clone --recurse-submodules git://github.com/anasilviacs/rescore.git
 ```
 
-Go into the folder `ms2pip_c` and run the bash script `compile.sh`. For more details, please refer to the `ms2pip_c` repository.
+Go into the folder `ms2pip_c` and run the bash script `compile.sh`. For more details, please refer to the [ms2pip_c](https://github.com/compomics/ms2pip_c) repository.
 
 ## Usage
 
