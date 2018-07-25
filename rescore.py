@@ -15,7 +15,7 @@ def make_ms2pip_config(options):
     file.
     """
 
-    ms2pip_config = open(options["ms2pip"]["dir"] + "ms2pip.config", 'wt')
+    ms2pip_config = open("ms2pip.config", 'wt')
 
     if options["ms2pip"]["frag"] == "CID":
         ms2pip_config.write("frag_method=CID\n")
