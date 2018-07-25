@@ -4,6 +4,7 @@ concatenated searches.
 """
 
 import multiprocessing
+import os
 import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_squared_error
@@ -14,8 +15,8 @@ def make_ms2pip_config(options):
     write configuration file for ms2pip based on what's on the rescore config
     file.
     """
-
-    ms2pip_config = open("ms2pip.config", 'wt')
+    cwd = os.getcwd()
+    ms2pip_config = open(cwd + "ms2pip.config", 'wt')
 
     if options["ms2pip"]["frag"] == "CID":
         ms2pip_config.write("frag_method=CID\n")
