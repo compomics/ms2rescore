@@ -15,7 +15,10 @@ Use features calculated from comparing experimental spectra with computationally
 
 ### Installing
 
-Clone this repository. This includes the submodule  [MS2PIP](https://github.com/anasilviacs/ms2pip_c/tree/6f037dc2d0797cd25061aaed8091d625123971e1).
+Clone this repository. This includes the submodule  [MS2PIP](https://github.com/anasilviacs/ms2pip_c/tree/6f037dc2d0797cd25061aaed8091d625123971e1). To include this submodule, you must clone this repository using the `--recurse-submodules` flag:
+```
+git clone --recurse-submodules git://github.com/anasilviacs/rescore.git
+```
 
 Go into the folder `ms2pip_c` and run the bash script `compile.sh`. For more details, please refer to the `ms2pip_c` repository.
 
