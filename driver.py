@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # Run ms2pip
     MS2PIP_DIR = config["ms2pip"]["dir"]
     rescore.make_ms2pip_config(config)
-    ms2pip_command = "python {}/ms2pipC.py {} -c ms2pip.config -s {}".format(MS2PIP_DIR, args.peprec, MS2PIP_DIR, args.spec_file)
+    ms2pip_command = "python {}/ms2pipC.py {} -c ms2pip.config -s {} -m {}".format(MS2PIP_DIR, args.peprec, args.spec_file, config["ms2pip"]["num_cpu"])
     sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)

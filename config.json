@@ -1,6 +1,7 @@
 {
   "ms2pip": {
     "dir": "ms2pip_c",
-    "frag": "HCD"
+    "frag": "HCD",
+    "num_cpu": 24
   }
 }
