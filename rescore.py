@@ -16,7 +16,7 @@ def make_ms2pip_config(options):
     file.
     """
     cwd = os.getcwd()
-    ms2pip_config = open(cwd + "ms2pip.config", 'wt')
+    ms2pip_config = open(cwd + "/ms2pip.config", 'wt')
 
     if options["ms2pip"]["frag"] == "CID":
         ms2pip_config.write("frag_method=CID\n")
@@ -67,7 +67,7 @@ def compute_features(df):
         'iony_min_abs_diff', 'iony_max_abs_diff', 'iony_abs_diff_Q1',
         'iony_abs_diff_Q2', 'iony_abs_diff_Q3', 'iony_mean_abs_diff',
         'iony_std_abs_diff', 'dotprod', 'dotprod_ionb', 'dotprod_iony', 'cos',
-        'cos_ionb', 'cos_iony'])
+        'cos_ionb', 'cos_iony', 'Label'])
 
     for peptide in df.spec_id.unique():
         tmp = df[df.spec_id == peptide].copy()
@@ -79,6 +79,7 @@ def compute_features(df):
         feats["spec_id"] = tmp["spec_id"].unique()[0]
         feats["peplen"] = tmp["peplen"].unique()[0]
         feats["charge"] = tmp["charge"].unique()[0]
+        feats["Label"] = tmp["Label"].unique()[0]
 
         # calculation of features between normalized spectra
         feats["spec_pearson_norm"] = tmp["target"].corr(tmp["prediction"])
@@ -183,14 +184,18 @@ def compute_features(df):
         rescore_features = rescore_features.append(feats, ignore_index=True)
     return rescore_features
 
-def calculate_features(path_to_pred_and_emp, path_to_out):
+def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
     """
     parallelize calculation of features and write them into a csv file
     """
-    num_cpu = 20
+
     myPool = multiprocessing.Pool(num_cpu)
 
     df = pd.read_csv(path_to_pred_and_emp)
+    peprec = pd.read_csv(path_to_pred_and_emp.replace('_pred_and_emp.csv', '.PEPREC'), sep=' ', index_col='spec_id')
+    label_dict = peprec['Label'].to_dict()
+    df['Label'] = df.spec_id.map(label_dict)
+
     peptides = list(df.spec_id.unique())
     split_peptides = [peptides[i * len(peptides) // num_cpu: (i + 1) * len(peptides) // num_cpu] for i in range(num_cpu)]
 
