@@ -1,6 +1,6 @@
 # ReScore
 
-Use features calculated from comparing experimental spectra with computationally generated spectra (see [MS2PIP](https://github.com/sdgroeve/ms2pip_c)) to re-score peptide identifications using [Percolator](https://github.com/percolator/percolator/).
+Use features calculated from comparing experimental spectra with computationally generated spectra (see [MS2PIP](https://github.com/sdgroeve/ms2pip_c)) to re-score peptide identifications using [Percolator](https://github.com/percolator/percolator/). If you are interested in reproducing the results shown in _no title yet sry_, please refer to the [wiki page](https://github.com/anasilviacs/rescore/wiki/Reproducing-manuscript-results).
 
 ## Prerequisites
 
