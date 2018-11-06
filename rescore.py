@@ -29,20 +29,16 @@ def make_ms2pip_config(options):
         ms2pip_config.write("frag_error=0.02\n")
 
     ms2pip_config.write("\n")
-    ms2pip_config.write("ptm=PhosphoS,79.966331,opt,S\n")
-    ms2pip_config.write("ptm=PhosphoT,79.966331,opt,T\n")
-    ms2pip_config.write("ptm=PhosphoY,79.966331,opt,Y\n")
-    ms2pip_config.write("ptm=Oxidation,15.994915,opt,M\n")
-    ms2pip_config.write("ptm=Carbamidomethyl,57.021464,opt,C\n")
-    ms2pip_config.write("ptm=Glu->pyro-Glu,-18.010565,opt,E\n")
-    ms2pip_config.write("ptm=Gln->pyro-Glu,-17.026549,opt,Q\n")
-    ms2pip_config.write("ptm=Pyro-carbamidomethyl,39.994915,opt,C\n")
-    ms2pip_config.write("ptm=ptm=Pyro-carbamidomethyl,39.994915,opt,C\n")
-    ms2pip_config.write("ptm=Deamidated,0.984016,opt,N\n")
-    ms2pip_config.write("ptm=iTRAQ,144.102063,opt,N-term\n")
-    ms2pip_config.write("ptm=Acetyl,42.010565,opt,N-term\n")
-    ms2pip_config.write("ptm=TMT6plexN,229.162932,opt,N-term\n")
-    ms2pip_config.write("ptm=TMT6plex,229.162932,opt,K\n")
+
+    modifications = options["ms2pip"]["modifications"]
+    for mod in modifications:
+        if mod["amino_acid"] == None and mod["n_term"] == True:
+            aa = "N-term"
+        else:
+            aa = mod["amino_acid"]
+        print([mod["name"], str(mod["mass_shift"]), "opt", aa])
+        tmp = ','.join([mod["name"], str(mod["mass_shift"]), "opt", aa])
+        ms2pip_config.write("ptm=" + tmp + "\n")
 
     ms2pip_config.close()
 
