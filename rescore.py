@@ -16,7 +16,7 @@ def make_ms2pip_config(options):
     file.
     """
     cwd = os.getcwd()
-    ms2pip_config = open(cwd + "/ms2pip.config", 'wt')
+    ms2pip_config = open(cwd + "/rescore_config.txt", 'wt')
 
     if options["ms2pip"]["frag"] == "CID":
         ms2pip_config.write("frag_method=CID\n")
@@ -33,8 +33,16 @@ def make_ms2pip_config(options):
     ms2pip_config.write("ptm=PhosphoT,79.966331,opt,T\n")
     ms2pip_config.write("ptm=PhosphoY,79.966331,opt,Y\n")
     ms2pip_config.write("ptm=Oxidation,15.994915,opt,M\n")
-    ms2pip_config.write("ptm=Cam,57.021464,opt,C\n")
-    ms2pip_config.write("ptm=Acetylation,42.010565,opt,K\n")
+    ms2pip_config.write("ptm=Carbamidomethyl,57.021464,opt,C\n")
+    ms2pip_config.write("ptm=Glu->pyro-Glu,-18.010565,opt,E\n")
+    ms2pip_config.write("ptm=Gln->pyro-Glu,-17.026549,opt,Q\n")
+    ms2pip_config.write("ptm=Pyro-carbamidomethyl,39.994915,opt,C\n")
+    ms2pip_config.write("ptm=ptm=Pyro-carbamidomethyl,39.994915,opt,C\n")
+    ms2pip_config.write("ptm=Deamidated,0.984016,opt,N\n")
+    ms2pip_config.write("ptm=iTRAQ,144.102063,opt,N-term\n")
+    ms2pip_config.write("ptm=Acetyl,42.010565,opt,N-term\n")
+    ms2pip_config.write("ptm=TMT6plexN,229.162932,opt,N-term\n")
+    ms2pip_config.write("ptm=TMT6plex,229.162932,opt,K\n")
 
     ms2pip_config.close()
 
