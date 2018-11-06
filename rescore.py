@@ -42,7 +42,7 @@ def compute_features(df):
     conv = {}
     conv['b'] = 0
     conv['y'] = 1
-    rescore_features = pd.DataFrame(columns=['spec_id', 'peplen', 'charge',
+    rescore_features = pd.DataFrame(columns=['spec_id', 'charge',
         'spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
         'spec_spearman_norm', 'ionb_spearman_norm', 'iony_spearman_norm',
         'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
@@ -77,7 +77,6 @@ def compute_features(df):
         feats = {}
 
         feats["spec_id"] = tmp["spec_id"].unique()[0]
-        feats["peplen"] = tmp["peplen"].unique()[0]
         feats["charge"] = tmp["charge"].unique()[0]
 
         # calculation of features between normalized spectra
