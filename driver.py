@@ -28,7 +28,7 @@ if __name__ == "__main__":
     with open(args.config_file) as f:
         config = json.load(f)
 
-    fname = args.spec_file.rstrip(".mgf")
+    fname = args.peprec.rstrip(".PEPREC")
 
     # Run ms2pip
     MS2PIP_DIR = config["ms2pip"]["dir"]
