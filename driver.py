@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     sys.stdout.write("Calculating features from predicted spectra... ")
     sys.stdout.flush()
-    rescore.calculate_features(fname + "_pred_and_emp.csv", fname + "_all_features.csv", config["ms2pip"]["num_cpu"])
+    rescore.calculate_features(fname + "_" + config["ms2pip"]["frag"] + "_pred_and_emp.csv", fname + "_all_features.csv", config["ms2pip"]["num_cpu"])
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
