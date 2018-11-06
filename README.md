@@ -1,6 +1,6 @@
 # ReScore
 
-Use features calculated from comparing experimental spectra with computationally generated spectra (see [MS2PIP](https://github.com/sdgroeve/ms2pip_c)) to re-score peptide identifications using [Percolator](https://github.com/percolator/percolator/). If you are interested in reproducing the results shown in _no title yet sry_, please refer to the [wiki page](https://github.com/anasilviacs/rescore/wiki/Reproducing-manuscript-results).
+Use features calculated from comparing experimental spectra with computationally generated spectra (see [MS2PIP](https://github.com/sdgroeve/ms2pip_c)) to re-score peptide identifications using [Percolator](https://github.com/percolator/percolator/). If you are interested in reproducing the results shown in [_Accurate peptide fragmentation predictions allow data driven approaches to replace and improve upon proteomics search engine scoring functions (bioRxiv)_](https://www.biorxiv.org/content/early/2018/10/03/428805), please refer to the [wiki page](https://github.com/anasilviacs/rescore/wiki/Reproducing-manuscript-results).
 
 ## Prerequisites
 
@@ -36,13 +36,14 @@ python driver.py <mgf file> <peprec file> <config file>
 - `<peprec file>` is the peptide list file
 - `<config file>` is json with configurations for MS2PIP. A reference file that can be adapted is included in this repository.
 
+An example configuration file is included (`config.json`). The modifications in the `<PEPREC file>` should match the modification names in `config.json`. This file already includes several modifications, but more can be added by following the same structure.
+
 
 ### Output
 
-Several intermediate files are created when the entire pipeline is ran. Their names are all built from the `<mgf file>` name and are stored in that file's folder. They are the following:
+Several intermediate files are created when the entire pipeline is ran. Their names are all built based on the `<PEPREC file>` name and are stored in that file's folder. They are the following:
 
 - `<mgf file>_pred_and_emp.csv` is one of the outputs of MS2PIP that includes the predicted and empirical intensity for each peak;
-- `<mgf file>_correlations.csv` is the other MS2PIP output and includes the Pearson correlations between the predicted and empirical spectra;
 - `<mgf file>_all_features.csv` includes all the spectral features that were calculated;
 - `<mgf file>.pin` is a Percolator INput file that includes the calculated features.
 
