@@ -36,7 +36,6 @@ def make_ms2pip_config(options):
             aa = "N-term"
         else:
             aa = mod["amino_acid"]
-        print([mod["name"], str(mod["mass_shift"]), "opt", aa])
         tmp = ','.join([mod["name"], str(mod["mass_shift"]), "opt", aa])
         ms2pip_config.write("ptm=" + tmp + "\n")
 
