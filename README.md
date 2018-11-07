@@ -24,7 +24,7 @@ Go into the folder `ms2pip_c` and run the bash script `compile.sh`. For more det
 
 ## Usage
 
-To run the entire pipeline from the beginning, you need a spectrum file in the [MGF format](http://www.matrixscience.com/help/data_file_help.html) and a peptide list in the [PEPREC format](https://github.com/anasilviacs/ms2pip_c/tree/7b89618f236c84aed3c171132f690556c757b6b5).
+To run the entire pipeline from the beginning, you need a spectrum file in the [MGF format](http://www.matrixscience.com/help/data_file_help.html) and a peptide list in the [PEPREC format](https://github.com/anasilviacs/ms2pip_c/tree/7b89618f236c84aed3c171132f690556c757b6b5). The file should have an additional column, `Label`, where target PSMs have a value of `1` and decoys of `-1`, and `Protein`, with the protein identifiers the PSM is associated with (this is optional for the execution of the pipeline, but likely important for posterior analysis).
 
 Run the pipeline as follows:
 
