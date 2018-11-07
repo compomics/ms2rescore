@@ -28,7 +28,7 @@ if __name__ == "__main__":
         config = json.load(f)
 
     fname = args.spec_file.rstrip(".mgf")
-
+    
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
         MSGF_DIR = config["search_engine_options"]["dir"]
@@ -78,15 +78,15 @@ if __name__ == "__main__":
 
     sys.stdout.write("Calculating features from predicted spectra... ")
     sys.stdout.flush()
-    rescore.calculate_features(fname + "_" + config["ms2pip"]["frag"] + "_pred_and_emp.csv", fname + "_all_features.csv", config["ms2pip"]["num_cpu"])
+    rescore.calculate_features(fname + "_" + config["ms2pip"]["frag"] + "_pred_and_emp.csv", fname + "_all_features_norm.csv", config["ms2pip"]["num_cpu"])
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
     sys.stdout.write("Generating pin files with different features... ")
     sys.stdout.flush()
-    rescore.join_features(fname + "_all_features.csv", fname + ".pin")
+    rescore.join_features(fname + "_all_features_norm.csv", fname + ".pin")
 
-    rescore.write_pin_files(fname + "_all_features.csv", fname)
+    rescore.write_pin_files(fname + "_all_features_norm.csv", fname)
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
