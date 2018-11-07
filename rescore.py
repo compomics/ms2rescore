@@ -439,7 +439,7 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
 
     # Writing files with ordered columns
     complete_df.loc[:, ['SpecId', 'Label', 'ScanNr'] + features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}.pin'.format(savepath), sep='\t', index=False)
-return None
+    return None
 
 def format_output(path_to_pout, search_engine, savepath, fname, fig=True):
     out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout+"_dec", sep='\t')])
