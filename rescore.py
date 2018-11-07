@@ -296,7 +296,7 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
     # Add artificial protein column, scan numbers and flanking aminoacids to
     # peptide sequences
     complete_df['ScanNr'] = list(range(len(complete_df)))
-    complete_df['Proteins'] = complete_df['Peptide']
+    complete_df['Proteins'] = complete_df['Proteins']
     complete_df['Peptide'] = 'X.' + complete_df.Peptide + '.X'
 
     # Writing files with ordered columns
