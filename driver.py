@@ -28,7 +28,7 @@ if __name__ == "__main__":
         config = json.load(f)
 
     fname = args.spec_file.rstrip(".mgf")
-    
+
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
         MSGF_DIR = config["search_engine_options"]["dir"]

@@ -408,6 +408,7 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
         'iony_mean_abs_diff', 'iony_std_abs_diff', 'dotprod', 'dotprod_ionb',
         'dotprod_iony', 'cos', 'cos_ionb', 'cos_iony']
 
+    all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features.csv', sep=',', index=False)
     norm_features = pd.DataFrame(StandardScaler().fit_transform(X=all_features.loc[:, norm_cols]), columns=norm_cols)
     all_features.loc[:, norm_features.columns] = norm_features
     all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features_norm.csv', sep=',', index=False)
