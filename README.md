@@ -15,7 +15,7 @@ Use features calculated from comparing experimental spectra with computationally
 
 ### Installing
 
-Clone this repository. This includes the submodule  [MS2PIP](https://github.com/anasilviacs/ms2pip_c/tree/6f037dc2d0797cd25061aaed8091d625123971e1). To include this submodule, you must clone this repository using the `--recurse-submodules` flag:
+Clone this repository. This includes the submodule  [MS2PIP](https://github.com/anasilviacs/ms2pip_c/tree/7b89618f236c84aed3c171132f690556c757b6b5). To include this submodule, you must clone this repository using the `--recurse-submodules` flag:
 ```
 git clone --recurse-submodules git://github.com/anasilviacs/rescore.git
 ```
@@ -24,7 +24,7 @@ Go into the folder `ms2pip_c` and run the bash script `compile.sh`. For more det
 
 ## Usage
 
-To run the entire pipeline from the beginning, you need a spectrum file in the [MGF format](http://www.matrixscience.com/help/data_file_help.html) and a peptide list in the [PEPREC format](https://github.com/anasilviacs/ms2pip_c/tree/6f037dc2d0797cd25061aaed8091d625123971e1).
+To run the entire pipeline from the beginning, you need a spectrum file in the [MGF format](http://www.matrixscience.com/help/data_file_help.html) and a peptide list in the [PEPREC format](https://github.com/anasilviacs/ms2pip_c/tree/7b89618f236c84aed3c171132f690556c757b6b5).
 
 Run the pipeline as follows:
 
