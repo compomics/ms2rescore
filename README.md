@@ -2,9 +2,11 @@
 
 Use features calculated from comparing experimental spectra with computationally generated spectra (see [MS2PIP](https://github.com/sdgroeve/ms2pip_c)) to re-score peptide identifications using [Percolator](https://github.com/percolator/percolator/).
 
+This branch starts with a FASTA and an MGF file, runs a search using MS-GF+, generates the MS2PIP input file and runs MS2PIP. From the MS2PIP output the spectral comparison features are generated. Three pin files are written: one with the default features, one with the MS2PIP features and a third with all of them in a single file. Percolator is called on each of these files, creating two pout files (one for targets and one for decoys) for each pin file.
+
 ## Prerequisites
 
-- [MS-GF+](https://omics.pnl.gov/software/ms-gf): currently, MS-GF+ is the only supported search engine
+- [MS-GF+](https://omics.pnl.gov/software/ms-gf)
 - [Percolator](https://github.com/percolator/percolator/)
 - Python 3
 
@@ -18,7 +20,11 @@ Use features calculated from comparing experimental spectra with computationally
 
 ### Installing
 
-Clone this repository. This includes the submodules [mapper](https://github.com/anasilviacs/mapper/tree/0ee46adcbb20a118a8274908255cc8b3f95a51db) and [MS2PIP](https://github.com/anasilviacs/ms2pip_c/tree/6f037dc2d0797cd25061aaed8091d625123971e1).
+Clone this repository. This includes the submodules [mapper](https://github.com/anasilviacs/mapper/tree/0ee46adcbb20a118a8274908255cc8b3f95a51db) and [MS2PIP](https://github.com/anasilviacs/ms2pip_c/tree/6f037dc2d0797cd25061aaed8091d625123971e1). As such, the repository should be called as:
+
+```
+git clone --recurse-submodules git://github.com/anasilviacs/rescore.git
+```
 
 Go into the folder `ms2pip_c` and run the bash script `compile.sh`. For more details, please refer to the `ms2pip_c` repository.
 
@@ -36,7 +42,7 @@ python driver.py <mgf file> <fasta file> <config file>
 - `<fasta file>` is the database file
 - `<config file>` is json with configurations for MS-GF+, MS2PIP and Percolator. A reference file is included in this repository, that can be adapted.
 
-Currently, only MS-GF+ is supported. If you want to use a different search engine and re-score the obtained identifications, you can use the helper functions in `rescore.py` and `mapper.py` to get the necessary files to run MS2PIP, which are a `PEPREC` file and the spectrum file, and to generate the pin files with the different subset of features. Afterwards you can run Percolator as normal.
+Only MS-GF+ is directly supported, but if you want to use a different search engine and re-score the obtained identifications, you can use the helper functions in `rescore.py` and `mapper.py` to get the necessary files to run MS2PIP, which are a `PEPREC` file and the spectrum file, and to generate the pin files with the different subset of features. Afterwards you can run Percolator as normal.
 
 ### Output
 
