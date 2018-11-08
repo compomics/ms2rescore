@@ -1,7 +1,7 @@
 {
   "search_engine": "MSGFPlus",
   "search_engine_options": {
-    "dir": "/home/compomics/software/MSGFPlus",
+    "dir": "/home/compomics/software/MSGFPlus_20181015",
     "frag": "HCD",
     "path_to_modsfile": "modification.txt",
     "min_length": 8,
