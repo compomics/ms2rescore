@@ -43,7 +43,7 @@ def run_msgfplus(msgf_dir, mgffile, fastafile, options):
 
     msgf_command = "java -Xmx28000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t\
          10ppm -tda 1 -m {} -inst {} -minLength {} -minCharge {} -maxCharge {}\
-         -n 1 -addFeatures 1 -protocol 0 -thread 23 > {}.log".format(msgf_dir,
+         -n 1 -e 1 -addFeatures 1 -protocol 0 -thread 23 > {}.log".format(msgf_dir,
          mods, mgffile, fastafile, outfile, m, inst, options["min_length"],
          options["min_charge"], options["max_charge"], mgffile.rstrip(".mgf"))
 
