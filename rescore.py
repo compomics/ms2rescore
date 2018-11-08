@@ -63,7 +63,7 @@ def make_pepfile(path_to_pin, options):
 
     Returns
     :pd.DataFrame pepfile, columns ['TITLE', 'Peptide', 'Charge', 'Label',
-        'modifications']
+        'modifications', 'Proteins']
     """
     pin = pd.read_csv(path_to_pin, sep='\t', header=0, skiprows=[1])
 
@@ -78,7 +78,7 @@ def make_pepfile(path_to_pin, options):
         value = int(ch.lstrip('Charge'))
         pin.loc[pin[ch]==1, 'Charge'] = value
 
-    pepfile = pin.loc[:, ['TITLE', 'Peptide', 'Charge', 'Label']]
+    pepfile = pin.loc[:, ['TITLE', 'Peptide', 'Charge', 'Label', 'Proteins']]
 
     # Add modifications column to PEPREC file
     # the keys correspond to the UNIMOD keys for each modification
@@ -136,17 +136,17 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
     """
 
     if concat:
-        pepfile_tosave = pepfile.loc[:, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label', 'Protein']]
-        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label', 'Protein']
+        pepfile_tosave = pepfile.loc[:, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label', 'Proteins']]
+        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label', 'Proteins']
         pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep=' ', index=False)
 
     else:
-        pepfile_tosave = pepfile.loc[pepfile.Label == 1, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label', 'Protein']]
-        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label', 'Protein']
+        pepfile_tosave = pepfile.loc[pepfile.Label == 1, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label', 'Proteins']]
+        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label', 'Proteins']
         pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep=' ', index=False)
 
-        pepfile_tosave = pepfile.loc[pepfile.Label == -1, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label', 'Protein']]
-        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label', 'Protein']
+        pepfile_tosave = pepfile.loc[pepfile.Label == -1, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label', 'Proteins']]
+        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label', 'Proteins']
         pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
 
     return None
