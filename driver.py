@@ -46,9 +46,9 @@ if __name__ == "__main__":
 
     sys.stdout.write("Generating pin file... ")
     sys.stdout.flush()
-    rescore.norm_features(fname + "_all_features.csv")
+    rescore.norm_features(fname + "_all_features_norm.csv")
 
-    rescore.write_pin_files(fname + "_all_features.csv", args.peprec, fname)
+    rescore.write_pin_files(fname + "_all_features_norm.csv", args.peprec, fname)
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
