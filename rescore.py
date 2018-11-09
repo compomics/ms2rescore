@@ -289,20 +289,19 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
 
     all_features = pd.read_csv(path_to_features, sep=',')
 
-    if type(pep_file) == str:
-        with open(pep_file, 'rt') as f:
+    if type(path_to_pep) == str:
+        with open(path_to_pep, 'rt') as f:
             line = f.readline()
             if line[:7] != 'spec_id':
                 sys.stdout.write('PEPREC file should start with header column\n')
                 exit(1)
             sep = line[7]
-        pep = pd.read_csv(pep_file,
+        pep = pd.read_csv(path_to_pep,
                            sep=sep,
                            index_col=False,
-                           dtype={"spec_id": str, "modifications": str},
-                           nrows=limit)
+                           dtype={"spec_id": str, "modifications": str})
     else:
-        pep = pep_file
+        pep = path_to_pep
     # for some reason the missing values are converted to float otherwise
     pep = pep.fillna("-")
 
