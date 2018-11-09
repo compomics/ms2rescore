@@ -292,7 +292,10 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
     pep = pd.read_csv(path_to_pep, sep=' ')
     complete_df = pd.merge(all_features, pep, on=['spec_id', 'charge'])
     complete_df.rename(mapper={'spec_id': 'SpecId', 'peptide': 'Peptide'}, axis='columns', inplace=True)
-    complete_df['Proteins'] = complete_df['Proteins']
+    if 'Proteins' in complete_df.columns:
+        complete_df['Proteins'] = complete_df['Proteins']
+    else:
+        complete_df['Proteins'] = complete_df.Peptide
 
     # Add artificial scan numbers and flanking aminoacids to peptide sequences
     complete_df['ScanNr'] = list(range(len(complete_df)))
