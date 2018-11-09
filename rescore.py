@@ -289,7 +289,23 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
 
     all_features = pd.read_csv(path_to_features, sep=',')
 
-    pep = pd.read_csv(path_to_pep, sep=' ')
+    if type(pep_file) == str:
+        with open(pep_file, 'rt') as f:
+            line = f.readline()
+            if line[:7] != 'spec_id':
+                sys.stdout.write('PEPREC file should start with header column\n')
+                exit(1)
+            sep = line[7]
+        pep = pd.read_csv(pep_file,
+                           sep=sep,
+                           index_col=False,
+                           dtype={"spec_id": str, "modifications": str},
+                           nrows=limit)
+    else:
+        pep = pep_file
+    # for some reason the missing values are converted to float otherwise
+    pep = pep.fillna("-")
+
     complete_df = pd.merge(all_features, pep, on=['spec_id', 'charge'])
     complete_df.rename(mapper={'spec_id': 'SpecId', 'peptide': 'Peptide'}, axis='columns', inplace=True)
     if 'Proteins' in complete_df.columns:
