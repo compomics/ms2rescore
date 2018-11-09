@@ -26,7 +26,7 @@
       {"name":"TMT6plexN", "unimod_accession":737, "mass_shift":229.162932, "amino_acid":"N", "n_term":false, "fixed":false},
       {"name":"TMT6plex", "unimod_accession":737, "mass_shift":229.162932, "amino_acid":null, "n_term":true, "fixed":false}
     ],
-    "num_cpu": 24
+    "num_cpu": 23
   },
   "percolator": {
     "trainFDR": 0.01

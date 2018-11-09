@@ -27,7 +27,7 @@ if __name__ == "__main__":
     with open(args.config_file) as f:
         config = json.load(f)
 
-    fname = args.spec_file.rstrip(".mgf")
+    fname = args.fasta_file.rstrip(".fasta")
 
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
