@@ -305,6 +305,8 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
     # for some reason the missing values are converted to float otherwise
     pep = pep.fillna("-")
 
+    pep = pep.rename(columns={'label': 'Label', 'proteins': 'Proteins'})
+
     complete_df = pd.merge(all_features, pep, on=['spec_id', 'charge'])
     complete_df.rename(mapper={'spec_id': 'SpecId', 'peptide': 'Peptide'}, axis='columns', inplace=True)
     if 'Proteins' in complete_df.columns:
