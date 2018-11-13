@@ -29,6 +29,7 @@
     "num_cpu": 23
   },
   "percolator": {
-    "trainFDR": 0.01
+    "trainFDR": 0.01,
+    "subset-max-train": 200000
   }
 }
