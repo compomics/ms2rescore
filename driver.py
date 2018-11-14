@@ -27,8 +27,8 @@ if __name__ == "__main__":
     with open(args.config_file) as f:
         config = json.load(f)
 
-    fname = args.fasta_file.rstrip(".fasta")
-
+    fname = args.spec_file.rstrip(".mgf").rstrip(".MGF")
+    
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
         MSGF_DIR = config["search_engine_options"]["dir"]
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     sys.stdout.write("Fixing tabs on pin file... ")
     sys.stdout.flush()
     mapper.fix_pin_tabs(fname + ".pin")
-    os.remove(fname + ".pin")
+    # os.remove(fname + ".pin")
     os.rename(fname + "_fixed.pin", fname + ".pin")
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     # file's TITLE field.
     sys.stdout.write("Adding TITLE to pin file... ")
     sys.stdout.flush()
-    mapper.map_mgf_title(fname + ".pin", fname + ".mzid")
+    mapper.map_mgf_title(fname + ".pin", fname + ".mzid", msgs=False)
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
@@ -78,15 +78,15 @@ if __name__ == "__main__":
 
     sys.stdout.write("Calculating features from predicted spectra... ")
     sys.stdout.flush()
-    rescore.calculate_features(fname + "_" + config["ms2pip"]["frag"] + "_pred_and_emp.csv", fname + "_all_features_norm.csv", config["ms2pip"]["num_cpu"])
+    rescore.calculate_features(fname + "_" + config["ms2pip"]["frag"] + "_pred_and_emp.csv", fname + "_all_features.csv", config["ms2pip"]["num_cpu"])
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
     sys.stdout.write("Generating pin files with different features... ")
     sys.stdout.flush()
-    rescore.join_features(fname + "_all_features_norm.csv", fname + ".pin")
+    rescore.join_features(fname + "_all_features.csv", fname + ".pin")
 
-    rescore.write_pin_files(fname + "_all_features_norm.csv", fname)
+    rescore.write_pin_files(fname + "_all_features.csv", fname)
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
