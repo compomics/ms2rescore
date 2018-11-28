@@ -384,34 +384,7 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
         all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
     all_features = all_features.drop(all_features.loc[:,all_features.columns.str.endswith('.1')], axis=1)
 
-    norm_cols = ['spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
-        'spec_spearman_norm', 'ionb_spearman_norm', 'iony_spearman_norm',
-        'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm', 'min_abs_diff_norm',
-        'max_abs_diff_norm', 'abs_diff_Q1_norm', 'abs_diff_Q2_norm',
-        'abs_diff_Q3_norm', 'mean_abs_diff_norm', 'std_abs_diff_norm',
-        'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
-        'ionb_abs_diff_Q1_norm', 'ionb_abs_diff_Q2_norm',
-        'ionb_abs_diff_Q3_norm', 'ionb_mean_abs_diff_norm',
-        'ionb_std_abs_diff_norm', 'iony_min_abs_diff_norm',
-        'iony_max_abs_diff_norm', 'iony_abs_diff_Q1_norm',
-        'iony_abs_diff_Q2_norm', 'iony_abs_diff_Q3_norm',
-        'iony_mean_abs_diff_norm', 'iony_std_abs_diff_norm', 'dotprod_norm',
-        'dotprod_ionb_norm', 'dotprod_iony_norm', 'cos_norm', 'cos_ionb_norm',
-        'cos_iony_norm', 'spec_pearson', 'ionb_pearson', 'iony_pearson',
-        'spec_spearman', 'ionb_spearman', 'iony_spearman', 'spec_mse',
-        'ionb_mse', 'iony_mse', 'min_abs_diff', 'max_abs_diff', 'abs_diff_Q1',
-        'abs_diff_Q2', 'abs_diff_Q3', 'mean_abs_diff', 'std_abs_diff',
-        'ionb_min_abs_diff', 'ionb_max_abs_diff', 'ionb_abs_diff_Q1',
-        'ionb_abs_diff_Q2', 'ionb_abs_diff_Q3', 'ionb_mean_abs_diff',
-        'ionb_std_abs_diff', 'iony_min_abs_diff', 'iony_max_abs_diff',
-        'iony_abs_diff_Q1', 'iony_abs_diff_Q2', 'iony_abs_diff_Q3',
-        'iony_mean_abs_diff', 'iony_std_abs_diff', 'dotprod', 'dotprod_ionb',
-        'dotprod_iony', 'cos', 'cos_ionb', 'cos_iony']
-
     all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features.csv', sep=',', index=False)
-    norm_features = pd.DataFrame(StandardScaler().fit_transform(X=all_features.loc[:, norm_cols]), columns=norm_cols)
-    all_features.loc[:, norm_features.columns] = norm_features
-    all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features_norm.csv', sep=',', index=False)
 
 
 def write_pin_files(path_to_features, savepath):
