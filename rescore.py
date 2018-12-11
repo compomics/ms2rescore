@@ -188,9 +188,7 @@ def compute_features(df):
     conv['y'] = 1
     rescore_features = pd.DataFrame(columns=['spec_id', 'charge',
         'spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
-        'spec_spearman_norm', 'ionb_spearman_norm', 'iony_spearman_norm',
         'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
-        'min_abs_diff_iontype_norm', 'max_abs_diff_iontype_norm',
         'min_abs_diff_norm', 'max_abs_diff_norm', 'abs_diff_Q1_norm',
         'abs_diff_Q2_norm', 'abs_diff_Q3_norm', 'mean_abs_diff_norm',
         'std_abs_diff_norm', 'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
@@ -228,16 +226,9 @@ def compute_features(df):
         feats["ionb_pearson_norm"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"])
         feats["iony_pearson_norm"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"])
 
-        feats["spec_spearman_norm"] = tmp["target"].corr(tmp["prediction"], "spearman")
-        feats["ionb_spearman_norm"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"], "spearman")
-        feats["iony_spearman_norm"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"], "spearman")
-
         feats["spec_mse_norm"] = mean_squared_error(tmp["target"], tmp["prediction"])
         feats["ionb_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "b", "target"], tmp.loc[tmp.ion == "b", "prediction"])
         feats["iony_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "y", "target"], tmp.loc[tmp.ion == "y", "prediction"])
-
-        feats["min_abs_diff_iontype_norm"] = conv[tmp[tmp.abs_diff == np.min(tmp["abs_diff"])]["ion"].values[0]]
-        feats["max_abs_diff_iontype_norm"] = conv[tmp[tmp.abs_diff == np.max(tmp["abs_diff"])]["ion"].values[0]]
 
         feats["min_abs_diff_norm"] = np.min(tmp["abs_diff"])
         feats["max_abs_diff_norm"] = np.max(tmp["abs_diff"])
@@ -351,8 +342,9 @@ def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
     for r in results:
         all_results.append(r.get())
     all_results = pd.concat(all_results)
-
     all_results.to_csv(path_to_out, index=False)
+    print(all_results.head())
+    return None
 
 def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=None):
     """
@@ -382,6 +374,7 @@ def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=N
                                   rescore_targets.merge(pin[pin.Label == 1], left_on='spec_id', right_on='TITLE')])
     else:
         all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
+
     all_features = all_features.drop(all_features.loc[:,all_features.columns.str.endswith('.1')], axis=1)
 
     all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features.csv', sep=',', index=False)
@@ -409,9 +402,7 @@ def write_pin_files(path_to_features, savepath):
         'Y-Freq', 'B-Freq', 'Z-Freq', 'J-Freq', 'X-Freq', 'U-Freq', 'O-Freq']
 
     rescore_features = ['spec_pearson_norm', 'ionb_pearson_norm',
-        'iony_pearson_norm', 'spec_spearman_norm', 'ionb_spearman_norm',
-        'iony_spearman_norm', 'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
-         'min_abs_diff_iontype_norm', 'max_abs_diff_iontype_norm',
+        'iony_pearson_norm', 'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
         'min_abs_diff_norm', 'max_abs_diff_norm', 'abs_diff_Q1_norm',
         'abs_diff_Q2_norm', 'abs_diff_Q3_norm', 'mean_abs_diff_norm',
         'std_abs_diff_norm', 'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
