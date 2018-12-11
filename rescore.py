@@ -47,9 +47,7 @@ def compute_features(df):
     conv['y'] = 1
     rescore_features = pd.DataFrame(columns=['spec_id', 'charge',
         'spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
-        'spec_spearman_norm', 'ionb_spearman_norm', 'iony_spearman_norm',
         'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
-        'min_abs_diff_iontype_norm', 'max_abs_diff_iontype_norm',
         'min_abs_diff_norm', 'max_abs_diff_norm', 'abs_diff_Q1_norm',
         'abs_diff_Q2_norm', 'abs_diff_Q3_norm', 'mean_abs_diff_norm',
         'std_abs_diff_norm', 'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
@@ -87,16 +85,9 @@ def compute_features(df):
         feats["ionb_pearson_norm"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"])
         feats["iony_pearson_norm"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"])
 
-        feats["spec_spearman_norm"] = tmp["target"].corr(tmp["prediction"], "spearman")
-        feats["ionb_spearman_norm"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"], "spearman")
-        feats["iony_spearman_norm"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"], "spearman")
-
         feats["spec_mse_norm"] = mean_squared_error(tmp["target"], tmp["prediction"])
         feats["ionb_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "b", "target"], tmp.loc[tmp.ion == "b", "prediction"])
         feats["iony_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "y", "target"], tmp.loc[tmp.ion == "y", "prediction"])
-
-        feats["min_abs_diff_iontype_norm"] = conv[tmp[tmp.abs_diff == np.min(tmp["abs_diff"])]["ion"].values[0]]
-        feats["max_abs_diff_iontype_norm"] = conv[tmp[tmp.abs_diff == np.max(tmp["abs_diff"])]["ion"].values[0]]
 
         feats["min_abs_diff_norm"] = np.min(tmp["abs_diff"])
         feats["max_abs_diff_norm"] = np.max(tmp["abs_diff"])
@@ -214,57 +205,13 @@ def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
     all_results.to_csv(path_to_out, index=False)
 
 
-def norm_features(path_to_features):
-    """
-    Normalize the features obtained from MS2PIP
-
-    :param path_to_features: string, path to MS2PIP features
-
-    Returns
-    :pd.DataFrame features, includes normalized MS2PIP features
-    """
-
-    # Read features csv file and fillna
-    features = pd.read_csv(path_to_features)
-    features = features.fillna(0)
-
-    norm_cols = ['spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
-        'spec_spearman_norm', 'ionb_spearman_norm', 'iony_spearman_norm',
-        'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm', 'min_abs_diff_norm',
-        'max_abs_diff_norm', 'abs_diff_Q1_norm', 'abs_diff_Q2_norm',
-        'abs_diff_Q3_norm', 'mean_abs_diff_norm', 'std_abs_diff_norm',
-        'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
-        'ionb_abs_diff_Q1_norm', 'ionb_abs_diff_Q2_norm',
-        'ionb_abs_diff_Q3_norm', 'ionb_mean_abs_diff_norm',
-        'ionb_std_abs_diff_norm', 'iony_min_abs_diff_norm',
-        'iony_max_abs_diff_norm', 'iony_abs_diff_Q1_norm',
-        'iony_abs_diff_Q2_norm', 'iony_abs_diff_Q3_norm',
-        'iony_mean_abs_diff_norm', 'iony_std_abs_diff_norm', 'dotprod_norm',
-        'dotprod_ionb_norm', 'dotprod_iony_norm', 'cos_norm', 'cos_ionb_norm',
-        'cos_iony_norm', 'spec_pearson', 'ionb_pearson', 'iony_pearson',
-        'spec_spearman', 'ionb_spearman', 'iony_spearman', 'spec_mse',
-        'ionb_mse', 'iony_mse', 'min_abs_diff', 'max_abs_diff', 'abs_diff_Q1',
-        'abs_diff_Q2', 'abs_diff_Q3', 'mean_abs_diff', 'std_abs_diff',
-        'ionb_min_abs_diff', 'ionb_max_abs_diff', 'ionb_abs_diff_Q1',
-        'ionb_abs_diff_Q2', 'ionb_abs_diff_Q3', 'ionb_mean_abs_diff',
-        'ionb_std_abs_diff', 'iony_min_abs_diff', 'iony_max_abs_diff',
-        'iony_abs_diff_Q1', 'iony_abs_diff_Q2', 'iony_abs_diff_Q3',
-        'iony_mean_abs_diff', 'iony_std_abs_diff', 'dotprod', 'dotprod_ionb',
-        'dotprod_iony', 'cos', 'cos_ionb', 'cos_iony']
-
-    norm_features = pd.DataFrame(StandardScaler().fit_transform(X=features.loc[:, norm_cols]), columns=norm_cols)
-    features.loc[:, norm_features.columns] = norm_features
-    features.to_csv(path_to_features, sep=',', index=False)
-
 def write_pin_files(path_to_features, path_to_pep, savepath):
     """
     Given a dataframe with all the features, writes a pin file
     """
     # feature columns
     features = ['spec_pearson_norm', 'ionb_pearson_norm',
-        'iony_pearson_norm', 'spec_spearman_norm', 'ionb_spearman_norm',
-        'iony_spearman_norm', 'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
-         'min_abs_diff_iontype_norm', 'max_abs_diff_iontype_norm',
+        'iony_pearson_norm', 'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
         'min_abs_diff_norm', 'max_abs_diff_norm', 'abs_diff_Q1_norm',
         'abs_diff_Q2_norm', 'abs_diff_Q3_norm', 'mean_abs_diff_norm',
         'std_abs_diff_norm', 'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
