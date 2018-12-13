@@ -6,6 +6,7 @@ import argparse
 import sys
 import subprocess
 import os
+import re
 import json
 
 import mapper
@@ -27,8 +28,8 @@ if __name__ == "__main__":
     with open(args.config_file) as f:
         config = json.load(f)
 
-    fname = args.spec_file.rstrip(".mgf").rstrip(".MGF")
-    
+    fname = re.sub('.mgf', '', args.spec_file, flags=re.IGNORECASE)
+
     # Run search engine
     if config["search_engine"] == "MSGFPlus":
         MSGF_DIR = config["search_engine_options"]["dir"]
