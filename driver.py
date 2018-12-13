@@ -6,6 +6,7 @@ import argparse
 import sys
 import subprocess
 import os
+import re
 import json
 
 import rescore
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     with open(args.config_file) as f:
         config = json.load(f)
 
-    fname = args.peprec.rstrip(".PEPREC").rstrip(".peprec")
+    fname = re.sub('.peprec', '', args.peprec, flags=re.IGNORECASE)
 
     # Run ms2pip
     MS2PIP_DIR = config["ms2pip"]["dir"]
@@ -38,7 +39,7 @@ if __name__ == "__main__":
     sys.stdout.flush()
     subprocess.run(ms2pip_command, shell=True)
 
-    sys.stdout.write("Calculating features from predicted spectra... ")
+    sys.stdout.write("Calculating features from predicted spectra...")
     sys.stdout.flush()
     rescore.calculate_features(fname + "_" + config["ms2pip"]["frag"] + "_pred_and_emp.csv", fname + "_all_features.csv", config["ms2pip"]["num_cpu"])
     sys.stdout.write("Done! \n")
