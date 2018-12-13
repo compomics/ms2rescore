@@ -13,20 +13,26 @@ def get_indices(path_to_mzid):
     the Percolator index. Save these correspondences in a dictionary.
     https://github.com/percolator/percolator/issues/147
     """
-    index_map = {}
-    tid = ""
+    title_dict = {}
+    sp = False
+    count = 0
+    PSM_ids = []
 
     with open(path_to_mzid) as f:
-    	for row in f:
-    		if "<SpectrumIdentificationItem" in row:
-    			l=row.rstrip().split('id=')
-    			tid = l[1][1:-2] + row.split('rank=')[1][1]
-    		if 'name="spectrum title"' in row:
-    			l=row.rstrip().split('value=')[1].split(' ')[0]
-    			#id_map[tid] = l[1:-1]
-    			index_map[tid] = l[1:].rstrip('"/>')
+        for row in f:
+            if "<SpectrumIdentificationResult" in row:
+                sp = True
+            if sp == True and "<SpectrumIdentificationItem" in row:
+                PSM_ids.append(row.rstrip().split('id=')[1][1:-2])
+            elif sp == True and "spectrum title" in row:
+                sp = False
+                title = row.rstrip().split('value=')[1].split(' ')[0][1:].rstrip('"/>')
+                for PSM in PSM_ids:
+                    title_dict[PSM] = title
+                PSM_ids = []
+                count += 1
 
-    return index_map
+    return title_dict
 
 def get_indices_old(path_to_mzid):
     """
@@ -138,13 +144,17 @@ def map_mgf_title(path_to_pin, path_to_mzid, path_to_decoy_mzid=None, msgs=False
             k = line.split('\t')[0]
             k = k.split('_')[-6:-3]
             k = '_'.join(k)
+            # print(k)
+            # print(title_map[k])
+            # exit(1)
             if k in title_map.keys():
                 pin_out.write(line.rstrip('\n')+'\t'+title_map[k]+'\n')
             else:
-                sys.stderr.write("No match found in MGF file for SpecId {}\n".format(line.split('\t')[0]))
+                sys.stderr.write("No match found in mzid file for SpecId {}\n".format(line.split('\t')[0]))
+                pin_out.write(line.rstrip('\n')+'\t'+"UNKNOWN"+'\n')
         pin_in.close()
         pin_out.close()
-        os.rename(path_to_pin + '_title', path_to_pin)
+        #os.rename(path_to_pin + '_title', path_to_pin)
 
     # for separate target-decoy there are two mzid (haven't removed pandas here)
     else:
@@ -187,23 +197,11 @@ if __name__ == "__main__":
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
 
-    sys.stdout.write('Parsing pin file... ')
-    sys.stdout.flush()
-    pin = pd.read_csv(args.pin, header=0, sep='\t')
-    sys.stdout.write('Done! \n')
-    sys.stdout.flush()
-
     sys.stdout.write('Mapping spectrum TITLE on to pin file... \n')
     sys.stdout.flush()
     if args.decoys:
-        pin = map_mgf_title(pin, args.targets, args.decoys)
+        map_mgf_title(args.pin.rstrip('.pin') + '_fixed.pin', args.targets, args.decoys)
     else:
-        pin = map_mgf_title(pin, args.mzid)
-    sys.stdout.write('Done! \n')
-    sys.stdout.flush()
-
-    sys.stdout.write('Saving pin file... ')
-    sys.stdout.flush()
-    pin.to_csv(args.pin, sep='\t', index=False)
+        map_mgf_title(args.pin.rstrip('.pin') + '_fixed.pin', args.mzid)
     sys.stdout.write('Done! \n')
     sys.stdout.flush()
