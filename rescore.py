@@ -82,12 +82,12 @@ def compute_features(df):
 
         # calculation of features between normalized spectra
         feats["spec_pearson_norm"] = tmp["target"].corr(tmp["prediction"])
-        feats["ionb_pearson_norm"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"])
-        feats["iony_pearson_norm"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"])
+        feats["ionb_pearson_norm"] = tmp.loc[tmp.ion == "B", "target"].corr(tmp.loc[tmp.ion == "B", "prediction"])
+        feats["iony_pearson_norm"] = tmp.loc[tmp.ion == "Y", "target"].corr(tmp.loc[tmp.ion == "Y", "prediction"])
 
         feats["spec_mse_norm"] = mean_squared_error(tmp["target"], tmp["prediction"])
-        feats["ionb_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "b", "target"], tmp.loc[tmp.ion == "b", "prediction"])
-        feats["iony_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "y", "target"], tmp.loc[tmp.ion == "y", "prediction"])
+        feats["ionb_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "B", "target"], tmp.loc[tmp.ion == "B", "prediction"])
+        feats["iony_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "Y", "target"], tmp.loc[tmp.ion == "Y", "prediction"])
 
         feats["min_abs_diff_norm"] = np.min(tmp["abs_diff"])
         feats["max_abs_diff_norm"] = np.max(tmp["abs_diff"])
@@ -97,29 +97,29 @@ def compute_features(df):
         feats["mean_abs_diff_norm"] = np.mean(tmp["abs_diff"])
         feats["std_abs_diff_norm"] = np.std(tmp["abs_diff"])
 
-        feats["ionb_min_abs_diff_norm"] = np.min(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_max_abs_diff_norm"] = np.max(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_abs_diff_Q1_norm"] = tmp[tmp.ion == "b"].quantile(q=0.25)["abs_diff"]
-        feats["ionb_abs_diff_Q2_norm"] = tmp[tmp.ion == "b"].quantile(q=0.5)["abs_diff"]
-        feats["ionb_abs_diff_Q3_norm"] = tmp[tmp.ion == "b"].quantile(q=0.75)["abs_diff"]
-        feats["ionb_mean_abs_diff_norm"] = np.mean(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_std_abs_diff_norm"] = np.std(tmp.loc[tmp.ion == "b", "abs_diff"])
+        feats["ionb_min_abs_diff_norm"] = np.min(tmp.loc[tmp.ion == "B", "abs_diff"])
+        feats["ionb_max_abs_diff_norm"] = np.max(tmp.loc[tmp.ion == "B", "abs_diff"])
+        feats["ionb_abs_diff_Q1_norm"] = tmp[tmp.ion == "B"].quantile(q=0.25)["abs_diff"]
+        feats["ionb_abs_diff_Q2_norm"] = tmp[tmp.ion == "B"].quantile(q=0.5)["abs_diff"]
+        feats["ionb_abs_diff_Q3_norm"] = tmp[tmp.ion == "B"].quantile(q=0.75)["abs_diff"]
+        feats["ionb_mean_abs_diff_norm"] = np.mean(tmp.loc[tmp.ion == "B", "abs_diff"])
+        feats["ionb_std_abs_diff_norm"] = np.std(tmp.loc[tmp.ion == "B", "abs_diff"])
 
-        feats["iony_min_abs_diff_norm"] = np.min(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_max_abs_diff_norm"] = np.max(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_abs_diff_Q1_norm"] = tmp[tmp.ion == "y"].quantile(q=0.25)["abs_diff"]
-        feats["iony_abs_diff_Q2_norm"] = tmp[tmp.ion == "y"].quantile(q=0.5)["abs_diff"]
-        feats["iony_abs_diff_Q3_norm"] = tmp[tmp.ion == "y"].quantile(q=0.75)["abs_diff"]
-        feats["iony_mean_abs_diff_norm"] = np.mean(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_std_abs_diff_norm"] = np.std(tmp.loc[tmp.ion == "y", "abs_diff"])
+        feats["iony_min_abs_diff_norm"] = np.min(tmp.loc[tmp.ion == "Y", "abs_diff"])
+        feats["iony_max_abs_diff_norm"] = np.max(tmp.loc[tmp.ion == "Y", "abs_diff"])
+        feats["iony_abs_diff_Q1_norm"] = tmp[tmp.ion == "Y"].quantile(q=0.25)["abs_diff"]
+        feats["iony_abs_diff_Q2_norm"] = tmp[tmp.ion == "Y"].quantile(q=0.5)["abs_diff"]
+        feats["iony_abs_diff_Q3_norm"] = tmp[tmp.ion == "Y"].quantile(q=0.75)["abs_diff"]
+        feats["iony_mean_abs_diff_norm"] = np.mean(tmp.loc[tmp.ion == "Y", "abs_diff"])
+        feats["iony_std_abs_diff_norm"] = np.std(tmp.loc[tmp.ion == "Y", "abs_diff"])
 
         feats["dotprod_norm"] = np.dot(tmp["target"], tmp["prediction"])
-        feats["dotprod_ionb_norm"] = np.dot(tmp.loc[tmp.ion == "b"]["target"], tmp[tmp.ion == "b"]["prediction"])
-        feats["dotprod_iony_norm"] = np.dot(tmp[tmp.ion == "y"]["target"], tmp[tmp.ion == "y"]["prediction"])
+        feats["dotprod_ionb_norm"] = np.dot(tmp.loc[tmp.ion == "B"]["target"], tmp[tmp.ion == "B"]["prediction"])
+        feats["dotprod_iony_norm"] = np.dot(tmp[tmp.ion == "Y"]["target"], tmp[tmp.ion == "Y"]["prediction"])
 
         feats["cos_norm"] = feats["dotprod_norm"] / (np.linalg.norm(tmp["target"], 2) * np.linalg.norm(tmp["prediction"], 2))
-        feats["cos_ionb_norm"] = feats["dotprod_ionb_norm"] / (np.linalg.norm(tmp[tmp.ion == "b"]["target"], 2) * np.linalg.norm(tmp[tmp.ion == "b"]["prediction"], 2))
-        feats["cos_iony_norm"] = feats["dotprod_iony_norm"] / (np.linalg.norm(tmp[tmp.ion == "y"]["target"], 2) * np.linalg.norm(tmp[tmp.ion == "y"]["prediction"], 2))
+        feats["cos_ionb_norm"] = feats["dotprod_ionb_norm"] / (np.linalg.norm(tmp[tmp.ion == "B"]["target"], 2) * np.linalg.norm(tmp[tmp.ion == "B"]["prediction"], 2))
+        feats["cos_iony_norm"] = feats["dotprod_iony_norm"] / (np.linalg.norm(tmp[tmp.ion == "Y"]["target"], 2) * np.linalg.norm(tmp[tmp.ion == "Y"]["prediction"], 2))
 
         # same features but between un-normalized spectral
         tmp.loc[:, 'target'] = 2**tmp['target']-0.001
@@ -127,16 +127,16 @@ def compute_features(df):
         tmp.loc[:, "abs_diff"] = np.abs(tmp["target"] - tmp["prediction"])
 
         feats["spec_pearson"] = tmp["target"].corr(tmp["prediction"])
-        feats["ionb_pearson"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"])
-        feats["iony_pearson"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"])
+        feats["ionb_pearson"] = tmp.loc[tmp.ion == "B", "target"].corr(tmp.loc[tmp.ion == "B", "prediction"])
+        feats["iony_pearson"] = tmp.loc[tmp.ion == "Y", "target"].corr(tmp.loc[tmp.ion == "Y", "prediction"])
 
         feats["spec_spearman"] = tmp["target"].corr(tmp["prediction"], "spearman")
-        feats["ionb_spearman"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"], "spearman")
-        feats["iony_spearman"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"], "spearman")
+        feats["ionb_spearman"] = tmp.loc[tmp.ion == "B", "target"].corr(tmp.loc[tmp.ion == "B", "prediction"], "spearman")
+        feats["iony_spearman"] = tmp.loc[tmp.ion == "Y", "target"].corr(tmp.loc[tmp.ion == "Y", "prediction"], "spearman")
 
         feats["spec_mse"] = mean_squared_error(tmp["target"], tmp["prediction"])
-        feats["ionb_mse"] = mean_squared_error(tmp.loc[tmp.ion == "b", "target"], tmp.loc[tmp.ion == "b", "prediction"])
-        feats["iony_mse"] = mean_squared_error(tmp.loc[tmp.ion == "y", "target"], tmp.loc[tmp.ion == "y", "prediction"])
+        feats["ionb_mse"] = mean_squared_error(tmp.loc[tmp.ion == "B", "target"], tmp.loc[tmp.ion == "B", "prediction"])
+        feats["iony_mse"] = mean_squared_error(tmp.loc[tmp.ion == "Y", "target"], tmp.loc[tmp.ion == "Y", "prediction"])
 
         feats["min_abs_diff_iontype"] = conv[tmp[tmp.abs_diff == np.min(tmp["abs_diff"])]["ion"].values[0]]
         feats["max_abs_diff_iontype"] = conv[tmp[tmp.abs_diff == np.max(tmp["abs_diff"])]["ion"].values[0]]
@@ -149,29 +149,29 @@ def compute_features(df):
         feats["mean_abs_diff"] = np.mean(tmp["abs_diff"])
         feats["std_abs_diff"] = np.std(tmp["abs_diff"])
 
-        feats["ionb_min_abs_diff"] = np.min(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_max_abs_diff"] = np.max(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_abs_diff_Q1"] = tmp[tmp.ion == "b"].quantile(q=0.25)["abs_diff"]
-        feats["ionb_abs_diff_Q2"] = tmp[tmp.ion == "b"].quantile(q=0.5)["abs_diff"]
-        feats["ionb_abs_diff_Q3"] = tmp[tmp.ion == "b"].quantile(q=0.75)["abs_diff"]
-        feats["ionb_mean_abs_diff"] = np.mean(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_std_abs_diff"] = np.std(tmp.loc[tmp.ion == "b", "abs_diff"])
+        feats["ionb_min_abs_diff"] = np.min(tmp.loc[tmp.ion == "B", "abs_diff"])
+        feats["ionb_max_abs_diff"] = np.max(tmp.loc[tmp.ion == "B", "abs_diff"])
+        feats["ionb_abs_diff_Q1"] = tmp[tmp.ion == "B"].quantile(q=0.25)["abs_diff"]
+        feats["ionb_abs_diff_Q2"] = tmp[tmp.ion == "B"].quantile(q=0.5)["abs_diff"]
+        feats["ionb_abs_diff_Q3"] = tmp[tmp.ion == "B"].quantile(q=0.75)["abs_diff"]
+        feats["ionb_mean_abs_diff"] = np.mean(tmp.loc[tmp.ion == "B", "abs_diff"])
+        feats["ionb_std_abs_diff"] = np.std(tmp.loc[tmp.ion == "B", "abs_diff"])
 
-        feats["iony_min_abs_diff"] = np.min(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_max_abs_diff"] = np.max(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_abs_diff_Q1"] = tmp[tmp.ion == "y"].quantile(q=0.25)["abs_diff"]
-        feats["iony_abs_diff_Q2"] = tmp[tmp.ion == "y"].quantile(q=0.5)["abs_diff"]
-        feats["iony_abs_diff_Q3"] = tmp[tmp.ion == "y"].quantile(q=0.75)["abs_diff"]
-        feats["iony_mean_abs_diff"] = np.mean(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_std_abs_diff"] = np.std(tmp.loc[tmp.ion == "y", "abs_diff"])
+        feats["iony_min_abs_diff"] = np.min(tmp.loc[tmp.ion == "Y", "abs_diff"])
+        feats["iony_max_abs_diff"] = np.max(tmp.loc[tmp.ion == "Y", "abs_diff"])
+        feats["iony_abs_diff_Q1"] = tmp[tmp.ion == "Y"].quantile(q=0.25)["abs_diff"]
+        feats["iony_abs_diff_Q2"] = tmp[tmp.ion == "Y"].quantile(q=0.5)["abs_diff"]
+        feats["iony_abs_diff_Q3"] = tmp[tmp.ion == "Y"].quantile(q=0.75)["abs_diff"]
+        feats["iony_mean_abs_diff"] = np.mean(tmp.loc[tmp.ion == "Y", "abs_diff"])
+        feats["iony_std_abs_diff"] = np.std(tmp.loc[tmp.ion == "Y", "abs_diff"])
 
         feats["dotprod"] = np.dot(tmp["target"], tmp["prediction"])
-        feats["dotprod_ionb"] = np.dot(tmp.loc[tmp.ion == "b", "target"], tmp.loc[tmp.ion == "b", "prediction"])
-        feats["dotprod_iony"] = np.dot(tmp.loc[tmp.ion == "y", "target"], tmp.loc[tmp.ion == "y", "prediction"])
+        feats["dotprod_ionb"] = np.dot(tmp.loc[tmp.ion == "B", "target"], tmp.loc[tmp.ion == "B", "prediction"])
+        feats["dotprod_iony"] = np.dot(tmp.loc[tmp.ion == "Y", "target"], tmp.loc[tmp.ion == "Y", "prediction"])
 
         feats["cos"] = feats["dotprod"] / (np.linalg.norm(tmp["target"], 2) * np.linalg.norm(tmp["prediction"], 2))
-        feats["cos_ionb"] = feats["dotprod_ionb"] / (np.linalg.norm(tmp.loc[tmp.ion == "b", "target"], 2) * np.linalg.norm(tmp.loc[tmp.ion == "b", "prediction"], 2))
-        feats["cos_iony"] = feats["dotprod_iony"] / (np.linalg.norm(tmp.loc[tmp.ion == "y", "target"], 2) * np.linalg.norm(tmp.loc[tmp.ion == "y", "prediction"], 2))
+        feats["cos_ionb"] = feats["dotprod_ionb"] / (np.linalg.norm(tmp.loc[tmp.ion == "B", "target"], 2) * np.linalg.norm(tmp.loc[tmp.ion == "B", "prediction"], 2))
+        feats["cos_iony"] = feats["dotprod_iony"] / (np.linalg.norm(tmp.loc[tmp.ion == "Y", "target"], 2) * np.linalg.norm(tmp.loc[tmp.ion == "Y", "prediction"], 2))
 
         rescore_features = rescore_features.append(feats, ignore_index=True)
     return rescore_features
