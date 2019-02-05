@@ -1,6 +1,7 @@
 # Others
 steps.txt
 old_files/
+manuscript/steps
 
 # Atom remote-sync config
 .remote-sync.json
