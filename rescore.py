@@ -43,8 +43,8 @@ def make_ms2pip_config(options):
 
 def compute_features(df):
     conv = {}
-    conv['b'] = 0
-    conv['y'] = 1
+    conv['B'] = 0
+    conv['Y'] = 1
     rescore_features = pd.DataFrame(columns=['spec_id', 'charge',
         'spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
         'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
