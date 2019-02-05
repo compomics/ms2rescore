@@ -1,6 +1,7 @@
 # Others
 steps.txt
 old_files/
+prepare_pin_files.py
 
 # Atom remote-sync config
 .remote-sync.json
