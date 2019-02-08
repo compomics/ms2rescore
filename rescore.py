@@ -1,6 +1,5 @@
 """
-Functions necessary to run the rescore algorithm. Currently supports MSGF+ with
-concatenated searches.
+Functions necessary to run the rescore algorithm.
 """
 
 import multiprocessing
