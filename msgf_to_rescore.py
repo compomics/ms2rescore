@@ -220,7 +220,7 @@ def main():
     os.rename(fname + ".pin.PEPREC", fname + ".PEPREC")
 
     # Add features from the pin file to the PEPREC file
-    logging.info("Addin pin features to PEPREC file")
+    logging.info("Adding pin features to PEPREC file")
     join_features(fname + ".pin", fname + ".PEPREC")
 
 if __name__ == '__main__':
