@@ -11,6 +11,7 @@
   "ms2pip": {
     "dir": "ms2pip_c",
     "frag": "HCD",
+    "frag_error": 0.02,
     "modifications": [
       {"name":"Glu->pyro-Glu", "unimod_accession":27, "mass_shift":-18.0153, "amino_acid":"E", "n_term":true, "fixed":false},
       {"name":"Gln->pyro-Glu", "unimod_accession":28, "mass_shift":-17.0305, "amino_acid":"Q", "n_term":true, "fixed":false},

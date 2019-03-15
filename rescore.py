@@ -24,15 +24,22 @@ def make_ms2pip_config(options):
     cwd = os.getcwd()
     ms2pip_config = open(cwd + "/rescore_config.txt", 'wt')
 
-    if options["ms2pip"]["frag"] == "CID":
-        ms2pip_config.write("frag_method=CID\n")
-        ms2pip_config.write("frag_error=0.8\n")
-    elif options["ms2pip"]["frag"] == "phospho":
-        ms2pip_config.write("frag_method=phospho\n")
-        ms2pip_config.write("frag_error=0.02\n")
+    if "frag" in options["ms2pip"]:
+        ms2pip_config.write("frag_method={}\n".format(options["ms2pip"]["frag"]))
     else:
+        # Assume HCD
         ms2pip_config.write("frag_method=HCD\n")
-        ms2pip_config.write("frag_error=0.02\n")
+
+    if "frag_error" in options["ms2pip"]:
+        ms2pip_config.write("frag_error={}\n".format(options["ms2pip"]["frag_error"]))
+    else:
+        if options["ms2pip"]["frag"] == "CID":
+            ms2pip_config.write("frag_error=0.8\n")
+        elif options["ms2pip"]["frag"] == "phospho":
+            ms2pip_config.write("frag_error=0.02\n")
+        else:
+            # Assume HCD
+            ms2pip_config.write("frag_error=0.02\n")
 
     ms2pip_config.write("\n")
 
