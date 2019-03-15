@@ -3,17 +3,17 @@ Functions necessary to run the rescore algorithm. Currently supports MSGF+ with
 concatenated searches.
 """
 
-import subprocess
-import multiprocessing
+# Standard library
+import warnings
 import sys
+import multiprocessing
 import os
-import re
+
+# Third party
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import StandardScaler
+from scipy.stats import pearsonr, spearmanr
+from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm
 
 def make_ms2pip_config(options):
@@ -273,111 +273,54 @@ def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
     print("Writing to file...")
     all_results.to_csv(path_to_out, index=False)
 
-def write_pin_files(path_to_features, savepath):
+def write_pin_files(path_to_features, path_to_pep, savepath):
     """
-    Given a dataframe with all the features, writes three different pin files:
-    _only_rescore.pin with only the rescore features
-    _all_percolator.pin with all the percolator features
-    _all_features.pin with all the rescore and percolator features
-    :param path_to_features: pd.DataFrame obtained from rescore.join_features()
-    :param savepath: path to save the pin files
+    Given a dataframe with all the features, writes three PIN files.
+    Writes three PIN files: search_engine_features, ms2pip_features and
+    all_features
+    Arguments:
+    path_to_features: str of path to features or pd.DataFrame with features
+    path_to_pep: str of path to peprec or pd.DataFrame with peprec
+    save_path: path to save PIN files into
     """
-    # columns to save
-    percolator_features = ['ExpMass', 'CalcMass', 'RawScore', 'DeNovoScore',
-        'ScoreRatio', 'Energy', 'lnEValue', 'IsotopeError',
-        'lnExplainedIonCurrentRatio', 'lnNTermIonCurrentRatio',
-        'lnCTermIonCurrentRatio', 'lnMS2IonCurrent', 'Mass', 'PepLen', 'dM',
-        'absdM', 'MeanErrorTop7', 'sqMeanErrorTop7', 'StdevErrorTop7',
-        'Charge2', 'Charge3', 'Charge4', 'Charge5', 'Charge6', 'enzN', 'enzC',
-        'enzInt', 'ptm', 'A-Freq', 'C-Freq', 'D-Freq', 'E-Freq', 'F-Freq',
-        'G-Freq', 'H-Freq', 'I-Freq', 'K-Freq', 'L-Freq', 'M-Freq', 'N-Freq',
-        'P-Freq', 'Q-Freq', 'R-Freq', 'S-Freq', 'T-Freq', 'V-Freq', 'W-Freq',
-        'Y-Freq', 'B-Freq', 'Z-Freq', 'J-Freq', 'X-Freq', 'U-Freq', 'O-Freq']
-
-    rescore_features = ['spec_pearson_norm', 'ionb_pearson_norm',
-        'iony_pearson_norm', 'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
-        'min_abs_diff_norm', 'max_abs_diff_norm', 'abs_diff_Q1_norm',
-        'abs_diff_Q2_norm', 'abs_diff_Q3_norm', 'mean_abs_diff_norm',
-        'std_abs_diff_norm', 'ionb_min_abs_diff_norm', 'ionb_max_abs_diff_norm',
-        'ionb_abs_diff_Q1_norm', 'ionb_abs_diff_Q2_norm',
-        'ionb_abs_diff_Q3_norm', 'ionb_mean_abs_diff_norm',
-        'ionb_std_abs_diff_norm', 'iony_min_abs_diff_norm',
-        'iony_max_abs_diff_norm', 'iony_abs_diff_Q1_norm',
-        'iony_abs_diff_Q2_norm', 'iony_abs_diff_Q3_norm',
-        'iony_mean_abs_diff_norm', 'iony_std_abs_diff_norm', 'dotprod_norm',
-        'dotprod_ionb_norm', 'dotprod_iony_norm', 'cos_norm', 'cos_ionb_norm',
-        'cos_iony_norm', 'spec_pearson', 'ionb_pearson', 'iony_pearson',
-        'spec_spearman', 'ionb_spearman', 'iony_spearman', 'spec_mse',
-        'ionb_mse', 'iony_mse', 'min_abs_diff_iontype', 'max_abs_diff_iontype',
-        'min_abs_diff', 'max_abs_diff', 'abs_diff_Q1', 'abs_diff_Q2',
-        'abs_diff_Q3', 'mean_abs_diff', 'std_abs_diff', 'ionb_min_abs_diff',
-        'ionb_max_abs_diff', 'ionb_abs_diff_Q1', 'ionb_abs_diff_Q2',
-        'ionb_abs_diff_Q3', 'ionb_mean_abs_diff', 'ionb_std_abs_diff',
-        'iony_min_abs_diff', 'iony_max_abs_diff', 'iony_abs_diff_Q1',
-        'iony_abs_diff_Q2', 'iony_abs_diff_Q3', 'iony_mean_abs_diff',
-        'iony_std_abs_diff', 'dotprod', 'dotprod_ionb', 'dotprod_iony', 'cos',
-        'cos_ionb', 'cos_iony']
 
     all_features = pd.read_csv(path_to_features, sep=',')
-    # Writing files with appropriate columns
-    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + rescore_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_rescore.pin'.format(savepath), sep='\t', index=False)
-    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_percolator.pin'.format(savepath), sep='\t', index=False)
-    all_features.loc[:, ['SpecId', 'Label', 'ScanNr'] + percolator_features + rescore_features + ['Peptide', 'Proteins']].fillna(value=0).to_csv('{}_all_features.pin'.format(savepath), sep='\t', index=False)
+
+    if type(path_to_pep) == str:
+        with open(path_to_pep, 'rt') as f:
+            line = f.readline()
+            if line[:7] != 'spec_id':
+                sys.stdout.write('PEPREC file should start with header column\n')
+                exit(1)
+            sep = line[7]
+        pep = pd.read_csv(path_to_pep,
+                           sep=sep,
+                           index_col=False,
+                           dtype={"spec_id": str, "modifications": str})
+    else:
+        pep = path_to_pep
+
+    pep['modifications'].fillna("-", inplace=True)
+    pep = pep.replace(-np.inf, 0.0).replace(np.inf, 0.0)
+
+    peprec_cols = ['spec_id', 'peptide', 'modifications', 'charge']
+    pin_columns = ['SpecId', 'ScanNr', 'Label', 'Peptide', 'Proteins', 'TITLE']
+
+    # Get list with feature names split by type of feature
+    search_engine_feature_names = [col for col in pep.columns if (col not in peprec_cols) and (col not in pin_columns)]
+    ms2pip_feature_names = [col for col in all_features.columns if col not in peprec_cols]
+
+    # Merge ms2pip_features and peprec DataFrames
+    complete_df = pd.merge(all_features, pep, on=['spec_id', 'charge'])
+    complete_df = complete_df.fillna(value=0)
+
+    # Writing files with ordered columns
+    # Create three PIN files: search_engine_features, ms2pip_features and all_features
+    complete_df.loc[:, ['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + search_engine_feature_names + ['Peptide', 'Proteins']]\
+        .to_csv('{}_allfeatures.pin'.format(savepath), sep='\t', index=False)
+    complete_df.loc[:, ['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + ['Peptide', 'Proteins']]\
+        .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', index=False)
+    complete_df.loc[:, ['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['Peptide', 'Proteins']]\
+        .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', index=False)
+
     return None
-
-def format_output(path_to_pout, search_engine, savepath, fname, fig=True):
-    out = pd.concat([pd.read_csv(path_to_pout, sep='\t'), pd.read_csv(path_to_pout+"_dec", sep='\t')])
-    inp = pd.read_csv(fname + '_all_features.csv')
-
-    if search_engine == "MSGFPlus":
-        out['Label'] = [-1 if p.startswith('XXX') else 1 for p in out.proteinIds]
-        score = 'lnEValue'
-
-    if fig:
-        f, axes = plt.subplots(4, 3, figsize=(16, 21))
-
-        sns.boxplot(data=inp, y=score, x='Label', ax=axes[0][0])
-
-        sns.distplot(inp.loc[inp.Label == -1, score], kde=False, ax=axes[0][1])
-        sns.distplot(inp.loc[inp.Label == 1, score], kde=False, ax=axes[0][1])
-
-        sns.distplot(inp.loc[inp.Label == -1, score], hist=False, ax=axes[0][2])
-        sns.distplot(inp.loc[inp.Label == 1, score], hist=False, ax=axes[0][2])
-
-        sns.boxplot(data=out, y='score', x='Label', ax=axes[1][0])
-
-        sns.distplot(out.loc[out.Label == -1, 'score'], kde=False, ax=axes[1][1])
-        sns.distplot(out.loc[out.Label == 1, 'score'], kde=False, ax=axes[1][1])
-
-        sns.distplot(out.loc[out.Label == -1, 'score'], hist=False, ax=axes[1][2])
-        sns.distplot(out.loc[out.Label == 1, 'score'], hist=False, ax=axes[1][2])
-
-        sns.boxplot(data=out, y='q-value', x='Label', ax=axes[2][0])
-
-        sns.distplot(out.loc[out.Label == -1, 'q-value'], kde=False, ax=axes[2][1])
-        sns.distplot(out.loc[out.Label == 1, 'q-value'], kde=False, ax=axes[2][1])
-
-        sns.distplot(out.loc[out.Label == -1, 'q-value'], hist=False, ax=axes[2][2])
-        sns.distplot(out.loc[out.Label == 1, 'q-value'], hist=False, ax=axes[2][2])
-
-        sns.boxplot(data=out, y='posterior_error_prob', x='Label', ax=axes[3][0])
-
-        sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], kde=False, ax=axes[3][1])
-        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], kde=False, ax=axes[3][1])
-
-        sns.distplot(out.loc[out.Label == -1, 'posterior_error_prob'], hist=False, ax=axes[3][2])
-        sns.distplot(out.loc[out.Label == 1, 'posterior_error_prob'], hist=False, ax=axes[3][2])
-
-        axes[0][1].set_xlim([np.min(inp[score]), np.max(inp[score])])
-        axes[0][2].set_xlim([np.min(inp[score]), np.max(inp[score])])
-
-        axes[1][1].set_xlim([np.min(out['score']), np.max(out['score'])])
-        axes[1][2].set_xlim([np.min(out['score']), np.max(out['score'])])
-
-        axes[2][1].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
-        axes[2][2].set_xlim([np.min(out['q-value']), np.max(out['q-value'])])
-
-        axes[3][1].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
-        axes[3][2].set_xlim([np.min(out['posterior_error_prob']), np.max(out['posterior_error_prob'])])
-
-        f.savefig(savepath)

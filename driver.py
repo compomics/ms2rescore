@@ -9,16 +9,17 @@ import os
 import re
 import json
 
-import mapper
 import rescore
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Run MSGF+ to get PSMs, MS2PIP to extract spectral features, and Percolator to rescore PSMs")
+        description="Given an mgf spectrum file and a PEPREC file, run MS2PIP \
+        and extract features from spectrum comparison, and write them as a \
+        Percolator INput file")
     parser.add_argument("spec_file", metavar="spectrum-file",
                         help="file containing MS2 spectra (MGF)")
-    parser.add_argument("fasta_file", metavar="FASTA-file",
-                        help="file containing protein sequences")
+    parser.add_argument("peprec", metavar="PEPREC-file",
+                        help="MS2PIP input file")
     parser.add_argument("config_file", metavar="config-file",
                         help="json file containing configurable variables")
 
@@ -28,82 +29,41 @@ if __name__ == "__main__":
     with open(args.config_file) as f:
         config = json.load(f)
 
-    fname = re.sub('.mgf', '', args.spec_file, flags=re.IGNORECASE)
-
-    # Run search engine
-    if config["search_engine"] == "MSGFPlus":
-        MSGF_DIR = config["search_engine_options"]["dir"]
-        rescore.run_msgfplus(MSGF_DIR, args.spec_file, args.fasta_file, config["search_engine_options"])
-        # Convert .mzid to pin. XXX is the decoy pattern from MSGF+
-        convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(fname, fname)
-        sys.stdout.write("\nConverting .mzid file to pin file:")
-        sys.stdout.flush()
-        subprocess.run(convert_command, shell=True)
-    else:
-        sys.stdout.write("Unsupported search engine for automatic processing\n")
-        sys.exit(0)
-
-    # PIN FILE: "Proteins" column has tab-separated values which makes the file
-    # cumbersome to read. mapper.fix_pin_tabs replaces those tabs with ";"
-    sys.stdout.write("Fixing tabs on pin file... ")
-    sys.stdout.flush()
-    mapper.fix_pin_tabs(fname + ".pin")
-    # os.remove(fname + ".pin")
-    os.rename(fname + "_fixed.pin", fname + ".pin")
-    sys.stdout.write("Done! \n")
-    sys.stdout.flush()
-
-    # Percolator generates its own spectrum ID, so we must match it to the mgf
-    # file's TITLE field.
-    sys.stdout.write("Adding TITLE to pin file... ")
-    sys.stdout.flush()
-    mapper.map_mgf_title(fname + ".pin", fname + ".mzid", msgs=False)
-    sys.stdout.write("Done! \n")
-    sys.stdout.flush()
-
-    # Create & write PEPREC file from the pin file
-    sys.stdout.write("Generating PEPREC files... ")
-    sys.stdout.flush()
-    rescore.make_pepfile(fname + ".pin", config)
-    os.rename(fname + ".pin.PEPREC", fname + ".PEPREC")
-    sys.stdout.write("Done! \n")
-    sys.stdout.flush()
-
+    fname = re.sub('.peprec', '', args.peprec, flags=re.IGNORECASE)
+    
     # Run ms2pip
     MS2PIP_DIR = config["ms2pip"]["dir"]
     rescore.make_ms2pip_config(config)
-    ms2pip_command = "python {}/ms2pipC.py {} -c rescore_config.txt -s {}".format(MS2PIP_DIR, fname + ".PEPREC", args.spec_file)
+    ms2pip_command = "python {}/ms2pipC.py {} -c rescore_config.txt -s {} -m {}".format(MS2PIP_DIR, args.peprec, args.spec_file, config["ms2pip"]["num_cpu"])
     sys.stdout.write("Running ms2pip: {} \n".format(ms2pip_command))
     sys.stdout.flush()
-    subprocess.run(ms2pip_command, shell=True)
+    subprocess.run(ms2pip_command, shell=True, check=True)
 
-    sys.stdout.write("Calculating features from predicted spectra... ")
+    sys.stdout.write("Calculating features from predicted spectra...")
     sys.stdout.flush()
-    rescore.calculate_features(fname + "_" + config["ms2pip"]["frag"] + "_pred_and_emp.csv", fname + "_all_features.csv", config["ms2pip"]["num_cpu"])
+    rescore.calculate_features(fname + "_" + config["ms2pip"]["frag"] + "_pred_and_emp.csv", fname + "_ms2pipfeatures.csv", config["ms2pip"]["num_cpu"])
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
-    sys.stdout.write("Generating pin files with different features... ")
+    sys.stdout.write("Generating pin file(s)... ")
     sys.stdout.flush()
-    rescore.join_features(fname + "_all_features.csv", fname + ".pin")
-
-    rescore.write_pin_files(fname + "_all_features.csv", fname)
+    rescore.write_pin_files(fname + "_ms2pipfeatures.csv", args.peprec, fname)
     sys.stdout.write("Done! \n")
     sys.stdout.flush()
 
     # Run Percolator with different feature subsets
-    for subset in ["_rescore", "_percolator", "_all_features"]:
+    for subset in ["_allfeatures", "_searchenginefeatures", "_ms2pipfeatures"]:
         subname = fname + subset
+
         percolator_cmd = "percolator "
         for op in config["percolator"].keys():
             percolator_cmd = percolator_cmd + "--{} {} ".format(op, config["percolator"][op])
         percolator_cmd = percolator_cmd + "{} -m {} -M {} -w {} -v 0 -U\n".format(subname + ".pin", subname + ".pout", subname + ".pout_dec", subname + ".weights")
         sys.stdout.write("Running Percolator: {} \n".format(percolator_cmd))
         subprocess.run(percolator_cmd, shell=True)
-        if os.path.isfile(subname + ".pout"):
-            rescore.format_output(subname+".pout", config["search_engine"], subname+"_output_plots.png", fname)#, fig=False)
-        else:
-            sys.stdout.write("Error running Percolator \n")
-        sys.stdout.flush()
 
-    sys.stdout.write("All done!\n")
+        if not os.path.isfile(subname + ".pout"):
+            sys.stdout.write("Error running Percolator \n")
+            sys.stdout.flush()
+
+sys.stdout.write("All done!\n")
