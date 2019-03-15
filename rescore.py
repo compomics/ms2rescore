@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
+from tqdm import tqdm
 
 def make_ms2pip_config(options):
     """
@@ -46,11 +47,43 @@ def make_ms2pip_config(options):
 
     ms2pip_config.close()
 
+def df_to_dict(df):
+    """
+    Create easy to access dict from pred_and_emp
+    """
+    preds_dict = {}
+    preds_list = df[['spec_id', 'charge', 'ion', 'target', 'prediction']].values.tolist()
+
+    for row in preds_list:
+        spec_id = row[0]
+        if spec_id in preds_dict.keys():
+            if row[2] in preds_dict[spec_id]['target']:
+                preds_dict[spec_id]['target'][row[2]].append(row[3])
+                preds_dict[spec_id]['prediction'][row[2]].append(row[4])
+            else:
+                preds_dict[spec_id]['target'][row[2]] = [row[3]]
+                preds_dict[spec_id]['prediction'][row[2]] = [row[4]]
+        else:
+            preds_dict[spec_id] = {
+                'charge': row[1],
+                'target': {row[2]: [row[3]]},
+                'prediction': {row[2]: [row[4]]}
+            }
+    return preds_dict
+
+
 def compute_features(df):
-    conv = {}
-    conv['b'] = 0
-    conv['y'] = 1
-    rescore_features = pd.DataFrame(columns=['spec_id', 'charge',
+    """
+    Compute ReScore features
+    """
+
+    preds_dict = df_to_dict(df)
+
+    rescore_features = []
+    spec_ids = []
+    charges = []
+
+    feature_names = [
         'spec_pearson_norm', 'ionb_pearson_norm', 'iony_pearson_norm',
         'spec_mse_norm', 'ionb_mse_norm', 'iony_mse_norm',
         'min_abs_diff_norm', 'max_abs_diff_norm', 'abs_diff_Q1_norm',
@@ -73,176 +106,172 @@ def compute_features(df):
         'iony_min_abs_diff', 'iony_max_abs_diff', 'iony_abs_diff_Q1',
         'iony_abs_diff_Q2', 'iony_abs_diff_Q3', 'iony_mean_abs_diff',
         'iony_std_abs_diff', 'dotprod', 'dotprod_ionb', 'dotprod_iony', 'cos',
-        'cos_ionb', 'cos_iony'])
+        'cos_ionb', 'cos_iony'
+    ]
 
-    for peptide in df.spec_id.unique():
-        tmp = df[df.spec_id == peptide].copy()
-        tmp.loc[tmp.prediction < np.log2(0.001), 'prediction'] = np.log2(0.001)
-        tmp.loc[:, "abs_diff"] = np.abs(tmp["target"] - tmp["prediction"])
+    # Suppress RuntimeWarnings about invalid values
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
 
-        feats = {}
+        for spec_id, preds in preds_dict.items():
+            spec_ids.append(spec_id)
+            charges.append(preds['charge'])
 
-        feats["spec_id"] = tmp["spec_id"].unique()[0]
-        feats["charge"] = tmp["charge"].unique()[0]
+            # Create numpy arrays
+            target_b = np.array(preds['target']['B'])
+            target_y = np.array(preds['target']['Y'])
+            target_all = np.concatenate([target_b, target_y])
+            prediction_b = np.array(preds['prediction']['B'])
+            prediction_y = np.array(preds['prediction']['Y'])
+            prediction_all = np.concatenate([prediction_b, prediction_y])
 
-        # calculation of features between normalized spectra
-        feats["spec_pearson_norm"] = tmp["target"].corr(tmp["prediction"])
-        feats["ionb_pearson_norm"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"])
-        feats["iony_pearson_norm"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"])
+            target_b_unlog = 2 ** target_b - 0.001
+            target_y_unlog = 2 ** target_y - 0.001
+            target_all_unlog = 2 ** target_all - 0.001
+            prediction_b_unlog = 2 ** prediction_b - 0.001
+            prediction_y_unlog = 2 ** prediction_y - 0.001
+            prediction_all_unlog = 2 ** prediction_all - 0.001
 
-        feats["spec_mse_norm"] = mean_squared_error(tmp["target"], tmp["prediction"])
-        feats["ionb_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "b", "target"], tmp.loc[tmp.ion == "b", "prediction"])
-        feats["iony_mse_norm"] = mean_squared_error(tmp.loc[tmp.ion == "y", "target"], tmp.loc[tmp.ion == "y", "prediction"])
+            # Calculate absolute differences
+            abs_diff_b = np.abs(target_b - prediction_b)
+            abs_diff_y = np.abs(target_y - prediction_y)
+            abs_diff_all = np.abs(target_all - prediction_all)
 
-        feats["min_abs_diff_norm"] = np.min(tmp["abs_diff"])
-        feats["max_abs_diff_norm"] = np.max(tmp["abs_diff"])
-        feats["abs_diff_Q1_norm"] = tmp.quantile(q=0.25)["abs_diff"]
-        feats["abs_diff_Q2_norm"] = tmp.quantile(q=0.5)["abs_diff"]
-        feats["abs_diff_Q3_norm"] = tmp.quantile(q=0.75)["abs_diff"]
-        feats["mean_abs_diff_norm"] = np.mean(tmp["abs_diff"])
-        feats["std_abs_diff_norm"] = np.std(tmp["abs_diff"])
+            abs_diff_b_unlog = np.abs(target_b_unlog - prediction_b_unlog)
+            abs_diff_y_unlog = np.abs(target_y_unlog - prediction_y_unlog)
+            abs_diff_all_unlog = np.abs(target_all_unlog - prediction_all_unlog)
 
-        feats["ionb_min_abs_diff_norm"] = np.min(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_max_abs_diff_norm"] = np.max(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_abs_diff_Q1_norm"] = tmp[tmp.ion == "b"].quantile(q=0.25)["abs_diff"]
-        feats["ionb_abs_diff_Q2_norm"] = tmp[tmp.ion == "b"].quantile(q=0.5)["abs_diff"]
-        feats["ionb_abs_diff_Q3_norm"] = tmp[tmp.ion == "b"].quantile(q=0.75)["abs_diff"]
-        feats["ionb_mean_abs_diff_norm"] = np.mean(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_std_abs_diff_norm"] = np.std(tmp.loc[tmp.ion == "b", "abs_diff"])
+            # Add features
+            feats = np.array([
+                #spec_id,
+                #preds['charge'],
 
-        feats["iony_min_abs_diff_norm"] = np.min(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_max_abs_diff_norm"] = np.max(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_abs_diff_Q1_norm"] = tmp[tmp.ion == "y"].quantile(q=0.25)["abs_diff"]
-        feats["iony_abs_diff_Q2_norm"] = tmp[tmp.ion == "y"].quantile(q=0.5)["abs_diff"]
-        feats["iony_abs_diff_Q3_norm"] = tmp[tmp.ion == "y"].quantile(q=0.75)["abs_diff"]
-        feats["iony_mean_abs_diff_norm"] = np.mean(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_std_abs_diff_norm"] = np.std(tmp.loc[tmp.ion == "y", "abs_diff"])
+                # Features between spectra in log space
+                pearsonr(target_all, prediction_all)[0],  # Pearson all ions
+                pearsonr(target_b, prediction_b)[0],  # Pearson b ions
+                pearsonr(target_y, prediction_y)[0],  # Pearson y ions
 
-        feats["dotprod_norm"] = np.dot(tmp["target"], tmp["prediction"])
-        feats["dotprod_ionb_norm"] = np.dot(tmp.loc[tmp.ion == "b"]["target"], tmp[tmp.ion == "b"]["prediction"])
-        feats["dotprod_iony_norm"] = np.dot(tmp[tmp.ion == "y"]["target"], tmp[tmp.ion == "y"]["prediction"])
+                mse(target_all, prediction_all),  # MSE all ions
+                mse(target_b, prediction_b),  # MSE b ions
+                mse(target_y, prediction_y),  # MSE y ions
 
-        feats["cos_norm"] = feats["dotprod_norm"] / (np.linalg.norm(tmp["target"], 2) * np.linalg.norm(tmp["prediction"], 2))
-        feats["cos_ionb_norm"] = feats["dotprod_ionb_norm"] / (np.linalg.norm(tmp[tmp.ion == "b"]["target"], 2) * np.linalg.norm(tmp[tmp.ion == "b"]["prediction"], 2))
-        feats["cos_iony_norm"] = feats["dotprod_iony_norm"] / (np.linalg.norm(tmp[tmp.ion == "y"]["target"], 2) * np.linalg.norm(tmp[tmp.ion == "y"]["prediction"], 2))
+                np.min(abs_diff_all),  # min_abs_diff_norm
+                np.max(abs_diff_all),  # max_abs_diff_norm
+                np.quantile(abs_diff_all, 0.25),  # abs_diff_Q1_norm
+                np.quantile(abs_diff_all, 0.5),  # abs_diff_Q2_norm
+                np.quantile(abs_diff_all, 0.75),  # abs_diff_Q3_norm
+                np.mean(abs_diff_all),  # mean_abs_diff_norm
+                np.std(abs_diff_all),  # std_abs_diff_norm
 
-        # same features but between un-normalized spectral
-        tmp.loc[:, 'target'] = 2**tmp['target']-0.001
-        tmp.loc[:, 'prediction'] = 2**tmp['prediction']-0.001
-        tmp.loc[:, "abs_diff"] = np.abs(tmp["target"] - tmp["prediction"])
+                np.min(abs_diff_b),  # ionb_min_abs_diff_norm
+                np.max(abs_diff_b),  # ionb_max_abs_diff_norm
+                np.quantile(abs_diff_b, 0.25),  # ionb_abs_diff_Q1_norm
+                np.quantile(abs_diff_b, 0.5),  # ionb_abs_diff_Q2_norm
+                np.quantile(abs_diff_b, 0.75),  # ionb_abs_diff_Q3_norm
+                np.mean(abs_diff_b),  # ionb_mean_abs_diff_norm
+                np.std(abs_diff_b),  # ionb_std_abs_diff_norm
 
-        feats["spec_pearson"] = tmp["target"].corr(tmp["prediction"])
-        feats["ionb_pearson"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"])
-        feats["iony_pearson"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"])
+                np.min(abs_diff_y),  # iony_min_abs_diff_norm
+                np.max(abs_diff_y),  # iony_max_abs_diff_norm
+                np.quantile(abs_diff_y, 0.25),  # iony_abs_diff_Q1_norm
+                np.quantile(abs_diff_y, 0.5),  # iony_abs_diff_Q2_norm
+                np.quantile(abs_diff_y, 0.75),  # iony_abs_diff_Q3_norm
+                np.mean(abs_diff_y),  # iony_mean_abs_diff_norm
+                np.std(abs_diff_y),  # iony_std_abs_diff_norm
 
-        feats["spec_spearman"] = tmp["target"].corr(tmp["prediction"], "spearman")
-        feats["ionb_spearman"] = tmp.loc[tmp.ion == "b", "target"].corr(tmp.loc[tmp.ion == "b", "prediction"], "spearman")
-        feats["iony_spearman"] = tmp.loc[tmp.ion == "y", "target"].corr(tmp.loc[tmp.ion == "y", "prediction"], "spearman")
+                np.dot(target_all, prediction_all),  # Dot product all ions
+                np.dot(target_b, prediction_b),  # Dot product b ions
+                np.dot(target_y, prediction_y),  # Dot product y ions
 
-        feats["spec_mse"] = mean_squared_error(tmp["target"], tmp["prediction"])
-        feats["ionb_mse"] = mean_squared_error(tmp.loc[tmp.ion == "b", "target"], tmp.loc[tmp.ion == "b", "prediction"])
-        feats["iony_mse"] = mean_squared_error(tmp.loc[tmp.ion == "y", "target"], tmp.loc[tmp.ion == "y", "prediction"])
+                np.dot(target_all, prediction_all) / (np.linalg.norm(target_all, 2) * np.linalg.norm(prediction_all, 2)),  # Cos similarity all ions
+                np.dot(target_b, prediction_b) / (np.linalg.norm(target_b, 2) * np.linalg.norm(prediction_b, 2)),  # Cos similarity b ions
+                np.dot(target_y, prediction_y) / (np.linalg.norm(target_y, 2) * np.linalg.norm(prediction_y, 2)),  # Cos similarity y ions
 
-        feats["min_abs_diff_iontype"] = conv[tmp[tmp.abs_diff == np.min(tmp["abs_diff"])]["ion"].values[0]]
-        feats["max_abs_diff_iontype"] = conv[tmp[tmp.abs_diff == np.max(tmp["abs_diff"])]["ion"].values[0]]
+                # Same features in normal space
+                pearsonr(target_all_unlog, prediction_all_unlog)[0],  # Pearson all ions
+                pearsonr(target_b_unlog, prediction_b_unlog)[0],  # Pearson b ions
+                pearsonr(target_y_unlog, prediction_y_unlog)[0],  # Pearson y ions
 
-        feats["min_abs_diff"] = np.min(tmp["abs_diff"])
-        feats["max_abs_diff"] = np.max(tmp["abs_diff"])
-        feats["abs_diff_Q1"] = tmp.quantile(q=0.25)["abs_diff"]
-        feats["abs_diff_Q2"] = tmp.quantile(q=0.5)["abs_diff"]
-        feats["abs_diff_Q3"] = tmp.quantile(q=0.75)["abs_diff"]
-        feats["mean_abs_diff"] = np.mean(tmp["abs_diff"])
-        feats["std_abs_diff"] = np.std(tmp["abs_diff"])
+                spearmanr(target_all_unlog, prediction_all_unlog)[0],  # Spearman all ions
+                spearmanr(target_b_unlog, prediction_b_unlog)[0],  # Spearman b ions
+                spearmanr(target_y_unlog, prediction_y_unlog)[0],  # Spearman y ions
 
-        feats["ionb_min_abs_diff"] = np.min(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_max_abs_diff"] = np.max(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_abs_diff_Q1"] = tmp[tmp.ion == "b"].quantile(q=0.25)["abs_diff"]
-        feats["ionb_abs_diff_Q2"] = tmp[tmp.ion == "b"].quantile(q=0.5)["abs_diff"]
-        feats["ionb_abs_diff_Q3"] = tmp[tmp.ion == "b"].quantile(q=0.75)["abs_diff"]
-        feats["ionb_mean_abs_diff"] = np.mean(tmp.loc[tmp.ion == "b", "abs_diff"])
-        feats["ionb_std_abs_diff"] = np.std(tmp.loc[tmp.ion == "b", "abs_diff"])
+                mse(target_all_unlog, prediction_all_unlog),  # MSE all ions
+                mse(target_b_unlog, prediction_b_unlog),  # MSE b ions
+                mse(target_y_unlog, prediction_y_unlog),  # MSE y ions,
 
-        feats["iony_min_abs_diff"] = np.min(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_max_abs_diff"] = np.max(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_abs_diff_Q1"] = tmp[tmp.ion == "y"].quantile(q=0.25)["abs_diff"]
-        feats["iony_abs_diff_Q2"] = tmp[tmp.ion == "y"].quantile(q=0.5)["abs_diff"]
-        feats["iony_abs_diff_Q3"] = tmp[tmp.ion == "y"].quantile(q=0.75)["abs_diff"]
-        feats["iony_mean_abs_diff"] = np.mean(tmp.loc[tmp.ion == "y", "abs_diff"])
-        feats["iony_std_abs_diff"] = np.std(tmp.loc[tmp.ion == "y", "abs_diff"])
+                0 if np.min(abs_diff_b_unlog) <= np.min(abs_diff_y_unlog) else 1,  # Ion type with min absolute difference
+                0 if np.max(abs_diff_b_unlog) >= np.max(abs_diff_y_unlog) else 1,  # Ion type with max absolute difference
 
-        feats["dotprod"] = np.dot(tmp["target"], tmp["prediction"])
-        feats["dotprod_ionb"] = np.dot(tmp.loc[tmp.ion == "b", "target"], tmp.loc[tmp.ion == "b", "prediction"])
-        feats["dotprod_iony"] = np.dot(tmp.loc[tmp.ion == "y", "target"], tmp.loc[tmp.ion == "y", "prediction"])
+                np.min(abs_diff_all_unlog),  # min_abs_diff
+                np.max(abs_diff_all_unlog),  # max_abs_diff
+                np.quantile(abs_diff_all_unlog, 0.25),  # abs_diff_Q1
+                np.quantile(abs_diff_all_unlog, 0.5),  # abs_diff_Q2
+                np.quantile(abs_diff_all_unlog, 0.75),  # abs_diff_Q3
+                np.mean(abs_diff_all_unlog),  # mean_abs_diff
+                np.std(abs_diff_all_unlog),  # std_abs_diff
 
-        feats["cos"] = feats["dotprod"] / (np.linalg.norm(tmp["target"], 2) * np.linalg.norm(tmp["prediction"], 2))
-        feats["cos_ionb"] = feats["dotprod_ionb"] / (np.linalg.norm(tmp.loc[tmp.ion == "b", "target"], 2) * np.linalg.norm(tmp.loc[tmp.ion == "b", "prediction"], 2))
-        feats["cos_iony"] = feats["dotprod_iony"] / (np.linalg.norm(tmp.loc[tmp.ion == "y", "target"], 2) * np.linalg.norm(tmp.loc[tmp.ion == "y", "prediction"], 2))
+                np.min(abs_diff_b_unlog),  # ionb_min_abs_diff
+                np.max(abs_diff_b_unlog),  # ionb_max_abs_diff_norm
+                np.quantile(abs_diff_b_unlog, 0.25),  # ionb_abs_diff_Q1
+                np.quantile(abs_diff_b_unlog, 0.5),  # ionb_abs_diff_Q2
+                np.quantile(abs_diff_b_unlog, 0.75),  # ionb_abs_diff_Q3
+                np.mean(abs_diff_b_unlog),  # ionb_mean_abs_diff
+                np.std(abs_diff_b_unlog),  # ionb_std_abs_diff
 
-        rescore_features = rescore_features.append(feats, ignore_index=True)
+                np.min(abs_diff_y_unlog),  # iony_min_abs_diff
+                np.max(abs_diff_y_unlog),  # iony_max_abs_diff
+                np.quantile(abs_diff_y_unlog, 0.25),  # iony_abs_diff_Q1
+                np.quantile(abs_diff_y_unlog, 0.5),  # iony_abs_diff_Q2
+                np.quantile(abs_diff_y_unlog, 0.75),  # iony_abs_diff_Q3
+                np.mean(abs_diff_y_unlog),  # iony_mean_abs_diff
+                np.std(abs_diff_y_unlog),  # iony_std_abs_diff
+
+                np.dot(target_all_unlog, prediction_all_unlog),  # Dot product all ions
+                np.dot(target_b_unlog, prediction_b_unlog),  # Dot product b ions
+                np.dot(target_y_unlog, prediction_y_unlog),  # Dot product y ions
+
+                np.dot(target_all_unlog, prediction_all_unlog) / (np.linalg.norm(target_all_unlog, 2) * np.linalg.norm(prediction_all_unlog, 2)),  # Cos similarity all ions
+                np.dot(target_b_unlog, prediction_b_unlog) / (np.linalg.norm(target_b_unlog, 2) * np.linalg.norm(prediction_b_unlog, 2)),  # Cos similarity b ions
+                np.dot(target_y_unlog, prediction_y_unlog) / (np.linalg.norm(target_y_unlog, 2) * np.linalg.norm(prediction_y_unlog, 2)),  # Cos similarity y ions
+            ], dtype=np.float64)
+
+            rescore_features.append(feats)
+
+    rescore_features = np.vstack(rescore_features)
+    rescore_features = pd.DataFrame(rescore_features, columns=feature_names)
+    rescore_features['spec_id'] = spec_ids
+    rescore_features['charge'] = charges
+
     return rescore_features
+
 
 def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
     """
     parallelize calculation of features and write them into a csv file
     """
 
-    myPool = multiprocessing.Pool(num_cpu)
-
+    print("\nReading MS2PIP predictions file...")
     df = pd.read_csv(path_to_pred_and_emp)
+    df[['prediction', 'target']] = df[['prediction', 'target']].clip(lower=np.log2(0.001))
 
-    peptides = list(df.spec_id.unique())
-    split_peptides = [peptides[i * len(peptides) // num_cpu: (i + 1) * len(peptides) // num_cpu] for i in range(num_cpu)]
-
-    results = []
-
-    for i in range(num_cpu):
-        tmp = df[df["spec_id"].isin(split_peptides[i])]
-        results.append(myPool.apply_async(compute_features, args=(tmp, )))
-
-    myPool.close()
-    myPool.join()
-
-    all_results = []
-    for r in results:
-        all_results.append(r.get())
-    all_results = pd.concat(all_results)
-    all_results.to_csv(path_to_out, index=False)
-    print(all_results.head())
-    return None
-
-def join_features(path_to_target_features, path_to_pin, path_to_decoy_features=None):
-    """
-    Combine the features table obtained from Percolator (i.e. in the pin file)
-    and the ones obtained from MS2PIP_rescore in one DataFrame
-    :param path_to_target_features: string, path to MS2PIP features
-    :param path_to_pin: string, path to pin file
-    :param path_to_decoy_features: string, if non-concatenated search then there
-         will be a separate feature file with the decoy features
-    Returns
-    :pd.DataFrame all_features, includes all the Percolator and MS2PIP features
-    """
-    # read pin file - should not need the lazy pin parser as this pin already
-    # has the TITLE which means it was processed by mapper
-    pin = pd.read_csv(path_to_pin, sep='\t')
-
-    # Read rescore_features.csv file and fillna
-    rescore_targets = pd.read_csv(path_to_target_features)
-    rescore_targets = rescore_targets.fillna(0)
-    # If not concat searches, do that for target and decoy files
-    if path_to_decoy_features != None:
-        rescore_decoys = pd.read_csv(path_to_decoy_features)
-        rescore_decoys = rescore_decoys.fillna(0)
-
-        # join target and decoy tables
-        all_features = pd.concat([rescore_decoys.merge(pin[pin.Label == -1], left_on='spec_id', right_on='TITLE'),
-                                  rescore_targets.merge(pin[pin.Label == 1], left_on='spec_id', right_on='TITLE')])
+    print("Computing features...")
+    if len(df['spec_id'].unique()) < 10000:
+        all_results = compute_features(df)
     else:
-        all_features = rescore_targets.merge(pin, left_on='spec_id', right_on='TITLE')
+        # Split up df into list of chunk_size df's (will be divided over num_cpu)
+        chunk_size = 100
+        spec_ids = list(df['spec_id'].unique())
+        split_df = [df[df['spec_id'].isin(spec_ids[i * len(spec_ids) // chunk_size: (i + 1) * len(spec_ids) // chunk_size])] for i in range(chunk_size)]
 
-    all_features = all_features.drop(all_features.loc[:,all_features.columns.str.endswith('.1')], axis=1)
+        # Use imap, so we can use a tqdm progress bar
+        with multiprocessing.Pool(num_cpu) as p:
+            all_results = list(tqdm(p.imap(compute_features, split_df), total=chunk_size))
 
-    all_features.to_csv(path_to_pin.rstrip('.pin')+'_all_features.csv', sep=',', index=False)
+        all_results = pd.concat(all_results)
 
+    print("Writing to file...")
+    all_results.to_csv(path_to_out, index=False)
 
 def write_pin_files(path_to_features, savepath):
     """

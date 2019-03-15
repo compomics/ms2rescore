@@ -14,9 +14,7 @@ This branch starts with a FASTA and an MGF file, runs a search using MS-GF+, gen
   - pandas
   - scikit-learn
   - scipy
-  - xmltodict
-  - matplotlib
-  - seaborn
+  - tqdm
 
 ### Installing
 
