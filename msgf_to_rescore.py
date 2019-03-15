@@ -152,18 +152,29 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
     """
 
     if concat:
-        pepfile_tosave = pepfile.loc[:, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label', 'Proteins']]
-        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label', 'Proteins']
+        pepfile_tosave = pepfile.loc[:, ['TITLE', 'modifications', 'peptide', 'Charge']]
+        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge']
         pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep=' ', index=False)
 
     else:
-        pepfile_tosave = pepfile.loc[pepfile.Label == 1, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label', 'Proteins']]
-        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label', 'Proteins']
+        pepfile_tosave = pepfile.loc[pepfile.Label == 1, ['TITLE', 'modifications', 'peptide', 'Charge']]
+        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge']
         pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep=' ', index=False)
 
-        pepfile_tosave = pepfile.loc[pepfile.Label == -1, ['TITLE', 'modifications', 'peptide', 'Charge', 'Label', 'Proteins']]
-        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge', 'Label', 'Proteins']
+        pepfile_tosave = pepfile.loc[pepfile.Label == -1, ['TITLE', 'modifications', 'peptide', 'Charge']]
+        pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge']
         pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
+
+    return None
+
+def join_features(path_to_pin, path_to_pep):
+
+    pin = pd.read_csv(path_to_pin, sep='\t')
+    pep = pd.read_csv(path_to_pep, sep=' ')
+
+    pep = pep.join(pin)
+
+    pep.to_csv(path_to_pep, sep=' ', index=False)
 
     return None
 
@@ -202,11 +213,15 @@ def main():
     # file's TITLE field.
     logging.info("Adding mgf TITLE to pin file")
     mapper.map_mgf_title(fname + ".pin", fname + ".mzid", msgs=False)
+    os.rename(fname + ".pin_title", fname + ".pin")
 
-    # Create & write PEPREC files from the pin file
     logging.info("Writing PEPREC file")
     make_pepfile(fname + ".pin", config)
     os.rename(fname + ".pin.PEPREC", fname + ".PEPREC")
+
+    # Add features from the pin file to the PEPREC file
+    logging.info("Addin pin features to PEPREC file")
+    join_features(fname + ".pin", fname + ".PEPREC")
 
 if __name__ == '__main__':
     main()
