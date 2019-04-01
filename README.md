@@ -3,8 +3,8 @@
 Use features calculated from comparing experimental spectra with computationally generated spectra (see [MS2PIP](https://github.com/compomics/ms2pip_c)) to re-score peptide identifications using [Percolator](https://github.com/percolator/percolator/).
 
 On this branch, scripts that can be used to generate the necessary files are also provided. Currently, we provide scripts for:
-- [MS-GF+](https://omics.pnl.gov/software/ms-gf) (start with `.mgf` and `.fasta` file, or from `.mzid` identifications file)
-- [MaxQuant](https://www.maxquant.org/) (start from `.msms` identifications file)
+- [MS-GF+](https://omics.pnl.gov/software/ms-gf) (Start with `.mgf` and `.fasta` file, or from `.mzid` identifications file)
+- [MaxQuant](https://www.maxquant.org/) (Start from `msms.txt` identification file and `.mgf` files. Be sure to export without FDR filtering!)
 
 
 ## Prerequisites
