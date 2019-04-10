@@ -1,7 +1,7 @@
 __author__ = "Ralf Gabriels"
 __credits__ = ["Ralf Gabriels", "Sven Degroeve", "Lennart Martens"]
 __license__ = "Apache License, Version 2.0"
-__version__ = "0.1"
+__version__ = "0.1.1"
 __email__ = "Ralf.Gabriels@UGent.be"
 
 
@@ -33,7 +33,7 @@ def argument_parser():
     parser.add_argument('-o', metavar='<output filename>', dest='outname', action='store', default='maxquant_to_rescore_out',
                         help='Output filename for PEPREC and parsed MGF.')
     args = parser.parse_args()
-    return(args)
+    return args
 
 
 def calc_top7_peak_features(intens, mass_errors):
@@ -124,7 +124,7 @@ def msms_to_peprec(msms_filename, fixed_modifications=None, ptm_mapping=None,
 
     msms_cols = [
         'Raw file', 'Scan number', 'Charge', 'Length', 'Sequence', 'Modified sequence',
-        'Proteins', 'Protein Names', 'Missed cleavages', 'Mass', 'Mass error [Da]',
+        'Proteins', 'Missed cleavages', 'Mass', 'Mass error [Da]',
         'Reverse', 'PEP', 'Score', 'Delta score', 'Localization prob', 'Matches',
         'Intensities', 'Mass Deviations [Da]', 'Intensity coverage', 'id',
     ]
@@ -147,7 +147,7 @@ def msms_to_peprec(msms_filename, fixed_modifications=None, ptm_mapping=None,
         len(msms[msms['Reverse'] == '+']) / len(msms)
     ))
 
-    logging.debug("Calculating Percolator features")
+    logging.debug("Calculating Search Engine features")
     # Calculate peak intensity related features
     top7_features = pd.DataFrame(
         [calc_top7_peak_features(i, md)
@@ -173,6 +173,8 @@ def msms_to_peprec(msms_filename, fixed_modifications=None, ptm_mapping=None,
     msms['Label'] = msms['Reverse'].isna().apply(lambda x: 1 if x else -1)
     msms['charge_ms2pip'] = msms['Charge']
     msms['spec_id'] = msms['Raw file'] + '.' + msms['Scan number'].astype(str) + '.' + msms['Scan number'].astype(str)
+    msms['Proteins'] = msms['Proteins'].str.split(';')
+    msms['Peptide'] = msms['Sequence']
 
     # Parse modifications for MS²PIP
     logging.debug("Parsing modifications to MS2PIP format")
@@ -186,11 +188,11 @@ def msms_to_peprec(msms_filename, fixed_modifications=None, ptm_mapping=None,
     msms = pd.concat([msms.reset_index(drop=True), top7_features, ion_current_features], axis=1)
     peprec_columns = ['spec_id', 'Parsed modifications', 'Sequence', 'charge_ms2pip']
     percolator_columns = [
-        'Label', 'Score', 'Delta score', 'Localization prob', 'PEP',
-        'lnExplainedIonCurrent', 'lnNTermIonCurrentRatio',
-        'lnCTermIonCurrentRatio', 'lnMS2IonCurrent', 'Mass', 'Length',
-        'Mass error [Da]', 'absdM', 'MeanErrorTop7', 'sqMeanErrorTop7',
-        'StdevErrorTop7', 'Charge', 'Missed cleavages'
+        'Label', 'Peptide', 'Proteins', 'Score', 'Delta score',
+        'Localization prob', 'PEP', 'lnExplainedIonCurrent',
+        'lnNTermIonCurrentRatio', 'lnCTermIonCurrentRatio', 'lnMS2IonCurrent',
+        'Mass', 'Length', 'Mass error [Da]', 'absdM', 'MeanErrorTop7',
+        'sqMeanErrorTop7', 'StdevErrorTop7', 'Charge', 'Missed cleavages'
     ]
     col_mapping = {
         'Parsed modifications': 'modifications',
@@ -246,6 +248,10 @@ def scan_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
 
             spec_set = set(df_in[(df_in[filename_col] == run)][spec_title_col].values)
 
+            # Temporary fix: replace charges in MGF with ID'ed charges
+            # Until MS2PIP uses ID'ed charge instead of MGF charge
+            id_charges = df_in[(df_in[filename_col] == run)].set_index('spec_id')['charge'].to_dict()
+
             found = False
             current_mgf_file = '{}/{}{}'.format(mgf_folder, str(run), file_suffix)
             with open(current_mgf_file, 'r') as f:
@@ -254,20 +260,29 @@ def scan_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
                 else:
                     mgf_iterator = f
                 for line in mgf_iterator:
-                    if 'TITLE' in line:
+                    if 'TITLE=' in line:
                         # Take everything between `TITLE=` and the first space
                         # as the title, but exclude the charge, as the measured
                         # charge is not always the identified charge...
                         title = '.'.join(line[6:].split(' ')[0].split('.')[:-1])
                         if title in spec_set:
                             found = True
+                            line = "TITLE=" + title + "\n"
                             out.write("BEGIN IONS\n")
-                            line = "TITLE=" + title + '\n'
+                            out.write(line)
                             count += 1
+                            continue
                     if 'END IONS' in line:
                         if found:
                             out.write(line + '\n')
                             found = False
+                            continue
+                    # Temporary fix (see above)
+                    if 'CHARGE=' in line:
+                        if found:
+                            charge = id_charges[title]
+                            out.write("CHARGE=" + str(charge) + "+\n")
+                            continue
                     # Only print lines when spectrum is found and intensity != 0
                     if found and line[-4:] != '0.0\n':
                         out.write(line)
@@ -284,7 +299,6 @@ def main():
     )
     logging.info("Parsing msms.txt file")
     peprec_percolator = msms_to_peprec(args.msms_filename)
-    #peprec_percolator.to_pickle('peprec_percolator.pkl')
 
     # If MGF folder is provide, scan MGF files for spectra to include in the one MGF
     if args.mgf_folder:
