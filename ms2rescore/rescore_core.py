@@ -283,6 +283,18 @@ def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
     all_results.to_csv(path_to_out, index=False)
 
 
+def redo_pin_tabs(pin_filename):
+    """
+    Replaces triple pipe (`|||`) with tab in given file.
+    """
+    with open(pin_filename, 'rt') as pin_in:
+        with open(pin_filename + '_tmp', 'wt') as pin_out:
+            for line in pin_in:
+                pin_out.write(line.replace('|||', '\t'))
+    os.remove(pin_filename)
+    os.rename(pin_filename + '_tmp', pin_filename)
+
+
 def write_pin_files(path_to_features, path_to_pep, savepath):
     """
     Given a dataframe with all the features, writes three PIN files.
@@ -303,15 +315,32 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
                 sys.stdout.write('PEPREC file should start with header column\n')
                 exit(1)
             sep = line[7]
+
+        # Convert Protein literal list to pseudo-PIN notation:
+        # not yet tab-separated, but pipe-separated
+        # to avoid isues in pd.DataFrame.to_csv()
+        protein_converter = lambda prot_list: '|||'.join(prot_list.strip("[]'").split("', '"))
         pep = pd.read_csv(path_to_pep,
                            sep=sep,
                            index_col=False,
-                           dtype={"spec_id": str, "modifications": str})
+                           dtype={"spec_id": str, "modifications": str},
+                           converters={
+                               'Proteins': protein_converter,
+                               'protein_list': protein_converter
+                            })
     else:
         pep = path_to_pep
 
     pep['modifications'].fillna("-", inplace=True)
     pep = pep.replace(-np.inf, 0.0).replace(np.inf, 0.0)
+
+    # Prepare Proteins column for PIN
+    # If no Proteins column in PEPREC, fill with peptide
+    if not 'Proteins' in pep.columns:
+        if not 'protein_list' in pep.columns:
+            pep['Proteins'] = pep['protein_list']
+        else:
+            pep['Proteins'] = pep['peptide']
 
     peprec_cols = ['spec_id', 'peptide', 'modifications', 'charge']
     pin_columns = ['SpecId', 'ScanNr', 'Label', 'Peptide', 'Proteins', 'TITLE']
@@ -322,13 +351,22 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
 
     # Merge ms2pip_features and peprec DataFrames
     complete_df = pd.merge(all_features, pep, on=['spec_id', 'charge'])
-    complete_df = complete_df.fillna(value=0)
+    complete_df = complete_df.fillna(value=0).reset_index(drop=True)
+
+    # Add missing columns if necessary
+    if not 'ScanNr' in complete_df.columns:
+        complete_df['ScanNr'] = complete_df.index
+    if not 'SpecId' in complete_df.columns:
+        complete_df['SpecId'] = complete_df['spec_id']
 
     # Writing files with ordered columns
     # Create three PIN files: search_engine_features, ms2pip_features and all_features
-    complete_df.loc[:, ['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + search_engine_feature_names + ['Peptide', 'Proteins']]\
-        .to_csv('{}_allfeatures.pin'.format(savepath), sep='\t', index=False)
-    complete_df.loc[:, ['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + ['Peptide', 'Proteins']]\
-        .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', index=False)
-    complete_df.loc[:, ['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['Peptide', 'Proteins']]\
-        .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', index=False)
+    complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + search_engine_feature_names + ['Peptide', 'Proteins']]\
+        .to_csv('{}_allfeatures.pin'.format(savepath), sep='\t', header=False, index=False)
+    complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + ['Peptide', 'Proteins']]\
+        .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', header=False, index=False)
+    complete_df[['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['Peptide', 'Proteins']]\
+        .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', header=False, index=False)
+
+    for features_version in ['allfeatures', 'ms2pipfeatures', 'searchenginefeatures']:
+        redo_pin_tabs('{}_{}.pin'.format(savepath, features_version))
