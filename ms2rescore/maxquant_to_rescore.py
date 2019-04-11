@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 # From project
-import parse_mgf
+from ms2rescore.parse_mgf import parse_mgf
 
 
 def argument_parser():

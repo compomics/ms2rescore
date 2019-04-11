@@ -65,3 +65,13 @@ From each `Percolator` execution, three files are generated:
 - `<file>.pout` with the output regarding target PSMs
 - `<file>.pout_dec` with the output regarding decoy PSMs
 - `<file>.weights` where the internal feature weights used by `Percolator`'s scoring function are stored.
+
+
+### Testing
+```
+python pytest --pyargs ms2rescore
+```
+or
+```
+pytest --pyargs ms2rescore
+```

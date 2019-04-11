@@ -10,7 +10,7 @@ import json
 import pandas as pd
 
 # Package
-import mapper
+from ms2rescore.mapper import mapper
 
 
 def argument_parser():
