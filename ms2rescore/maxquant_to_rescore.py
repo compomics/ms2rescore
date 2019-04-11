@@ -1,27 +1,14 @@
-__author__ = "Ralf Gabriels"
-__credits__ = ["Ralf Gabriels", "Sven Degroeve", "Lennart Martens"]
-__license__ = "Apache License, Version 2.0"
-__version__ = "0.1.1"
-__email__ = "Ralf.Gabriels@UGent.be"
-
-
 # Native
 import argparse
 import logging
-import mmap
 import re
 
 # Third party
 import numpy as np
 import pandas as pd
 
-# tqdm
-try:
-    from tqdm import tqdm
-except ImportError:
-    USE_TQDM = False
-else:
-    USE_TQDM = True
+# From project
+import parse_mgf
 
 
 def argument_parser():
@@ -215,81 +202,6 @@ def msms_to_peprec(msms_filename, fixed_modifications=None, ptm_mapping=None,
     return peprec_percolator
 
 
-def scan_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
-             filename_col='mgf_filename', spec_title_col='spec_id',
-             use_tqdm=False):
-
-
-    def get_num_lines(file_path):
-        fp = open(file_path, "r+")
-        buf = mmap.mmap(fp.fileno(), 0)
-        lines = 0
-        while buf.readline():
-            lines += 1
-        return lines
-
-
-    if df_in[filename_col].iloc[0][-4:] in ['.mgf', '.MGF']:
-        file_suffix = ''
-    else:
-        file_suffix = '.mgf'
-
-    with open(outname, 'w') as out:
-        count_runs = 0
-        count = 0
-        runs = df_in[filename_col].unique()
-        print("Scanning MGF files: {} runs to do. Now working on run: ".format(len(runs)), end='')
-        for run in runs:
-            count_runs += 1
-            if count_runs % 10 == 0:
-                print(str(count_runs), end='')
-            else:
-                print('.', end='')
-
-            spec_set = set(df_in[(df_in[filename_col] == run)][spec_title_col].values)
-
-            # Temporary fix: replace charges in MGF with ID'ed charges
-            # Until MS2PIP uses ID'ed charge instead of MGF charge
-            id_charges = df_in[(df_in[filename_col] == run)].set_index('spec_id')['charge'].to_dict()
-
-            found = False
-            current_mgf_file = '{}/{}{}'.format(mgf_folder, str(run), file_suffix)
-            with open(current_mgf_file, 'r') as f:
-                if use_tqdm:
-                    mgf_iterator = tqdm(f, total=get_num_lines(current_mgf_file))
-                else:
-                    mgf_iterator = f
-                for line in mgf_iterator:
-                    if 'TITLE=' in line:
-                        # Take everything between `TITLE=` and the first space
-                        # as the title, but exclude the charge, as the measured
-                        # charge is not always the identified charge...
-                        title = '.'.join(line[6:].split(' ')[0].split('.')[:-1])
-                        if title in spec_set:
-                            found = True
-                            line = "TITLE=" + title + "\n"
-                            out.write("BEGIN IONS\n")
-                            out.write(line)
-                            count += 1
-                            continue
-                    if 'END IONS' in line:
-                        if found:
-                            out.write(line + '\n')
-                            found = False
-                            continue
-                    # Temporary fix (see above)
-                    if 'CHARGE=' in line:
-                        if found:
-                            charge = id_charges[title]
-                            out.write("CHARGE=" + str(charge) + "+\n")
-                            continue
-                    # Only print lines when spectrum is found and intensity != 0
-                    if found and line[-4:] != '0.0\n':
-                        out.write(line)
-
-    print("\n{}/{} spectra found and written to new MGF file.".format(count, len(df_in)))
-
-
 def main():
     args = argument_parser()
     logging.basicConfig(
@@ -303,10 +215,10 @@ def main():
     # If MGF folder is provide, scan MGF files for spectra to include in the one MGF
     if args.mgf_folder:
         logging.info("Parsing MGF files")
-        scan_mgf(
+        parse_mgf(
             peprec_percolator,
             args.mgf_folder, outname='{}.mgf'.format(args.outname),
-            filename_col='Raw file', spec_title_col='spec_id', use_tqdm=USE_TQDM
+            filename_col='Raw file', spec_title_col='spec_id',
         )
 
     logging.info("Writing PEPREC file")

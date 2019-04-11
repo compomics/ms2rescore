@@ -1,19 +1,17 @@
-__author__ = "Ana Silva"
-__credits__ = ["Ana Silva", "Ralf Gabriels", "Sven Degroeve", "Lennart Martens"]
-__license__ = "Apache License, Version 2.0"
-__version__ = "0.1"
-__email__ = "Ralf.Gabriels@UGent.be"
-
+# Standard library
 import argparse
-import sys
 import logging
 import subprocess
 import os
 import re
 import json
+
+# Third party
 import pandas as pd
 
+# Package
 import mapper
+
 
 def argument_parser():
     parser = argparse.ArgumentParser(
@@ -26,7 +24,8 @@ def argument_parser():
                         help="json file containing configurable variables")
 
     args = parser.parse_args()
-    return(args)
+    return args
+
 
 def run_msgfplus(msgf_dir, mgffile, fastafile, options, log=False):
     """
@@ -65,10 +64,11 @@ def run_msgfplus(msgf_dir, mgffile, fastafile, options, log=False):
          mods, mgffile, fastafile, outfile, m, inst, options["min_length"],
          options["min_charge"], options["max_charge"], l)
 
-    logging.info("MSGF+ command: {}".format(msgf_command))
+    logging.info("MSGF+ command: %s", msgf_command)
     subprocess.run(msgf_command, shell=True)
 
     return None
+
 
 def make_pepfile(path_to_pin, options):
     """
@@ -85,14 +85,15 @@ def make_pepfile(path_to_pin, options):
 
     charge_states = []
     for a in pin.columns:
-        if a.startswith('Charge'): charge_states.append(a)
+        if a.startswith('Charge'):
+            charge_states.append(a)
         else: continue
 
     pin.loc[:, 'Charge'] = [None] * len(pin)
 
     for ch in charge_states:
         value = int(ch.lstrip('Charge'))
-        pin.loc[pin[ch]==1, 'Charge'] = value
+        pin.loc[pin[ch] == 1, 'Charge'] = value
 
     pepfile = pin.loc[:, ['TITLE', 'Peptide', 'Charge', 'Label', 'Proteins']]
 
@@ -142,6 +143,7 @@ def make_pepfile(path_to_pin, options):
 
     write_PEPREC(pepfile, path_to_pin)
 
+
 def write_PEPREC(pepfile, path_to_pep, concat=True):
     """
     Write the PEPREC file, which will be the input to MS2PIP.
@@ -167,6 +169,7 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
 
     return None
 
+
 def join_features(path_to_pin, path_to_pep):
 
     pin = pd.read_csv(path_to_pin, sep='\t')
@@ -177,6 +180,7 @@ def join_features(path_to_pin, path_to_pep):
     pep.to_csv(path_to_pep, sep=' ', index=False)
 
     return None
+
 
 def main():
     # Parse arguments
@@ -222,6 +226,7 @@ def main():
     # Add features from the pin file to the PEPREC file
     logging.info("Adding pin features to PEPREC file")
     join_features(fname + ".pin", fname + ".PEPREC")
+
 
 if __name__ == '__main__':
     main()

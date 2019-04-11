@@ -16,6 +16,7 @@ from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm
 
+
 def make_ms2pip_config(options):
     """
     write configuration file for ms2pip based on what's on the rescore config
@@ -45,7 +46,7 @@ def make_ms2pip_config(options):
 
     modifications = options["ms2pip"]["modifications"]
     for mod in modifications:
-        if mod["amino_acid"] == None and mod["n_term"] == True:
+        if mod["amino_acid"] is None and mod["n_term"]:
             aa = "N-term"
         else:
             aa = mod["amino_acid"]
@@ -53,6 +54,7 @@ def make_ms2pip_config(options):
         ms2pip_config.write("ptm=" + tmp + "\n")
 
     ms2pip_config.close()
+
 
 def df_to_dict(df):
     """
@@ -280,6 +282,7 @@ def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
     print("Writing to file...")
     all_results.to_csv(path_to_out, index=False)
 
+
 def write_pin_files(path_to_features, path_to_pep, savepath):
     """
     Given a dataframe with all the features, writes three PIN files.
@@ -329,5 +332,3 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
         .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', index=False)
     complete_df.loc[:, ['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['Peptide', 'Proteins']]\
         .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', index=False)
-
-    return None
