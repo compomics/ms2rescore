@@ -9,8 +9,6 @@ branches:
 
 install:
   - sudo apt-get update
-  # We do this conditionally because it saves us some downloading if the
-  # version is the same.
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -18,9 +16,10 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda config --add channels bioconda
-  - #conda info -a
+  - conda info -a
+  - conda install conda-build
   - conda build ms2rescore
-  - conda install your-package --use-local
+  - conda install ms2rescore --use-local
 
 script:
   - ms2rescore -h
