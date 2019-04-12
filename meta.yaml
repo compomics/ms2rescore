@@ -1,0 +1,40 @@
+{% set version = "0.2.1" %}
+
+package:
+  name: ms2rescore
+  version: {{ version }}
+
+source:
+  path: /mnt/e/Git/rescore/ms2rescore
+
+build:
+  number: 0
+  script: ['conda install -c bioconda pyteomics  >=4.0.1', 'python setup.py install']
+
+requirements:
+  host:
+    - python >=3.4,<3.7
+    - pip
+  run:
+    - python >=3.4,<3.7
+    - pip
+    - numpy >=1.15
+    - pandas >=0.23.4
+    - scipy >=1.1
+    - scikit-learn >=0.20.1
+    - tqdm >=4.28.1
+    - xmltodict >=0.12.0
+
+test:
+  commands:
+    - 'ms2rescore -h'
+
+about:
+  home: https://github.com/compomics/ReScore
+  license: Apache 2.0
+  license_file: LICENSE
+  summary: 'MS2ReScore: PSM rescoring with predicted MS² peak intensities'
+
+extra:
+  identifiers:
+    - doi:10.1101/428805

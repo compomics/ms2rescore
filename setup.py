@@ -4,8 +4,8 @@ from setuptools import setup
 
 setup(
     name='ms2rescore',
-    version='0.2',
-    description='MS2ReScore: Rescoring of PSMs with predicted MS² peak intensities.',
+    version='0.2.1',
+    description='MS2ReScore: PSM rescoring with predicted MS² peak intensities.',
     author='Ana Sílvia C. Silva',
     author_email='anascsilva@vib-ugent.be',
     url='https://www.github.com/compomics/rescore',
@@ -21,6 +21,24 @@ setup(
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Development Status :: 4 - Beta"
     ],
+    install_requires=[
+        'numpy',
+        'pandas',
+        'scipy',
+        'scikit-learn',
+        'tqdm',
+        'xmltodict',
+        'pyteomics'
+    ],
     test_suite='ms2rescore.tests.test_ms2rescore.Tests',
-    tests_require=['pytest'],
+    tests_require=[
+        'pytest',
+        'numpy',
+        'pandas',
+        'scipy',
+        'sklearn',
+        'tqdm',
+        'xmltodict',
+        'pyteomics',
+    ],
 )
