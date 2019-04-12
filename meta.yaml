@@ -25,9 +25,9 @@ requirements:
     - tqdm >=4.28.1
     - xmltodict >=0.12.0
 
-test:
-  commands:
-    - python setup.py test
+#test:
+#  commands:
+#    - python setup.py test
 
 about:
   home: https://github.com/compomics/ReScore
