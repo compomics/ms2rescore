@@ -1,4 +1,5 @@
 # MS²ReScore
+[![Build Status](https://travis-ci.org/compomics/rescore.svg?branch=dev)](https://travis-ci.org/compomics/rescore)
 
 Use features calculated from comparing experimental spectra with computationally
 generated spectra (see [MS²PIP](https://github.com/compomics/ms2pip_c)) to
@@ -160,9 +161,5 @@ From each `Percolator` execution, three files are generated:
 
 ## Unit testing
 ```
-python pytest --pyargs ms2rescore
-```
-or
-```
-pytest --pyargs ms2rescore
+python setup.py test
 ```

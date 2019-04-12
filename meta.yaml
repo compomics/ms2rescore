@@ -13,10 +13,10 @@ build:
 
 requirements:
   host:
-    - python >=3.4,<3.7
+    - python 3.7
     - pip
   run:
-    - python >=3.4,<3.7
+    - python 3.7
     - pip
     - numpy >=1.15
     - pandas >=0.23.4
@@ -27,7 +27,7 @@ requirements:
 
 test:
   commands:
-    - 'ms2rescore -h'
+    - python setup.py test
 
 about:
   home: https://github.com/compomics/ReScore

@@ -18,7 +18,7 @@ install:
   - conda config --add channels bioconda
   - conda info -a
   - conda install conda-build
-  - conda build .
+  - conda build . --numpy 1.16.1 --python 3.7
   - conda install ms2rescore --use-local
 
 script:
