@@ -4,13 +4,15 @@ from setuptools import setup
 
 setup(
     name='ms2rescore',
-    version='1.0',
-    description='MS²ReScore: Search engine independent rescoring of PSMs by using predicted MS² peak intensities.',
+    version='0.2',
+    description='MS2ReScore: Rescoring of PSMs with predicted MS² peak intensities.',
     author='Ana Sílvia C. Silva',
     author_email='anascsilva@vib-ugent.be',
     url='https://www.github.com/compomics/rescore',
     packages=['ms2rescore'],
-    scripts=['ms2rescore/ms2rescore'],
+    entry_points={
+        'console_scripts': ['ms2rescore=ms2rescore:main'],
+    },
     classifiers=[
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",

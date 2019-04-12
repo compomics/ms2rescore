@@ -74,8 +74,8 @@ def calc_ion_current_features(matches, intensities, intensity_coverage):
     return tuple([np.log2(x) for x in out])
 
 
-def msms_to_peprec(msms_filename, fixed_modifications=None, ptm_mapping=None,
-                   validate_amino_acids=True):
+def msms_to_peprec(msms_filename, modifications_mapping=None,
+                   fixed_modifications=None, validate_amino_acids=True):
     """
     Extract features and MS2PIP input data from MaxQuant msms.txt file for ReScore.'
 
@@ -86,28 +86,29 @@ def msms_to_peprec(msms_filename, fixed_modifications=None, ptm_mapping=None,
     `msms_file`: str with the file location of the MSMS.txt file
 
     Keyword arguments:
-    `ptm_mapping` (dict) is used to convert the MaxQuant PTM labels to PSI-MS
-    modification names. For correct parsing, the key should always include the
-    two brackets.
-    `fixed_modifications` (list of tuples, [(aa, ptm)]) can contain fixed
-    modifications to be added to the peprec. E.g. `[('C', 'cm')]`. The first
-    tuple element contains the one-letter amino acid code. The second tuple
-    element contains a two-character label for the PTM. This PTM also needs
-    to be present in the `ptm_mapping` dictionary.
+    `modifications_mapping` (dict) is used to convert the two-letter MaxQuant
+    modification labels to PSI-MS modification names.
+    `fixed_modifications` (dict, {aa: mod}) can contain fixed
+    modifications to be added to the peprec. E.g. `{'C': 'Carbamidomethyl'}`,
+    as the MaxQuant output does not include modifications that were set as fixed
+    during the search. The first tuple element contains the one-letter amino
+    acid code. The second tuple element contains the full modification name, as
+    listed in the values of `modifications_mapping`.
     `validate_amino_acids`: Remove PSMs where the sequence includes an invalid
     amino acid (B, J, O, U, X, Z); required for MS2PIP compatibility.
     """
 
+    # Parse modification input
+    if not modifications_mapping:
+        modifications_mapping = {}
+    else:
+        modifications_mapping = {"({})".format(k): v for k, v in modifications_mapping.items()}
+
     if not fixed_modifications:
-        fixed_modifications = [
-            ('C', 'cm'),
-        ]
-    if not ptm_mapping:
-        ptm_mapping = {
-            '(ox)': 'Oxidation',
-            '(ac)': 'Acetyl',
-            '(cm)': 'Carbamidomethyl'
-        }
+        fixed_modifications = []
+    else:
+        modifications_mapping_rev = {v: k for k, v in modifications_mapping.items()}
+        fixed_modifications = [(k, modifications_mapping_rev[v]) for k, v in fixed_modifications.items()]
 
     msms_cols = [
         'Raw file', 'Scan number', 'Charge', 'Length', 'Sequence', 'Modified sequence',
@@ -166,16 +167,16 @@ def msms_to_peprec(msms_filename, fixed_modifications=None, ptm_mapping=None,
     # Parse modifications for MS²PIP
     logging.debug("Parsing modifications to MS2PIP format")
     for aa, mod in fixed_modifications:
-        msms['Modified sequence'] = msms['Modified sequence'].str.replace(aa, '{}({})'.format(aa, mod))
+        msms['Modified sequence'] = msms['Modified sequence'].str.replace(aa, '{}{}'.format(aa, mod))
     pattern = r'\([a-z].\)'
-    msms['Parsed modifications'] = ['|'.join(['{}|{}'.format(m.start(0) - 1 - i*4, ptm_mapping[m.group()]) for i, m in enumerate(re.finditer(pattern, s))]) for s in msms['Modified sequence']]
+    msms['Parsed modifications'] = ['|'.join(['{}|{}'.format(m.start(0) - 1 - i*4, modifications_mapping[m.group()]) for i, m in enumerate(re.finditer(pattern, s))]) for s in msms['Modified sequence']]
     msms['Parsed modifications'] = ['-' if mods == '' else mods for mods in msms['Parsed modifications']]
 
     # Bringing it all together
     msms = pd.concat([msms.reset_index(drop=True), top7_features, ion_current_features], axis=1)
     peprec_columns = ['spec_id', 'Parsed modifications', 'Sequence', 'charge_ms2pip']
     percolator_columns = [
-        'Label', 'Peptide', 'Proteins', 'Score', 'Delta score',
+        'Label', 'Modified sequence', 'Proteins', 'Score', 'Delta score',
         'Localization prob', 'PEP', 'lnExplainedIonCurrent',
         'lnNTermIonCurrentRatio', 'lnCTermIonCurrentRatio', 'lnMS2IonCurrent',
         'Mass', 'Length', 'Mass error [Da]', 'absdM', 'MeanErrorTop7',
@@ -184,6 +185,7 @@ def msms_to_peprec(msms_filename, fixed_modifications=None, ptm_mapping=None,
     col_mapping = {
         'Parsed modifications': 'modifications',
         'Sequence': 'peptide',
+        'Modified sequence': 'ModPeptide',
         'charge_ms2pip': 'charge',
         'Score': 'RawScore',
         'Delta score': 'RawDeltaScore',

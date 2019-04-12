@@ -4,6 +4,7 @@ concatenated searches.
 """
 
 # Standard library
+import logging
 import warnings
 import sys
 import multiprocessing
@@ -17,13 +18,13 @@ from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm
 
 
-def make_ms2pip_config(options):
+def make_ms2pip_config(options, filename='ms2pip_config.txt'):
     """
     write configuration file for ms2pip based on what's on the rescore config
     file.
     """
     cwd = os.getcwd()
-    ms2pip_config = open(cwd + "/rescore_config.txt", 'wt')
+    ms2pip_config = open(os.path.join(cwd, filename), 'wt')
 
     if "frag" in options["ms2pip"]:
         ms2pip_config.write("frag_method={}\n".format(options["ms2pip"]["frag"]))
@@ -260,11 +261,11 @@ def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
     parallelize calculation of features and write them into a csv file
     """
 
-    print("\nReading MS2PIP predictions file...")
+    logging.debug("Reading MS2PIP predictions file")
     df = pd.read_csv(path_to_pred_and_emp)
     df[['prediction', 'target']] = df[['prediction', 'target']].clip(lower=np.log2(0.001))
 
-    print("Computing features...")
+    logging.debug("Computing features")
     if len(df['spec_id'].unique()) < 10000:
         all_results = compute_features(df)
     else:
@@ -279,7 +280,7 @@ def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
 
         all_results = pd.concat(all_results)
 
-    print("Writing to file...")
+    logging.debug("Writing to file")
     all_results.to_csv(path_to_out, index=False)
 
 
@@ -295,7 +296,7 @@ def redo_pin_tabs(pin_filename):
     os.rename(pin_filename + '_tmp', pin_filename)
 
 
-def write_pin_files(path_to_features, path_to_pep, savepath):
+def write_pin_files(path_to_features, path_to_pep, savepath, feature_sets=None):
     """
     Given a dataframe with all the features, writes three PIN files.
     Writes three PIN files: search_engine_features, ms2pip_features and
@@ -304,7 +305,12 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
     path_to_features: str of path to features or pd.DataFrame with features
     path_to_pep: str of path to peprec or pd.DataFrame with peprec
     save_path: path to save PIN files into
+    feature_sets: list with feature sets for which to write PIN files. Can
+    contain `all`, `search_engine` and `ms2pip`.
     """
+
+    if not feature_sets:
+        feature_sets = ['all', 'ms2pip', 'searchengine']
 
     all_features = pd.read_csv(path_to_features, sep=',')
 
@@ -312,7 +318,7 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
         with open(path_to_pep, 'rt') as f:
             line = f.readline()
             if line[:7] != 'spec_id':
-                sys.stdout.write('PEPREC file should start with header column\n')
+                logging.critical('PEPREC file should start with header column')
                 exit(1)
             sep = line[7]
 
@@ -337,13 +343,15 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
     # Prepare Proteins column for PIN
     # If no Proteins column in PEPREC, fill with peptide
     if not 'Proteins' in pep.columns:
-        if not 'protein_list' in pep.columns:
+        if 'protein_list' in pep.columns:
             pep['Proteins'] = pep['protein_list']
+        elif 'ModPeptide' in pep.columns:
+            pep['Proteins'] = pep['ModPeptide']
         else:
             pep['Proteins'] = pep['peptide']
 
     peprec_cols = ['spec_id', 'peptide', 'modifications', 'charge']
-    pin_columns = ['SpecId', 'ScanNr', 'Label', 'Peptide', 'Proteins', 'TITLE']
+    pin_columns = ['SpecId', 'ScanNr', 'Label', 'ModPeptide', 'Proteins', 'TITLE']
 
     # Get list with feature names split by type of feature
     search_engine_feature_names = [col for col in pep.columns if (col not in peprec_cols) and (col not in pin_columns)]
@@ -359,14 +367,16 @@ def write_pin_files(path_to_features, path_to_pep, savepath):
     if not 'SpecId' in complete_df.columns:
         complete_df['SpecId'] = complete_df['spec_id']
 
-    # Writing files with ordered columns
-    # Create three PIN files: search_engine_features, ms2pip_features and all_features
-    complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + search_engine_feature_names + ['Peptide', 'Proteins']]\
-        .to_csv('{}_allfeatures.pin'.format(savepath), sep='\t', header=False, index=False)
-    complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + ['Peptide', 'Proteins']]\
-        .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', header=False, index=False)
-    complete_df[['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['Peptide', 'Proteins']]\
-        .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', header=False, index=False)
+    # Write PIN files with ordered columns
+    if 'all' in feature_sets:
+        complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + search_engine_feature_names + ['ModPeptide', 'Proteins']]\
+            .to_csv('{}_allfeatures.pin'.format(savepath), sep='\t', header=False, index=False)
+    if 'ms2pip' in feature_sets:
+        complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + ['ModPeptide', 'Proteins']]\
+            .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', header=False, index=False)
+    if 'searchengine' in feature_sets:
+        complete_df[['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['ModPeptide', 'Proteins']]\
+            .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', header=False, index=False)
 
-    for features_version in ['allfeatures', 'ms2pipfeatures', 'searchenginefeatures']:
-        redo_pin_tabs('{}_{}.pin'.format(savepath, features_version))
+    for features_version in feature_sets:
+        redo_pin_tabs('{}_{}features.pin'.format(savepath, features_version))
