@@ -5,7 +5,7 @@ package:
   version: {{ version }}
 
 source:
-  path: /mnt/e/Git/rescore/ms2rescore
+  path: ./
 
 build:
   number: 0
