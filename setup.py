@@ -5,10 +5,10 @@ from setuptools import setup
 setup(
     name='ms2rescore',
     version='0.2.1',
-    description='MS2ReScore: PSM rescoring with predicted MS² peak intensities.',
+    description='MS²ReScore: PSM rescoring with predicted MS² peak intensities.',
     author='Ana Sílvia C. Silva',
     author_email='anascsilva@vib-ugent.be',
-    url='https://www.github.com/compomics/rescore',
+    url='https://www.github.com/compomics/ms2rescore',
     packages=['ms2rescore'],
     include_package_data=True,
     entry_points={

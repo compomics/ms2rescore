@@ -1,5 +1,7 @@
 # MS²ReScore
-[![Build Status](https://travis-ci.org/compomics/rescore.svg?branch=dev)](https://travis-ci.org/compomics/rescore)
+[![GitHub release](https://img.shields.io/github/release-pre/compomics/ms2rescore.svg)](https://github.com/compomics/ms2rescore/releases)
+[![Build Status](https://travis-ci.org/compomics/ms2rescore.svg?branch=dev)](https://travis-ci.org/compomics/ms2rescore)
+[![GitHub](https://img.shields.io/github/license/compomics/ms2pip_c.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Use features calculated from comparing experimental spectra with computationally
 generated spectra (see [MS²PIP](https://github.com/compomics/ms2pip_c)) to
@@ -33,7 +35,7 @@ and [MS2PIP](https://github.com/anasilviacs/ms2pip_c/tree/6f037dc2d0797cd25061aa
 As such, the repository should be called as:
 
 ```
-git clone --recurse-submodules git://github.com/compomics/rescore.git
+git clone --recurse-submodules git://github.com/compomics/ms2rescore.git
 ```
 
 Go to the newly made directory and switch to the correct branch:
