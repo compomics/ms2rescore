@@ -1,20 +1,23 @@
-{% set version = "0.2.1" %}
+{% set data = load_setup_py_data() %}
 
 package:
   name: ms2rescore
-  version: {{ version }}
+  version: {{ data.get('version') }}
 
 source:
   path: ./
 
 build:
   number: 0
-  script: ['conda install -c bioconda pyteomics  >=4.0.1', 'python setup.py install']
+  script: "conda install -c bioconda pyteomics  >=4.0.1; {{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv"
+  entry_points:
+    - ms2rescore=ms2rescore:main
 
 requirements:
   host:
     - python 3.7
     - pip
+    - setuptools
   run:
     - python 3.7
     - pip
@@ -30,10 +33,10 @@ requirements:
 #    - python setup.py test
 
 about:
-  home: https://github.com/compomics/ReScore
-  license: Apache 2.0
+  home: "{{ data.get('url') }}"
+  license: APACHE
   license_file: LICENSE
-  summary: 'MS2ReScore: PSM rescoring with predicted MS² peak intensities'
+  summary: "{{ data.get('description') }}"
 
 extra:
   identifiers:
