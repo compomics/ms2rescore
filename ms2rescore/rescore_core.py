@@ -275,7 +275,7 @@ def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
         split_df = [df[df['spec_id'].isin(spec_ids[i * len(spec_ids) // chunk_size: (i + 1) * len(spec_ids) // chunk_size])] for i in range(chunk_size)]
 
         # Use imap, so we can use a tqdm progress bar
-        with multiprocessing.Pool(num_cpu) as p:
+        with multiprocessing.Pool(int(num_cpu)) as p:
             all_results = list(tqdm(p.imap(compute_features, split_df), total=chunk_size))
 
         all_results = pd.concat(all_results)
