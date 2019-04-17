@@ -370,13 +370,13 @@ def write_pin_files(path_to_features, path_to_pep, savepath, feature_sets=None):
     # Write PIN files with ordered columns
     if 'all' in feature_sets:
         complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + search_engine_feature_names + ['ModPeptide', 'Proteins']]\
-            .to_csv('{}_allfeatures.pin'.format(savepath), sep='\t', header=False, index=False)
+            .to_csv('{}_allfeatures.pin'.format(savepath), sep='\t', header=True, index=False)
     if 'ms2pip' in feature_sets:
         complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + ['ModPeptide', 'Proteins']]\
-            .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', header=False, index=False)
+            .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', header=True, index=False)
     if 'searchengine' in feature_sets:
         complete_df[['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['ModPeptide', 'Proteins']]\
-            .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', header=False, index=False)
+            .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', header=True, index=False)
 
     for features_version in feature_sets:
         redo_pin_tabs('{}_{}features.pin'.format(savepath, features_version))
