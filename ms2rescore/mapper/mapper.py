@@ -30,7 +30,8 @@ def get_indices(path_to_mzid):
                 PSM_ids.append(row.rstrip().split('id=')[1][1:-2])
             elif sp and "spectrum title" in row:
                 sp = False
-                title = row.rstrip().split('value=')[1].split(' ')[0][1:].rstrip('"/>')
+                #title = row.rstrip().split('value=')[1].split(' ')[0][1:].rstrip('"/>')
+                title = row.rstrip().split('value="')[1].split('"')[0]
                 for PSM in PSM_ids:
                     title_dict[PSM] = title
                 PSM_ids = []
