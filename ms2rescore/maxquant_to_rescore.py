@@ -11,18 +11,6 @@ import pandas as pd
 from ms2rescore.parse_mgf import parse_mgf
 
 
-def argument_parser():
-    parser = argparse.ArgumentParser(description='Extract features and MS2PIP input data from MaxQuant msms.txt file for ReScore.')
-    parser.add_argument('msms_filename', metavar='<msms.txt file>',
-                        help='Path to msms.txt file.')
-    parser.add_argument('-m', metavar='<mgf folder>', dest='mgf_folder', action='store', default=None,
-                        help='Folder containing MGF files to parse.')
-    parser.add_argument('-o', metavar='<output filename>', dest='outname', action='store', default='maxquant_to_rescore_out',
-                        help='Output filename for PEPREC and parsed MGF.')
-    args = parser.parse_args()
-    return args
-
-
 def calc_top7_peak_features(intens, mass_errors):
     """
     Calculate top7-related features for Percolator.
@@ -202,30 +190,3 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
     logging.debug("Finished parsing msms.txt file")
 
     return peprec_percolator
-
-
-def main():
-    args = argument_parser()
-    logging.basicConfig(
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        level=logging.DEBUG
-    )
-    logging.info("Parsing msms.txt file")
-    peprec_percolator = msms_to_peprec(args.msms_filename)
-
-    # If MGF folder is provide, scan MGF files for spectra to include in the one MGF
-    if args.mgf_folder:
-        logging.info("Parsing MGF files")
-        parse_mgf(
-            peprec_percolator,
-            args.mgf_folder, outname='{}.mgf'.format(args.outname),
-            filename_col='Raw file', spec_title_col='spec_id',
-        )
-
-    logging.info("Writing PEPREC file")
-    peprec_percolator.drop('Raw file', axis=1, inplace=True)
-    peprec_percolator.to_csv('{}.peprec'.format(args.outname), sep=' ', index=False)
-
-if __name__ == '__main__':
-    main()
