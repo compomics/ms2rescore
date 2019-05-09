@@ -97,10 +97,10 @@ def get_indices_pyteomics(path_to_mzid):
     return index_map
 
 
-def fix_pin_tabs(path):
+def fix_pin_tabs(path, prot_sep='|||'):
     """
-    Takes a pin file and re-writes it, replacing the tabs that separate the
-    Proteins column with pipes
+    Take a pin file and rewrite it, replacing the tabs that separate the
+    Proteins column with a different separator
     """
     f = open(path)
     rows = f.readlines()
@@ -108,19 +108,17 @@ def fix_pin_tabs(path):
     out = open(outfile, 'w+')
 
     for i, row in enumerate(rows):
-        if i == 0:
+        if i == 0 & row.startswith('SpecId'):
             numcol = len(row.split('\t'))
             out.write(row)
-        elif i == 1:
+        elif i == 1 & row.startswith('DefaultDirection'):
             out.write(row)
         else:
-            r = row.rstrip('\n').split('\t')
-            tmp = []
-            for j in range(numcol):
-                tmp.append(r[j])
-            tmp.append(';'.join(r[numcol:]))
-            out.write('\t'.join(tmp[:numcol]))
-            out.write('\n')
+            r = row.strip().split('\t')
+            r_cols = r[:numcol-1]
+            r_proteins = r[numcol-1:]
+            r_cols.append(prot_sep.join(r_proteins))
+            out.write('\t'.join(r_cols) + '\n')
     f.close()
     out.close()
     return None
@@ -141,6 +139,8 @@ def map_mgf_title(path_to_pin, path_to_mzid, path_to_decoy_mzid=None, msgs=False
         if msgs:
             sys.stdout.write('\n parsing title map from mzid...\n')
         title_map = get_indices(path_to_mzid)
+        #print(list(title_map.items())[:10])
+        #exit(0)
         gc.collect()
         # Adding mgf "TITLE" column. Avoiding using pandas due to memory issues
         if msgs:
@@ -153,6 +153,7 @@ def map_mgf_title(path_to_pin, path_to_mzid, path_to_decoy_mzid=None, msgs=False
                 pin_out.write(line.rstrip('\n')+'\t'+'TITLE'+'\n')
                 continue
             elif line.startswith('Default'):
+                pin_out.write(line)
                 continue
             k = line.split('\t')[0]
             k = k.split('_')[-6:-3]
