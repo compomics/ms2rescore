@@ -1,73 +1,56 @@
 # Standard library
-import argparse
 import logging
 import subprocess
 import os
 import re
-import json
 
 # Third party
 import pandas as pd
 
 # Package
-from ms2rescore.mapper import mapper
+import ms2rescore.mapper as mapper
 
-
-def argument_parser():
-    parser = argparse.ArgumentParser(
-        description="Run MSGF+ to get PSMs and get PEPREC and pin files")
-    parser.add_argument("spec_file", metavar="spectrum-file",
-                        help="file containing MS2 spectra (MGF)")
-    parser.add_argument("fasta_file", metavar="FASTA-file",
-                        help="file containing protein sequences")
-    parser.add_argument("config_file", metavar="config-file",
-                        help="json file containing configurable variables")
-
-    args = parser.parse_args()
-    return args
-
-
-def run_msgfplus(msgf_dir, mgffile, fastafile, options, log=False):
+def run_msgfplus(msgfplus_config, outname, log=False, num_cpu=23):
     """
-    Runs MSGF+ with some fixed settings: 10ppm precursor mass tolerance,
-    concatenated search, minimum peptide length of 8aa, minimum charge is 2 and
-    maximum is 4, 1 match per spectrum, include additional features, no protocol
-    and use 23 threads. MSGF+ is called with subprocess.
+    Runs MSGFPlus with some fixed settings: concatenated search, include
+    additional features, no protocol. MSGF+ is called with subprocess.
 
-    :param msgfdir: string, path to MSGFPlus.jar
-    :param mgffile: string, spectrum file (MGF,PKL,DTA,mzXML,mzDATA or mzML)
-    :param fastafile: string, the database to search against in .fasta format
-    :param options: dictionary, contains search engine options
+    :param msgfplus_config: dictionary, contains search engine options
+    :param outname: string, name for output files
+    :param log: boolean, write MSGFPlus log to file or not
     """
 
-    if options["frag"] == 'HCD':
+    if msgfplus_config['search_params']['frag'] == 'HCD':
         m = 3
         inst = 1
-    elif options["frag"] == 'CID':
+    elif msgfplus_config['search_params']['frag'] == 'CID':
         m = 1
         inst = 0
-    if options["path_to_modsfile"] != '':
-        mods = '-mod {} '.format(options["path_to_modsfile"])
+    if msgfplus_config['search_params']['path_to_modsfile'] != '':
+        mods = '-mod {} '.format(msgfplus_config['search_params']['path_to_modsfile'])
     else:
         mods = ''
     if log:
-        l = " > {}.log".format(mgffile.rstrip(".mgf"))
+        log_cmd = " > {}.log".format(outname)
     else:
-        l = ''
+        log_cmd = ''
 
+    jar_file = msgfplus_config['search_params']['jar_file']
+    mgf_file = msgfplus_config['mgf_file']
+    fasta_file = msgfplus_config['search_params']['fasta_file']
+    min_length = msgfplus_config['search_params']['min_length']
+    min_charge = msgfplus_config['search_params']['min_charge']
+    max_charge = msgfplus_config['search_params']['max_charge']
+    ms1_tol = msgfplus_config['search_params']['ms1_tolerance']
 
-    outfile = mgffile.rstrip(".mgf") + ".mzid"
+    msgf_command = f"java -Xmx28000M -jar {jar_file} {mods}-s {mgf_file} \
+        -d {fasta_file} -o {outname}.mzid -t {ms1_tol} -tda 1 -m {m} \
+        -inst {inst} -minLength {min_length} -minCharge {min_charge} \
+        -maxCharge {max_charge} -n 1 -e 1 -addFeatures 1 -protocol 0 \
+        -thread {num_cpu}{log_cmd}"
 
-    msgf_command = "java -Xmx28000M -jar {}/MSGFPlus.jar {}-s {} -d {} -o {} -t\
-         10ppm -tda 1 -m {} -inst {} -minLength {} -minCharge {} -maxCharge {}\
-         -n 1 -e 1 -addFeatures 1 -protocol 0 -thread 23{}".format(msgf_dir,
-         mods, mgffile, fastafile, outfile, m, inst, options["min_length"],
-         options["min_charge"], options["max_charge"], l)
-
-    logging.info("MSGF+ command: %s", msgf_command)
-    subprocess.run(msgf_command, shell=True)
-
-    return None
+    logging.info("MSGFPlus command: %s", msgf_command)
+    subprocess.run(msgf_command, shell=True, check=True)
 
 
 def make_pepfile(path_to_pin, options):
@@ -156,77 +139,78 @@ def write_PEPREC(pepfile, path_to_pep, concat=True):
     if concat:
         pepfile_tosave = pepfile.loc[:, ['TITLE', 'modifications', 'peptide', 'Charge']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge']
-        pepfile_tosave.to_csv(path_to_pep + '.PEPREC', sep=' ', index=False)
+        pepfile_tosave.to_csv(path_to_pep + '.peprec', sep=' ', index=False)
 
     else:
         pepfile_tosave = pepfile.loc[pepfile.Label == 1, ['TITLE', 'modifications', 'peptide', 'Charge']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge']
-        pepfile_tosave.to_csv(path_to_pep + '.targets.PEPREC', sep=' ', index=False)
+        pepfile_tosave.to_csv(path_to_pep + '.targets.peprec', sep=' ', index=False)
 
         pepfile_tosave = pepfile.loc[pepfile.Label == -1, ['TITLE', 'modifications', 'peptide', 'Charge']]
         pepfile_tosave.columns = ['spec_id', 'modifications', 'peptide', 'charge']
-        pepfile_tosave.to_csv(path_to_pep + '.decoys.PEPREC', sep=' ', index=False)
+        pepfile_tosave.to_csv(path_to_pep + '.decoys.peprec', sep=' ', index=False)
 
     return None
 
 
 def join_features(path_to_pin, path_to_pep):
-
     pin = pd.read_csv(path_to_pin, sep='\t')
     pep = pd.read_csv(path_to_pep, sep=' ')
 
-    pep = pep.join(pin)
+    # Reorganize PIN file to have all features after ID cols (as it has to be
+    # in PEPREC)
+    pin.drop('SpecId', axis=1, inplace=True)
+    pin.rename(columns={'TITLE': 'spec_id', 'Peptide': 'ModPeptide'}, inplace=True)
+    id_cols = ['spec_id', 'Label', 'ScanNr', 'ModPeptide', 'Proteins']
+    feature_cols = [col for col in pin.columns if col not in id_cols]
+    pin = pin[id_cols + feature_cols]
+
+    # Merge PIN to PEPREC
+    pep = pep.merge(pin, on='spec_id')
 
     pep.to_csv(path_to_pep, sep=' ', index=False)
 
-    return None
 
-
-def main():
-    # Parse arguments
-    args = argument_parser()
-    fname = re.sub('.mgf', '', args.spec_file, flags=re.IGNORECASE)
-
-    # Parse config.json
-    with open(args.config_file) as f:
-        config = json.load(f)
-
-    logging.basicConfig(
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        level=logging.DEBUG
-    )
-
-    logging.info("Running MS-GF+")
-    MSGF_DIR = config["search_engine_options"]["dir"]
-    run_msgfplus(MSGF_DIR, args.spec_file, args.fasta_file, config["search_engine_options"])
+def msgf_pipeline(config, outname):
+    if config['msgfplus']['run_search']:
+        logging.info("Running MS-GF+")
+        run_msgfplus(
+            config['msgfplus'], outname,
+            num_cpu=config['general']['num_cpu']
+        )
+        mzid_file = outname + '.mzid'
+    else:
+        if not 'mzid_file' in config['msgfplus']:
+            logging.critical("No `mzid_file` passed. Pass `mzid_file` or set \
+                `run_search` to true.")
+            exit(1)
+        else:
+            mzid_file = config['msgfplus']['mzid_file']
 
     logging.info("Running msgf2pin")
     # Convert .mzid to pin. XXX is the decoy pattern from MSGF+
-    convert_command = "msgf2pin -P XXX {}.mzid > {}.pin".format(fname, fname)
+    convert_command = "msgf2pin -P XXX {} > {}_original.pin".format(mzid_file, outname)
     subprocess.run(convert_command, shell=True)
 
     # PIN FILE: "Proteins" column has tab-separated values which makes the file
     # cumbersome to read. mapper.fix_pin_tabs replaces those tabs with ";"
     logging.info("Fixing tabs on pin file")
-    mapper.fix_pin_tabs(fname + ".pin")
-    # os.remove(fname + ".pin")
-    os.rename(fname + "_fixed.pin", fname + ".pin")
+    mapper.fix_pin_tabs(outname + "_original.pin", prot_sep='|||')
+    os.rename(outname + "_original_fixed.pin", outname + "_edited.pin")
 
     # Percolator generates its own spectrum ID, so we must match it to the mgf
     # file's TITLE field.
     logging.info("Adding mgf TITLE to pin file")
-    mapper.map_mgf_title(fname + ".pin", fname + ".mzid", msgs=False)
-    os.rename(fname + ".pin_title", fname + ".pin")
+    mapper.map_mgf_title(outname + "_edited.pin", mzid_file, msgs=False)
+    os.rename(outname + "_edited.pin_title", outname + "_edited.pin")
 
     logging.info("Writing PEPREC file")
-    make_pepfile(fname + ".pin", config)
-    os.rename(fname + ".pin.PEPREC", fname + ".PEPREC")
+    make_pepfile(outname + "_edited.pin", config)
+    os.rename(outname + "_edited.pin.peprec", outname + ".peprec")
 
     # Add features from the pin file to the PEPREC file
     logging.info("Adding pin features to PEPREC file")
-    join_features(fname + ".pin", fname + ".PEPREC")
+    join_features(outname + "_edited.pin", outname + ".peprec")
+    os.remove(outname + '_edited.pin')
 
-
-if __name__ == '__main__':
-    main()
+    return outname + ".peprec", config['msgfplus']['mgf_file']

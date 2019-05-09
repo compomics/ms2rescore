@@ -6,7 +6,6 @@ concatenated searches.
 # Standard library
 import logging
 import warnings
-import sys
 import multiprocessing
 import os
 
@@ -28,6 +27,8 @@ def make_ms2pip_config(options, filename='ms2pip_config.txt'):
 
     if "frag" in options["ms2pip"]:
         ms2pip_config.write("frag_method={}\n".format(options["ms2pip"]["frag"]))
+    if "model" in options["ms2pip"]:
+        ms2pip_config.write("model={}\n".format(options["ms2pip"]["model"]))
     else:
         # Assume HCD
         ms2pip_config.write("frag_method=HCD\n")
@@ -256,7 +257,8 @@ def compute_features(df):
     return rescore_features
 
 
-def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
+def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu,
+                       show_progress_bar=True):
     """
     parallelize calculation of features and write them into a csv file
     """
@@ -276,8 +278,10 @@ def calculate_features(path_to_pred_and_emp, path_to_out, num_cpu):
 
         # Use imap, so we can use a tqdm progress bar
         with multiprocessing.Pool(int(num_cpu)) as p:
-            all_results = list(tqdm(p.imap(compute_features, split_df), total=chunk_size))
-
+            if show_progress_bar:
+                all_results = list(tqdm(p.imap(compute_features, split_df), total=chunk_size))
+            else:
+                all_results = list(p.imap(compute_features, split_df))
         all_results = pd.concat(all_results)
 
     logging.debug("Writing to file")
@@ -350,12 +354,20 @@ def write_pin_files(path_to_features, path_to_pep, savepath, feature_sets=None):
         else:
             pep['Proteins'] = pep['peptide']
 
-    peprec_cols = ['spec_id', 'peptide', 'modifications', 'charge']
-    pin_columns = ['SpecId', 'ScanNr', 'Label', 'ModPeptide', 'Proteins', 'TITLE']
+    # ModPeptide contains sequence with modifications (e.g. from MaxQuant)
+    if not 'ModPeptide' in pep.columns:
+        pep['ModPeptide'] = pep['peptide']
+    pep.rename(
+        columns={'peptide': 'peptide_peprec', 'ModPeptide': 'Peptide'},
+        inplace=True
+    )
+
+    peprec_cols = ['spec_id', 'peptide', 'peptide_peprec', 'modifications', 'charge']
+    pin_columns = ['SpecId', 'ScanNr', 'Label', 'Peptide', 'ModPeptide', 'Proteins', 'TITLE']
 
     # Get list with feature names split by type of feature
     search_engine_feature_names = [col for col in pep.columns if (col not in peprec_cols) and (col not in pin_columns)]
-    ms2pip_feature_names = [col for col in all_features.columns if col not in peprec_cols]
+    ms2pip_feature_names = [col for col in all_features.columns if (col not in peprec_cols) and (col not in pin_columns)]
 
     # Merge ms2pip_features and peprec DataFrames
     complete_df = pd.merge(all_features, pep, on=['spec_id', 'charge'])
@@ -368,14 +380,17 @@ def write_pin_files(path_to_features, path_to_pep, savepath, feature_sets=None):
         complete_df['SpecId'] = complete_df['spec_id']
 
     # Write PIN files with ordered columns
+    # From Percolator documentation:
+    # PSMId <tab> Label <tab> ScanNr <tab> feature1name <tab> ... <tab> featureNname <tab> Peptide <tab> Proteins
+
     if 'all' in feature_sets:
-        complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + search_engine_feature_names + ['ModPeptide', 'Proteins']]\
+        complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + search_engine_feature_names + ['Peptide', 'Proteins']]\
             .to_csv('{}_allfeatures.pin'.format(savepath), sep='\t', header=True, index=False)
     if 'ms2pip' in feature_sets:
-        complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + ['ModPeptide', 'Proteins']]\
+        complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + ['Peptide', 'Proteins']]\
             .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', header=True, index=False)
     if 'searchengine' in feature_sets:
-        complete_df[['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['ModPeptide', 'Proteins']]\
+        complete_df[['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['Peptide', 'Proteins']]\
             .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', header=True, index=False)
 
     for features_version in feature_sets:

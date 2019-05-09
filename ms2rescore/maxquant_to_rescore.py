@@ -1,14 +1,10 @@
 # Native
-import argparse
 import logging
 import re
 
 # Third party
 import numpy as np
 import pandas as pd
-
-# From project
-from ms2rescore.parse_mgf import parse_mgf
 
 
 def calc_top7_peak_features(intens, mass_errors):
@@ -98,12 +94,23 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
         modifications_mapping_rev = {v: k for k, v in modifications_mapping.items()}
         fixed_modifications = [(k, modifications_mapping_rev[v]) for k, v in fixed_modifications.items()]
 
-    msms_cols = [
+    msms_cols = {
         'Raw file', 'Scan number', 'Charge', 'Length', 'Sequence', 'Modified sequence',
         'Proteins', 'Missed cleavages', 'Mass', 'Mass error [Da]',
         'Reverse', 'PEP', 'Score', 'Delta score', 'Localization prob', 'Matches',
         'Intensities', 'Mass Deviations [Da]', 'Intensity coverage', 'id',
-    ]
+    }
+
+    # Read first line of msms, to check is Mass Error is present in Da or ppm
+    with open(msms_filename, 'rt') as f:
+        header = f.readline().split('\t')
+        if 'Mass error [Da]' in header:
+            mass_error_unit = 'Da'
+        elif 'Mass Error [ppm]' in header:
+            mass_error_unit = 'ppm'
+            msms_cols.remove('Mass error [Da]')
+            msms_cols.add('Mass Error [ppm]')
+        f.seek(0)
 
     logging.debug("Reading msms file")
     msms = pd.read_csv(msms_filename, sep='\t', usecols=msms_cols)
@@ -118,7 +125,7 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
         msms = msms[~(msms['Sequence'].str.contains('[BJOUXZ]', regex=True))]\
             .reset_index(drop=True)
 
-    logging.info("Found {} PSMs of which {:.0%} are decoy hits.".format(
+    logging.info("Found {} rank 1 PSMs of which {:.0%} are decoy hits.".format(
         len(msms),
         len(msms[msms['Reverse'] == '+']) / len(msms)
     ))
@@ -143,7 +150,7 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
     )
 
     # Other features
-    msms['absdM'] = msms['Mass error [Da]'].abs()
+    msms['absdM'] = msms['Mass error [{}]'.format(mass_error_unit)].abs()
 
     # Other MS2PIP / ReScore columns
     msms['Label'] = msms['Reverse'].isna().apply(lambda x: 1 if x else -1)
@@ -151,6 +158,15 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
     msms['spec_id'] = msms['Raw file'] + '.' + msms['Scan number'].astype(str) + '.' + msms['Scan number'].astype(str)
     msms['Proteins'] = msms['Proteins'].str.split(';')
     msms['Peptide'] = msms['Sequence']
+
+    # Fill NaN values in Proteins column for decoy PSMs
+    # But first check that NaN Proteins only occur for decoy PSMs, if so:
+    # fill these without the "REV_"
+    if (msms['Proteins'].isna() & msms['Reverse'].isna()).any():
+        req_cols = zip(msms['Proteins'], msms['Reverse'], msms['Modified sequence'])
+        msms['Proteins'] = [[modseq] if (type(rev) == float) & (type(prot) == float) else prot for prot, rev, modseq in req_cols]
+
+    msms['Proteins'] = msms['Proteins'].fillna('REV_' + msms['Modified sequence'])
 
     # Parse modifications for MS²PIP
     logging.debug("Parsing modifications to MS2PIP format")
