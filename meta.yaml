@@ -9,13 +9,14 @@ source:
 
 build:
   number: 0
-  script: "conda install -c bioconda pyteomics  >=4.0.1; {{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv"
+  script: "conda install -y -c bioconda pyteomics  >=4.0.1; {{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv"
   entry_points:
     - ms2rescore=ms2rescore:main
 
 requirements:
   host:
     - python 3.7
+    - numpy >=1.15
     - pip
     - setuptools
   run:
