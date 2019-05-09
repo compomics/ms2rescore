@@ -11,22 +11,13 @@ rescore peptide identifications using
 On this branch, multiple pipelines can be run, depending on your input format:
 - [MaxQuant](https://www.maxquant.org/): Start from `msms.txt` identification
 file and directory with `.mgf` files. Be sure to export without FDR filtering!
-
-Work in progress:
-- [MS-GF+](https://omics.pnl.gov/software/ms-gf): Start with `.mgf` and `.fasta`
-file, or from `.mzid` identifications file)
-- PEPREC: Start with [MS²PIP](https://github.com/compomics/ms2pip_c) `.peprec`
-and `.mgf` file.
+- [MSGFPlus](https://omics.pnl.gov/software/ms-gf): Start with `.mgf` and `.fasta`
+file, or from `.mzid` identifications file
 
 ## Prerequisites
-- [Percolator](https://github.com/percolator/percolator/) needs to be callable
+- Python 3.7 on Linux
+- If the option `run_percolator` is set to True, [Percolator](https://github.com/percolator/percolator/) needs to be callable
 with the `percolator` command (tested with version 3.02.1)
-- Python 3 on Linux
-  - numpy
-  - pandas
-  - scikit-learn
-  - scipy
-  - tqdm
 
 ## Installation
 Clone this repository. This includes the submodules
@@ -75,93 +66,163 @@ optional arguments:
   -l LEVEL     Logging level (default: `info`)
   ```
 
-### Config file
-The main argument is a link to the config file. This JSON file should contain
-all required information for MS²ReScore to be run properly. An example file for
-each pipeline is provided in this repository.
+### Configuration
+The main argument is a path to the config file. This JSON file should contain
+all required information for MS²ReScore to be run properly. Example files for
+each pipeline are provided in the GitHub repository.
 
 The config file contains three main top level keys (`general`, `ms2pip` and
 `percolator`) and a key for each pipeline (e.g. `maxquant`). 
 
 #### General
-- `pipeline`: pipeline to use (eg `"MaxQuant"`)
+- `pipeline`: pipeline to use (currently `MaxQuant` or `MSGFPlus`)
 - `feature_sets`: list with feature sets to use for rescoring. Options are:
     - `all` = both search engine features and MS²PIP features
     - `ms2pip` = only MS²PIP features
     - `searchengine` = only search engine features (classic Percolator)
-- `run_percolator`: bool, wether or not to call Percolator from the MS²ReScore
-pipeline
+- `run_percolator`: Whether or not to call Percolator from the MS²ReScore
+pipeline. If false, the end result is a Percolator PIN file.
 - `keep_tmp_files`: Keep temporary files or not (e.g. MS²PIP output). These
 files can be used for a more in-depth data-analysis. If set to true, only the
 PIN files and the Percolator output are kept.
-- `num_cpu`: number of CPU cores to use when using parallel processing
+- `show_progress_bar`: Whether or not to display a tqdm progress bar.
+- `num_cpu`: Number of CPU cores to use.
+
 For example:
 ```json
 "general":{
-    "pipeline":"MaxQuant",
-    "feature_sets":["all", "ms2pip", "searchengine"],
-    "run_percolator":true,
-    "keep_tmp_files":false,
-    "num_cpu":"24"
+  "pipeline":"MSGFPlus",
+  "feature_sets":["all", "ms2pip", "searchengine"],
+  "run_percolator":true,
+  "keep_tmp_files":false,
+  "show_progress_bar":true,
+  "num_cpu":24
 }
 ```
 
 #### MS2PIP
+These settings are passed to MS²PIP (see [github.com/compomics/ms2pip_c](https://github.com/compomics/ms2pip_c) for more info).
+- `dir`: Path to MS²PIP folder, containing ms2pipC.py
+- `model`: MS²PIP model to use (e.g. `HCD`, see [MS²PIP models](https://github.com/compomics/ms2pip_c#mspip-models) for more info)
+- `frag_error`: MS² mass error tolerance in Da
+- `Modifications`: 
+    - `name`: as used in e.g. MaxQuant `modifications_mapping` (see below)
+    - `unimod_accession`: Required for parsing MSGFPlus output (see [unimod.org](http://www.unimod.org/) for correct accession numbers)
+    - `mass_shift`: Mono-isotopic mass shift
+    - `amino_acid`: Amino acid on which the modification occurs, or `null` if
+    e.g. N-terminal modification
+    - `n_term`: Whether or not the modification is N-terminal (C-terminal
+    modifications are not yet supported)
+
+For example
 ```json
 "ms2pip":{
     "dir":"ms2pip_c",
     "frag":"HCD",
     "frag_error":0.02,
     "modifications":[
-        {"name":"Acetyl", "unimod_accession":1, "mass_shift":42.0367, "amino_acid":null, "n_term":true, "fixed":false},
-        {"name":"Oxidation", "unimod_accession":35, "mass_shift":15.9994, "amino_acid":"M", "n_term":false, "fixed":false},
-        {"name":"Carbamidomethyl", "unimod_accession":4, "mass_shift":57.0513, "amino_acid":"C", "n_term":false, "fixed":true}
+        {"name":"Acetyl", "unimod_accession":1, "mass_shift":42.0367, "amino_acid":null, "n_term":true},
+        {"name":"Oxidation", "unimod_accession":35, "mass_shift":15.9994, "amino_acid":"M", "n_term":false},
+        {"name":"Carbamidomethyl", "unimod_accession":4, "mass_shift":57.0513, "amino_acid":"C", "n_term":false}
     ]
 }
 ```
 
 #### Percolator
+Command line options directly passed to Percolator (see the [Percolator wiki](https://github.com/percolator/percolator/wiki/Command-line-options) for more info). For
+example:
+
 ```json
 "percolator":{
-    "trainFDR":0.01,
-    "subset-max-train":200000
+    "trainFDR": 0.01
 }
 ```
+In this case, `--trainFDR 0.01` is passed to Percolator.
 
 #### MaxQuant
+The MaxQuant pipeline starts with an `msms.txt` file and a directory containing
+MGF files. To convert Raw files to MGF, please use the
+[CompOmics ThermoRawFileParser](https://github.com/compomics/ThermoRawFileParser/),
+as this ensures correct parsing of the spectrum titles. Make sure to run
+MaxQuant without FDR filtering (set to 1)!  
+Tested with MaxQuant
+v1.6.2.3.
+- `msms_file`: Path to msms.txt file.
+- `mgf_dir`: Path to directory containing MGF files.
+- `modifications_mapping`: Maps MaxQuant output to MS²PIP modifications list.
+Keys must contain MaxQuant's two-letter modification codes and values must match
+one of the modifications listed in the MS²PIP configuration (see
+[MS2PIP config](#MS2PIP)).
+- `fixed_modifications`: Must list all modifications set as fixed during the
+MaxQuant search (as this is not denoted in the msms.txt file). Keys refer to the
+amino acid, values to the modification name used in the MS²PIP configuration.
+
+For example:
 ```json
 "maxquant_to_rescore":{
-    "msms_file":"ms2rescore/tests/data/msms_sample.txt",
-    "mgf_dir":"data/mgf",
-    "modifications_mapping":{
-        "ox":"Oxidation",
-        "ac":"Acetyl",
-        "cm":"Carbamidomethyl"
-    },
-    "fixed_modifications":{
-        "C":"Carbamidomethyl"
-    }
+  "msms_file":"examples/id/msms.txt",
+  "mgf_dir":"examples/mgf",
+  "modifications_mapping":{
+    "ox":"Oxidation",
+    "ac":"Acetyl",
+    "cm":"Carbamidomethyl",
+    "de":"Deamidated",
+    "gl":"Gln->pyro-Glu"
+  },
+  "fixed_modifications":{
+    "C":"Carbamidomethyl"
 }
 ```
-#### PEPREC
-- `<mgf file>` is the spectrum file
-- `<peprec file>` is the peptide list file
 
-For this, you need a spectrum file in the [MGF format](http://www.matrixscience.com/help/data_file_help.html) and a peptide list in the [PEPREC format](https://github.com/compomics/ms2pip_c/#peprec-file). The file should have an additional column, `Label`, where target PSMs have a value of `1` and decoys of `-1`, and `Protein`, with the protein identifiers the PSM is associated with (this is optional for the execution of the pipeline, but likely important for posterior analysis).
+#### MSGFPlus
+The MSGFPlus pipeline can either include the search (start from a fasta and MGF
+file) or start from an MSGFPlus mzid file. In the latter case, be sure to add
+`-addFeatures 1` when running MSGFPlus, as this is required for Percolator.
+In this pipeline, next to `percolator`, the `msgf2pin` command also needs to be
+callable.
+
+- `run_search`: Whether or not to run the search in this pipeline. If true, the
+path to the MSGFPlus jar file is required. If false, the path to the mzid file
+is required.
+- `mgf_file`: Path to the MGF file.
+- `mzid_file`: Path to the mzid file (only required if `run_search` is false)
+- `search_params`:
+    - `jar_file`: Path to MSGFPlus jar file.
+    - `fasta_file`: Path to fasta search database. Does not need to include
+    decoy sequences; these are added automatically.
+    - `frag`: Fragmentation method (e.g. `HCD`).
+    - `path_to_modsfile`: Path to MSGFPlus modifications config file.
+    - `min_length`, `min_charge`, `max_charge` and `ms1_tolerance`: respective
+    search settings for MSGFPlus.
+
+For example:
+```json
+"msgfplus": {
+  "run_search": false,
+  "mgf_file": "examples/mgf/20161213_NGHF_DBJ_SA_Exp3A_HeLa_1ug_7min_15000_02.mgf",
+  "mzid_file": "examples/id/msgfplus.mzid",
+  "search_params":{
+    "jar_file": "MSGFPlus.jar",
+    "fasta_file": "examples/fasta/uniprot-proteome-human-contaminants.fasta",
+    "frag": "HCD",
+    "path_to_modsfile": "examples/parameters/msgfplus_modifications.txt",
+    "min_length": 8,
+    "min_charge": 2,
+    "max_charge ": 4,
+    "ms1_tolerance": "10ppm"
+}
+```
 
 ## Output
 
-Several intermediate files are created when the entire pipeline is ran. Their names are all built based on the provided output filename. The most relevant files are the Percolator INput files, `.pin`.
+Several intermediate files are created when the entire pipeline is run. Their
+names are all built based on the provided output filename. Depending on the
+keep_tmp_files setting and whether or not Percolator is run, the following
+output files can be expected:
 
-`Percolator` is ran on each `.pin`, using the settings which have been specified in the config file. For details on these settings and on how to run `Percolator` please refer to its [wiki pages](https://github.com/percolator/percolator/wiki).
-
-From each `Percolator` execution, three files are generated:
-- `<file>.pout` with the output regarding target PSMs
-- `<file>.pout_dec` with the output regarding decoy PSMs
-- `<file>.weights` where the internal feature weights used by `Percolator`'s scoring function are stored.
-
-
-## Unit testing
-```
-python setup.py test
-```
+For each feature set (`all`, `ms2pip` and/or `searchengine`):
+- `<file>.pin` Percolator IN file
+- `<file>.pout` Percolator OUT file with target PSMs
+- `<file>.pout_dec` Percolator OUT file with decoy PSMs
+- `<file>.weights` Internal feature weights used by Percolator's scoring
+function.

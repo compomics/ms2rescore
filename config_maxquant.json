@@ -1,35 +1,39 @@
 {
-    "general":{
-       "pipeline":"MaxQuant",
-       "feature_sets":["all", "ms2pip", "searchengine"],
-       "run_percolator":true,
-       "keep_tmp_files":false,
-       "num_cpu":"24"
+  "general":{
+    "pipeline":"MaxQuant",
+    "feature_sets":["all", "ms2pip", "searchengine"],
+    "run_percolator":true,
+    "keep_tmp_files":false,
+    "show_progress_bar":true,
+    "num_cpu":24
+  },
+  "maxquant_to_rescore":{
+    "msms_file":"examples/id/msms.txt",
+    "mgf_dir":"examples/mgf",
+    "modifications_mapping":{
+      "ox":"Oxidation",
+      "ac":"Acetyl",
+      "cm":"Carbamidomethyl",
+      "de":"Deamidated",
+      "gl":"Gln->pyro-Glu"
     },
-    "maxquant_to_rescore":{
-       "msms_file":"ms2rescore/tests/data/msms_sample.txt",
-       "mgf_dir":"data/mgf",
-       "modifications_mapping":{
-          "ox":"Oxidation",
-          "ac":"Acetyl",
-          "cm":"Carbamidomethyl"
-       },
-       "fixed_modifications":{
-          "C":"Carbamidomethyl"
-       }
-    },
-    "ms2pip":{
-       "dir":"ms2pip_c",
-       "frag":"HCD",
-       "frag_error":0.02,
-       "modifications":[
-        {"name":"Acetyl", "unimod_accession":1, "mass_shift":42.0367, "amino_acid":null, "n_term":true, "fixed":false},
-        {"name":"Oxidation", "unimod_accession":35, "mass_shift":15.9994, "amino_acid":"M", "n_term":false, "fixed":false},
-        {"name":"Carbamidomethyl", "unimod_accession":4, "mass_shift":57.0513, "amino_acid":"C", "n_term":false, "fixed":true}
-       ]
-      },
-    "percolator":{
-       "trainFDR":0.01,
-       "subset-max-train":200000
+    "fixed_modifications":{
+      "C":"Carbamidomethyl"
     }
- }
+  },
+  "ms2pip":{
+    "dir":"ms2pip_c",
+    "model":"HCD",
+    "frag_error":0.02,
+    "modifications":[
+      {"name":"Acetyl", "unimod_accession":1, "mass_shift":42.0367, "amino_acid":null, "n_term":true},
+      {"name":"Oxidation", "unimod_accession":35, "mass_shift":15.9994, "amino_acid":"M", "n_term":false},
+      {"name":"Carbamidomethyl", "unimod_accession":4, "mass_shift":57.0513, "amino_acid":"C", "n_term":false},
+      {"name":"Gln->pyro-Glu", "unimod_accession":28, "mass_shift":-17.0305, "amino_acid":"Q", "n_term":true},
+      {"name":"Deamidated", "unimod_accession":7, "mass_shift":0.984016, "amino_acid":"N", "n_term":false}
+    ]
+  },
+  "percolator":{
+    "trainFDR":0.01
+  }
+}
