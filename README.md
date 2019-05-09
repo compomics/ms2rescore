@@ -18,6 +18,7 @@ file, or from `.mzid` identifications file
 - Python 3.7 on Linux
 - If the option `run_percolator` is set to True, [Percolator](https://github.com/percolator/percolator/) needs to be callable
 with the `percolator` command (tested with version 3.02.1)
+- To run MSGFPlus within the pipeline, the MSGFPlus jar file is required.
 
 ## Installation
 Clone this repository. This includes the submodules
@@ -217,8 +218,8 @@ For example:
 
 Several intermediate files are created when the entire pipeline is run. Their
 names are all built based on the provided output filename. Depending on the
-keep_tmp_files setting and whether or not Percolator is run, the following
-output files can be expected:
+pipeline, the `keep_tmp_files` setting and whether or not Percolator is run, the
+following output files can be expected:
 
 For each feature set (`all`, `ms2pip` and/or `searchengine`):
 - `<file>.pin` Percolator IN file
