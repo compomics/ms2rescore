@@ -20,7 +20,7 @@ install:
   - conda install conda-verify
   - conda info -a
   - conda build . --numpy 1.15 --python 3.7
-  - conda install ms2rescore --use-local
+  - conda install ms2rescore --use-local -c bioconda
 
 script:
   - ms2rescore -h
