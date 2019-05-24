@@ -32,7 +32,7 @@ git clone --recurse-submodules git://github.com/compomics/ms2rescore.git
 
 Go to the newly made directory and switch to the correct branch:
 ```
-cd rescore
+cd ms2rescore
 git checkout dev
 ```
 
