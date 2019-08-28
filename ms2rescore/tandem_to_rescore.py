@@ -155,7 +155,4 @@ def tandem_pipeline(config, outname):
     join_features(outname + "_edited.pin", outname + ".peprec")
     os.remove(outname + '_edited.pin')
 
-    return outname + ".peprec", config['msgfplus']['mgf_file']
-
-
-make_pepfile("/home/compomics/extra_disk/rescore-pyro-tandem/tandem/pyro-pyro.pin", options="/home/compomics/PycharmProjects/scripts/ms2rescore/config_tandem.json")
+    return outname + ".peprec", config['xtandem']['mgf_file']
