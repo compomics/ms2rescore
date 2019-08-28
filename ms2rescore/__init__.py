@@ -100,6 +100,8 @@ def main():
         peprec_filename, mgf_filename = maxquant_pipeline(config, args.outname)
     elif config['general']['pipeline'].lower() in ['msgfplus', 'msgf+', 'ms-gf+']:
         peprec_filename, mgf_filename = msgf_to_rescore.msgf_pipeline(config, args.outname)
+    elif config['general']['pipeline'].lower() in ['tandem', 'xtandem', 'x!tandem']:
+        peprec_filename, mgf_filename = tandem_to_rescore.tandem_pipeline(config, args.outname)
     else:
         logging.critical("Could not recognize the requested pipeline.")
         exit(1)
