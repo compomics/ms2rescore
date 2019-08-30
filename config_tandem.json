@@ -11,7 +11,7 @@
     "mgf_file": "examples/mgf/Velos005137.mgf",
     "xml_file": "examples/id/pyro.t.xml",
     "search_params":{
-      "fasta_file": "examples/fasta/pyro_crap_decoy.fasta",
+      "fasta_file": "examples/fasta/pyro_crap_td.fasta",
       "frag": "HCD",
       "path_to_modsfile": "examples/parameters/msgfplus_modifications.txt",
       "min_length": 8,
