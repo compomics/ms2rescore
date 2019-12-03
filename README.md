@@ -21,31 +21,7 @@ with the `percolator` command (tested with version 3.02.1)
 - To run MSGFPlus within the pipeline, the MSGFPlus jar file is required.
 
 ## Installation
-Clone this repository. This includes the submodules
-[mapper](https://github.com/anasilviacs/mapper/tree/0ee46adcbb20a118a8274908255cc8b3f95a51db)
-and [MS2PIP](https://github.com/anasilviacs/ms2pip_c/tree/6f037dc2d0797cd25061aaed8091d625123971e1).
-As such, the repository should be called as:
-
-```
-git clone --recurse-submodules git://github.com/compomics/ms2rescore.git
-```
-
-Go to the newly made directory and switch to the correct branch:
-```
-cd ms2rescore
-git checkout dev
-```
-
-If you missed the required usage of the `--recurse-submodules` flag, you can go
-into the submodules folders' and run the following command:
-```
-git submodule update --init
-```
-
-Go into the folder `ms2pip_c` and run the bash script `compile.sh` or use the 
-precompiled files. For more details, please refer to the `ms2pip_c` repository.
-
-Install MS²ReScore with
+Clone or download this repository and install:
 ```
 pip install .
 ```
@@ -103,7 +79,6 @@ For example:
 
 #### MS2PIP
 These settings are passed to MS²PIP (see [github.com/compomics/ms2pip_c](https://github.com/compomics/ms2pip_c) for more info).
-- `dir`: Path to MS²PIP folder, containing ms2pipC.py
 - `model`: MS²PIP model to use (e.g. `HCD`, see [MS²PIP models](https://github.com/compomics/ms2pip_c#mspip-models) for more info)
 - `frag_error`: MS² mass error tolerance in Da
 - `Modifications`: 
@@ -118,8 +93,7 @@ These settings are passed to MS²PIP (see [github.com/compomics/ms2pip_c](https:
 For example
 ```json
 "ms2pip":{
-    "dir":"ms2pip_c",
-    "frag":"HCD",
+    "model":"HCD",
     "frag_error":0.02,
     "modifications":[
         {"name":"Acetyl", "unimod_accession":1, "mass_shift":42.0367, "amino_acid":null, "n_term":true},

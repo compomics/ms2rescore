@@ -22,7 +22,6 @@
     }
   },
   "ms2pip":{
-    "dir":"ms2pip_c",
     "model":"HCD",
     "frag_error":0.02,
     "modifications":[

@@ -14,6 +14,7 @@ import ms2rescore.rescore_core as rescore_core
 import ms2rescore.maxquant_to_rescore as maxquant_to_rescore
 import ms2rescore.parse_mgf as parse_mgf
 import ms2rescore.msgf_to_rescore as msgf_to_rescore
+import ms2rescore.tandem_to_rescore as tandem_to_rescore
 
 
 def parse_arguments():
@@ -87,11 +88,9 @@ def main():
             exit(1)
 
     # Check if MS2PIP is callable
-    if subprocess.getstatusoutput(
-        'python ' + os.path.join(config['ms2pip']['dir'], 'ms2pipC.py') + ' -h'
-        )[0] != 0:
-        logging.critical("Could not successfully call MS2PIP on given directory\
-            . Check the given directory and that MS2PIP is set-up correctly.")
+    if subprocess.getstatusoutput('ms2pip -h')[0] != 0:
+        logging.critical(
+            "Could not call MS2PIP. Check that MS2PIP is set-up correctly.")
         exit(0)
 
     # Prepare with specific pipeline
@@ -109,8 +108,7 @@ def main():
     # Run general MS2ReScore stuff
     ms2pip_config_filename = args.outname + '_ms2pip_config.txt'
     rescore_core.make_ms2pip_config(config, filename=ms2pip_config_filename)
-    ms2pip_command = "python {}/ms2pipC.py {} -c {} -s {} -m {}".format(
-        config["ms2pip"]["dir"],
+    ms2pip_command = "ms2pip {} -c {} -s {} -m {}".format(
         peprec_filename,
         ms2pip_config_filename,
         mgf_filename,
@@ -121,7 +119,7 @@ def main():
 
     logging.info("Calculating features from predicted spectra")
     preds_filename = peprec_filename.replace('.peprec', '') + "_" + \
-        config["ms2pip"]["frag"] + "_pred_and_emp.csv"
+        config["ms2pip"]["model"] + "_pred_and_emp.csv"
     rescore_core.calculate_features(
         preds_filename,
         args.outname + "_ms2pipfeatures.csv",
@@ -141,7 +139,7 @@ def main():
         to_remove = [
             ms2pip_config_filename, preds_filename,
             args.outname + "_ms2pipfeatures.csv",
-            args.outname + "_" + config['ms2pip']['frag'] + "_correlations.csv",
+            args.outname + "_" + config['ms2pip']['model'] + "_correlations.csv",
             args.outname + '.mgf', args.outname + '.peprec'
         ]
         for filename in to_remove:
