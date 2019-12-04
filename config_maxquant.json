@@ -8,7 +8,6 @@
     "num_cpu":24
   },
   "maxquant_to_rescore":{
-    "msms_file":"examples/id/msms.txt",
     "mgf_dir":"examples/mgf",
     "modifications_mapping":{
       "ox":"Oxidation",

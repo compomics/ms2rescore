@@ -1,26 +1,53 @@
-# MS²ReScore
+<img src="./img/ms2rescore_logo.svg" width="150" height="150" />
+<br/><br/>
+
+![Python](https://img.shields.io/badge/python-%3E3.6-blue?style=flat-square)
 [![GitHub release](https://img.shields.io/github/release-pre/compomics/ms2rescore.svg)](https://github.com/compomics/ms2rescore/releases)
 [![Build Status](https://travis-ci.org/compomics/ms2rescore.svg?branch=dev)](https://travis-ci.org/compomics/ms2rescore)
-[![GitHub](https://img.shields.io/github/license/compomics/ms2pip_c.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![GitHub issues](https://img.shields.io/github/issues/compomics/ms2rescore?style=flat-square)](https://github.com/compomics/ms2rescore/issues)
+[![GitHub](https://img.shields.io/github/license/compomics/ms2rescore.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-Use features calculated from comparing experimental spectra with computationally
-generated spectra (see [MS²PIP](https://github.com/compomics/ms2pip_c)) to
-rescore peptide identifications using
+Sensitive PSM rescoring with predicted MS² peak intensities using
+[MS²PIP](https://github.com/compomics/ms2pip_c) and
 [Percolator](https://github.com/percolator/percolator/).
 
-On this branch, multiple pipelines can be run, depending on your input format:
-- [MaxQuant](https://www.maxquant.org/): Start from `msms.txt` identification
-file and directory with `.mgf` files. Be sure to export without FDR filtering!
-- [MSGFPlus](https://omics.pnl.gov/software/ms-gf): Start with `.mgf` and `.fasta`
-file, or from `.mzid` identifications file
+---
 
-## Prerequisites
-- Python 3.7 on Linux
-- If the option `run_percolator` is set to True, [Percolator](https://github.com/percolator/percolator/) needs to be callable
-with the `percolator` command (tested with version 3.02.1)
-- To run MSGFPlus within the pipeline, the MSGFPlus jar file is required.
+- [About MS²ReScore](#about-ms²rescore)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Command line interface](#command-line-interface)
+  - [Configuration file](#configuration-file)
+  - [Output](#output)
+---
+
+## About MS²ReScore
+Sensitive PSM rescoring with predicted MS² peak intensities using
+[MS²PIP](https://github.com/compomics/ms2pip_c) and
+[Percolator](https://github.com/percolator/percolator/). This allows more
+peptide identifications at a lower false discovery rate.
+
+MS²ReScore takes identifications from multiple search engines:
+- [MaxQuant](https://www.maxquant.org/): Start from `msms.txt` identification
+  file and directory with `.mgf` files. (Be sure to export without FDR
+  filtering!)
+- [MSGFPlus](https://omics.pnl.gov/software/ms-gf): Start with an `.mzid`
+  identifications file and corresponding `.mgf`. 
+- [X!Tandem](https://www.thegpm.org/tandem/): Start with an X!Tandem `.xml`
+  identifications file and corresponding `.mgf`.
+
+If you use MS²ReScore for your research, please cite the following article:  
+> **Accurate peptide fragmentation predictions allow data driven approaches to replace and improve upon proteomics search engine scoring functions.** Ana S C Silva, Robbin Bouwmeester, Lennart Martens, and Sven Degroeve. _Bioinformatics_ (2019) [doi:10.1093/bioinformatics/btz383](https://doi.org/10.1093/bioinformatics/btz383)
+
+To replicate the experiments described in this article, check out the [pub branch](https://github.com/compomics/ms2rescore/tree/pub) of this repository.
 
 ## Installation
+MS²ReScore requires:
+- Python >3.6 on Linux (or on [WSL](https://docs.microsoft.com/en-us/windows/wsl)
+on Windows 10)
+- If the option `run_percolator` is set to `True`, [Percolator](https://github.com/percolator/percolator/) needs to be callable
+with the `percolator` command (tested with [version 3.02.1](https://github.com/percolator/percolator/releases/tag/rel-3-02-01))
+
 Clone or download this repository and install:
 ```
 pip install .
@@ -30,31 +57,38 @@ pip install .
 ### Command line interface
 Run MS²ReScore as follows:
 ```
-usage: ms2rescore [-h] [-o FILE] [-l LEVEL] config-file
+usage: ms2rescore [-h] [-m FILE] [-c FILE] [-o FILE] [-l LEVEL]
+                  identification_file
 
-MS²ReScore: Rescoring of PSMs with predicted MS² peak intensities.
+MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities.
 
 positional arguments:
-  config-file  json MS2ReScore configuration file. See README.md
+  identification_file  Path to identification file (mzid, msms.txt, tandem
+                       xml)
 
 optional arguments:
-  -h, --help   show this help message and exit
-  -o FILE      Name for output files (default: `ms2rescore_out`)
-  -l LEVEL     Logging level (default: `info`)
+  -h, --help           show this help message and exit
+  -m FILE              Path to MGF file (default: derived from identifications
+                       file). Not applicable to MaxQuant pipeline.
+  -c FILE              Path to JSON MS²ReScore configuration file. See
+                       README.md for more info. (default: config.json)
+  -o FILE              Name for output files (default: derive from
+                       identification file
+  -l LEVEL             Logging level (default: `info`)
   ```
 
-### Configuration
-The main argument is a path to the config file. This JSON file should contain
-all required information for MS²ReScore to be run properly. Example files for
-each pipeline are provided in the GitHub repository.
+### Configuration file
+It is very important to configure MS²ReScore to your use case with the config
+file. The config file is written in JSON. Example files for each pipeline are
+provided in the GitHub repository.
 
-The config file contains three main top level keys (`general`, `ms2pip` and
-`percolator`) and a key for each pipeline (e.g. `maxquant`). 
+The config file contains three top level categories (`general`, `ms2pip` and
+`percolator`) and an additional category for each pipeline (e.g. `maxquant`). 
 
 #### General
-- `pipeline`: pipeline to use (currently `MaxQuant` or `MSGFPlus`)
+- `pipeline`: pipeline to use (currently `MaxQuant`, `MSGFPlus`, or `XTandem`)
 - `feature_sets`: list with feature sets to use for rescoring. Options are:
-    - `all` = both search engine features and MS²PIP features
+    - `all` = both search engine features and MS²PIP features (recommended)
     - `ms2pip` = only MS²PIP features
     - `searchengine` = only search engine features (classic Percolator)
 - `run_percolator`: Whether or not to call Percolator from the MS²ReScore
@@ -118,10 +152,11 @@ In this case, `--trainFDR 0.01` is passed to Percolator.
 The MaxQuant pipeline starts with an `msms.txt` file and a directory containing
 MGF files. To convert Raw files to MGF, please use the
 [CompOmics ThermoRawFileParser](https://github.com/compomics/ThermoRawFileParser/),
-as this ensures correct parsing of the spectrum titles. Make sure to run
-MaxQuant without FDR filtering (set to 1)!  
-Tested with MaxQuant
-v1.6.2.3.
+as this ensures correct parsing of the spectrum titles.
+
+:warning: **Make sure to run MaxQuant without FDR filtering (set to 1)!**
+
+Tested with MaxQuant v1.6.2.3.
 - `msms_file`: Path to msms.txt file.
 - `mgf_dir`: Path to directory containing MGF files.
 - `modifications_mapping`: Maps MaxQuant output to MS²PIP modifications list.
@@ -150,46 +185,17 @@ For example:
 ```
 
 #### MSGFPlus
-The MSGFPlus pipeline can either include the search (start from a fasta and MGF
-file) or start from an MSGFPlus mzid file. In the latter case, be sure to add
-`-addFeatures 1` when running MSGFPlus, as this is required for Percolator.
-In this pipeline, next to `percolator`, the `msgf2pin` command also needs to be
-callable.
+The MSGFPlus pipeline starts from an MSGFPlus `mzid` file. In this pipeline,
+next to `percolator`, the `msgf2pin` command also needs to be callable. No extra
+section in the config file is required.
 
-- `run_search`: Whether or not to run the search in this pipeline. If true, the
-path to the MSGFPlus jar file is required. If false, the path to the mzid file
-is required.
-- `mgf_file`: Path to the MGF file.
-- `mzid_file`: Path to the mzid file (only required if `run_search` is false)
-- `search_params`:
-    - `jar_file`: Path to MSGFPlus jar file.
-    - `fasta_file`: Path to fasta search database. Does not need to include
-    decoy sequences; these are added automatically.
-    - `frag`: Fragmentation method (e.g. `HCD`).
-    - `path_to_modsfile`: Path to MSGFPlus modifications config file.
-    - `min_length`, `min_charge`, `max_charge` and `ms1_tolerance`: respective
-    search settings for MSGFPlus.
+:warning: **Be sure to run MSGFPlus as a concatenated target-decoy search, with the `-addFeatures 1` flag.**
 
-For example:
-```json
-"msgfplus": {
-  "run_search": false,
-  "mgf_file": "examples/mgf/20161213_NGHF_DBJ_SA_Exp3A_HeLa_1ug_7min_15000_02.mgf",
-  "mzid_file": "examples/id/msgfplus.mzid",
-  "search_params":{
-    "jar_file": "MSGFPlus.jar",
-    "fasta_file": "examples/fasta/uniprot-proteome-human-contaminants.fasta",
-    "frag": "HCD",
-    "path_to_modsfile": "examples/parameters/msgfplus_modifications.txt",
-    "min_length": 8,
-    "min_charge": 2,
-    "max_charge ": 4,
-    "ms1_tolerance": "10ppm"
-}
-```
+#### X!Tandem
+The X!Tandem pipeline starts with the identifications `.xml` file.  No extra
+section in the config file is required.
 
-## Output
-
+### Output
 Several intermediate files are created when the entire pipeline is run. Their
 names are all built based on the provided output filename. Depending on the
 pipeline, the `keep_tmp_files` setting and whether or not Percolator is run, the

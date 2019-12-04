@@ -7,21 +7,6 @@
     "show_progress_bar":true,
     "num_cpu":24
   },
-  "msgfplus": {
-    "run_search": false,
-    "mgf_file": "examples/mgf/20161213_NGHF_DBJ_SA_Exp3A_HeLa_1ug_7min_15000_02.mgf",
-    "mzid_file": "examples/id/20161213_NGHF_DBJ_SA_Exp3A_HeLa_1ug_7min_15000_02.mzid",
-    "search_params":{
-      "jar_file": "MSGFPlus.jar",
-      "fasta_file": "examples/fasta/uniprot-proteome-human-contaminants.fasta",
-      "frag": "HCD",
-      "path_to_modsfile": "examples/parameters/msgfplus_modifications.txt",
-      "min_length": 8,
-      "min_charge": 2,
-      "max_charge ": 4,
-      "ms1_tolerance": "10ppm"
-    }
-  },
   "ms2pip": {
     "model": "HCD",
     "frag_error": 0.02,

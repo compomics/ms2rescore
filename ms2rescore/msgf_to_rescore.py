@@ -171,21 +171,13 @@ def join_features(path_to_pin, path_to_pep):
     pep.to_csv(path_to_pep, sep=' ', index=False)
 
 
-def msgf_pipeline(config, outname):
-    if config['msgfplus']['run_search']:
-        logging.info("Running MS-GF+")
-        run_msgfplus(
-            config['msgfplus'], outname,
-            num_cpu=config['general']['num_cpu']
-        )
-        mzid_file = outname + '.mzid'
-    else:
-        if not 'mzid_file' in config['msgfplus']:
-            logging.critical("No `mzid_file` passed. Pass `mzid_file` or set \
-                `run_search` to true.")
-            exit(1)
-        else:
-            mzid_file = config['msgfplus']['mzid_file']
+def msgf_pipeline(config):
+    outname = config['general']['output_filename']
+    mzid_file = config['general']['identification_file']
+    if not os.path.isfile(config['general']['mgf_file']):
+        logging.critical("MGF file %s not found. Please specify the correct \
+path to the MGF file.", config['general']['mgf_file'])
+    exit(1)
 
     logging.info("Running msgf2pin")
     # Convert .mzid to pin. XXX is the decoy pattern from MSGF+
@@ -213,4 +205,4 @@ def msgf_pipeline(config, outname):
     join_features(outname + "_edited.pin", outname + ".peprec")
     os.remove(outname + '_edited.pin')
 
-    return outname + ".peprec", config['msgfplus']['mgf_file']
+    return outname + ".peprec", config['general']['mgf_file']

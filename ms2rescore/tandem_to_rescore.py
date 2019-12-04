@@ -10,6 +10,7 @@ import pandas as pd
 # Package
 from ms2rescore import mapper
 
+
 def make_pepfile(path_to_pin, options):
 
     """
@@ -81,6 +82,7 @@ def make_pepfile(path_to_pin, options):
 
     write_PEPREC(pepfile, path_to_pin)
 
+
 def write_PEPREC(pepfile, path_to_pep, concat=True):
     """
     Write the PEPREC file, which will be the input to MS2PIP.
@@ -125,9 +127,9 @@ def join_features(path_to_pin, path_to_pep):
     pep.to_csv(path_to_pep, sep=' ', index=False)
 
 
-def tandem_pipeline(config, outname):
-
-    xml_file = config['xtandem']['xml_file']
+def tandem_pipeline(config):
+    xml_file = config['general']['identification_file']
+    outname = config['general']['output_filename']
 
     logging.info("Running tandem2pin")
     # Convert .x.xml to pin. DECOY_ is the decoy pattern from MSGF+

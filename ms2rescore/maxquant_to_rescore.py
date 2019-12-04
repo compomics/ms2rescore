@@ -206,3 +206,33 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
     logging.debug("Finished parsing msms.txt file")
 
     return peprec_percolator
+
+
+def maxquant_pipeline(config):
+    """
+    Interface to maxquant_to_rescore: Prepare PEPREC and single MGF for
+    MS2ReScore.
+    """
+    logging.info("Parsing msms.txt file")
+    outname = config['general']['output_filename']
+    peprec = msms_to_peprec(
+        config['general']['identification_file'],
+        modifications_mapping=config['maxquant_to_rescore']['modifications_mapping'],
+        fixed_modifications=config['maxquant_to_rescore']['fixed_modifications'],
+        validate_amino_acids=True
+    )
+    peprec.to_csv(outname + '.peprec', sep=' ', index=False)
+
+    logging.info("Parsing MGF files")
+    ms2rescore.parse_mgf.parse_mgf(
+        peprec, config['maxquant_to_rescore']['mgf_dir'],
+        outname=outname + '.mgf',
+        filename_col='Raw file', spec_title_col='spec_id',
+        title_parsing_method='TRFP_MQ',
+        show_progress_bar=config['general']['show_progress_bar']
+    )
+
+    peprec.drop('Raw file', axis=1, inplace=True)
+    peprec.to_csv(outname + '.peprec', sep=' ', index=False)
+
+    return outname + '.peprec', outname + '.mgf'
