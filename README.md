@@ -2,10 +2,10 @@
 <br/><br/>
 
 ![Python](https://img.shields.io/badge/python-%3E3.6-blue?style=flat-square)
-[![GitHub release](https://img.shields.io/github/release-pre/compomics/ms2rescore.svg)](https://github.com/compomics/ms2rescore/releases)
-[![Build Status](https://travis-ci.org/compomics/ms2rescore.svg?branch=dev)](https://travis-ci.org/compomics/ms2rescore)
+[![GitHub release](https://img.shields.io/github/release-pre/compomics/ms2rescore.svg?style=flat-square)](https://github.com/compomics/ms2rescore/releases)
+[![Build Status](https://img.shields.io/travis/compomics/ms2rescore?style=flat-square)](https://travis-ci.org/compomics/ms2rescore)
 [![GitHub issues](https://img.shields.io/github/issues/compomics/ms2rescore?style=flat-square)](https://github.com/compomics/ms2rescore/issues)
-[![GitHub](https://img.shields.io/github/license/compomics/ms2rescore.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![GitHub](https://img.shields.io/github/license/compomics/ms2rescore.svg?style=flat-square)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Sensitive PSM rescoring with predicted MS² peak intensities using
 [MS²PIP](https://github.com/compomics/ms2pip_c) and
