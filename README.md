@@ -1,4 +1,4 @@
-<img src="./img/ms2rescore_logo.svg" width="150" height="150" />
+<img src="https://github.com/compomics/ms2rescore/raw/dev/img/ms2rescore_logo.png" width="150" height="150" />
 <br/><br/>
 
 ![Python](https://img.shields.io/badge/python-%3E3.6-blue?style=flat-square)
@@ -13,12 +13,13 @@ Sensitive PSM rescoring with predicted MS² peak intensities using
 
 ---
 
-- [About MS²ReScore](#about-ms²rescore)
+- [About MS²ReScore](#about-msrescore)
 - [Installation](#installation)
 - [Usage](#usage)
   - [Command line interface](#command-line-interface)
   - [Configuration file](#configuration-file)
   - [Output](#output)
+
 ---
 
 ## About MS²ReScore
@@ -113,7 +114,7 @@ For example:
 
 #### MS2PIP
 These settings are passed to MS²PIP (see [github.com/compomics/ms2pip_c](https://github.com/compomics/ms2pip_c) for more info).
-- `model`: MS²PIP model to use (e.g. `HCD`, see [MS²PIP models](https://github.com/compomics/ms2pip_c#mspip-models) for more info)
+- `model`: MS²PIP model to use (e.g. `HCD`, see [MS²PIP models](http://compomics.github.io/projects/ms2pip_c#specialized-prediction-models) for more info)
 - `frag_error`: MS² mass error tolerance in Da
 - `Modifications`: 
     - `name`: as used in e.g. MaxQuant `modifications_mapping` (see below)
