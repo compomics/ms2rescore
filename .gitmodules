@@ -1,3 +1,0 @@
-[submodule "ms2pip_c"]
-	path = ms2pip_c
-	url = https://github.com/compomics/ms2pip_c.git
