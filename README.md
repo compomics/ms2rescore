@@ -33,11 +33,11 @@ MS²ReScore takes identifications from multiple search engines:
   file and directory with `.mgf` files. (Be sure to export without FDR
   filtering!)
 - [MSGFPlus](https://omics.pnl.gov/software/ms-gf): Start with an `.mzid`
-  identifications file and corresponding `.mgf`. 
+  identifications file and corresponding `.mgf`.
 - [X!Tandem](https://www.thegpm.org/tandem/): Start with an X!Tandem `.xml`
   identifications file and corresponding `.mgf`.
 
-If you use MS²ReScore for your research, please cite the following article:  
+If you use MS²ReScore for your research, please cite the following article:
 > **Accurate peptide fragmentation predictions allow data driven approaches to replace and improve upon proteomics search engine scoring functions.** Ana S C Silva, Robbin Bouwmeester, Lennart Martens, and Sven Degroeve. _Bioinformatics_ (2019) [doi:10.1093/bioinformatics/btz383](https://doi.org/10.1093/bioinformatics/btz383)
 
 To replicate the experiments described in this article, check out the [pub branch](https://github.com/compomics/ms2rescore/tree/pub) of this repository.
@@ -84,7 +84,7 @@ file. The config file is written in JSON. Example files for each pipeline are
 provided in the GitHub repository.
 
 The config file contains three top level categories (`general`, `ms2pip` and
-`percolator`) and an additional category for each pipeline (e.g. `maxquant`). 
+`percolator`) and an additional category for each pipeline (e.g. `maxquant`).
 
 #### General
 - `pipeline`: pipeline to use (currently `MaxQuant`, `MSGFPlus`, or `XTandem`)
@@ -116,7 +116,7 @@ For example:
 These settings are passed to MS²PIP (see [github.com/compomics/ms2pip_c](https://github.com/compomics/ms2pip_c) for more info).
 - `model`: MS²PIP model to use (e.g. `HCD`, see [MS²PIP models](http://compomics.github.io/projects/ms2pip_c#specialized-prediction-models) for more info)
 - `frag_error`: MS² mass error tolerance in Da
-- `Modifications`: 
+- `Modifications`:
     - `name`: as used in e.g. MaxQuant `modifications_mapping` (see below)
     - `unimod_accession`: Required for parsing MSGFPlus output (see [unimod.org](http://www.unimod.org/) for correct accession numbers)
     - `mass_shift`: Mono-isotopic mass shift

@@ -3,6 +3,7 @@ data/*
 steps.txt
 old_files/
 prepare_pin_files.py
+*.jar
 
 # Atom remote-sync config
 .remote-sync.json

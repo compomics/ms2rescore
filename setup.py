@@ -10,7 +10,7 @@ setup(
     author_email='anascsilva@vib-ugent.be',
     url='https://www.github.com/compomics/ms2rescore',
     packages=['ms2rescore'],
-    include_package_data=True,
+    include_package_data=False,
     entry_points={
         'console_scripts': ['ms2rescore=ms2rescore:main'],
     },
