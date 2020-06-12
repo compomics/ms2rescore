@@ -1,5 +1,5 @@
 # Others
-data/
+data/*
 steps.txt
 old_files/
 prepare_pin_files.py
