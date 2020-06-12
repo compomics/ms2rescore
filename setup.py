@@ -1,4 +1,5 @@
 #! python
+"""Setup ms2rescore."""
 
 from setuptools import setup
 
@@ -6,13 +7,13 @@ setup(
     name='ms2rescore',
     version='0.2.2',
     description='MS²ReScore: PSM rescoring with predicted MS² peak intensities.',
-    author='Ana Sílvia C. Silva',
-    author_email='anascsilva@vib-ugent.be',
-    url='https://www.github.com/compomics/ms2rescore',
+    author='Ana Sílvia C. Silva, Ralf Gabriels, Tim Van Den Bossche',
+    author_email='compomics.list@gmail.com',
+    url='https://compomics.github.io/projects/ms2rescore/',
     packages=['ms2rescore'],
     include_package_data=True,
     entry_points={
-        'console_scripts': ['ms2rescore=ms2rescore:main'],
+        'console_scripts': ['ms2rescore=ms2rescore.__main__:main'],
     },
     classifiers=[
         "Intended Audience :: Science/Research",
