@@ -6,6 +6,9 @@ import re
 import numpy as np
 import pandas as pd
 
+# Project
+import ms2rescore
+
 
 def calc_top7_peak_features(intens, mass_errors):
     """
