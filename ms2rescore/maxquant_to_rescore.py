@@ -69,22 +69,24 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
     Percolator features are derived from the MSGF2PIN script. See table 1 of
     Percolator-MSGF+ article (doi.org/10.1021/pr400937n).
 
-    Positional arguments:
-    `msms_file`: str with the file location of the MSMS.txt file
+    Parameters
+    ----------
+    msms_file: str
+        File location of the MSMS.txt file
+    modifications_mapping: dict
+        Mapping used to convert the two-letter MaxQuant modification labels to PSI-MS
+        modification names.
+    fixed_modifications: dict
+        Dictionary ({aa: mod}) can contain fixed modifications to be added to the
+        peprec. E.g. `{'C': 'Carbamidomethyl'}`, as the MaxQuant output does not include
+        modifications that were set as fixed during the search. The first tuple element
+        contains the one-letter amino acid code. The second tuple element contains the
+        full modification name, as listed in the values of `modifications_mapping`.
+    validate_amino_acids: bool
+        Remove PSMs where the sequence includes an invalid amino acid (B, J, O, U, X,
+        Z); required for MS2PIP compatibility.
 
-    Keyword arguments:
-    `modifications_mapping` (dict) is used to convert the two-letter MaxQuant
-    modification labels to PSI-MS modification names.
-    `fixed_modifications` (dict, {aa: mod}) can contain fixed
-    modifications to be added to the peprec. E.g. `{'C': 'Carbamidomethyl'}`,
-    as the MaxQuant output does not include modifications that were set as fixed
-    during the search. The first tuple element contains the one-letter amino
-    acid code. The second tuple element contains the full modification name, as
-    listed in the values of `modifications_mapping`.
-    `validate_amino_acids`: Remove PSMs where the sequence includes an invalid
-    amino acid (B, J, O, U, X, Z); required for MS2PIP compatibility.
     """
-
     # Parse modification input
     if not modifications_mapping:
         modifications_mapping = {}
@@ -100,8 +102,8 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
     msms_cols = {
         'Raw file', 'Scan number', 'Charge', 'Length', 'Sequence', 'Modified sequence',
         'Proteins', 'Missed cleavages', 'Mass', 'Mass error [Da]',
-        'Reverse', 'PEP', 'Score', 'Delta score', 'Localization prob', 'Matches',
-        'Intensities', 'Mass Deviations [Da]', 'Intensity coverage', 'id',
+        'Reverse', 'Retention time', 'PEP', 'Score', 'Delta score', 'Localization prob',
+        'Matches', 'Intensities', 'Mass Deviations [Da]', 'Intensity coverage', 'id',
     }
 
     # Read first line of msms, to check is Mass Error is present in Da or ppm
@@ -160,7 +162,6 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
     msms['charge_ms2pip'] = msms['Charge']
     msms['spec_id'] = msms['Raw file'] + '.' + msms['Scan number'].astype(str) + '.' + msms['Scan number'].astype(str)
     msms['Proteins'] = msms['Proteins'].str.split(';')
-    msms['Peptide'] = msms['Sequence']
 
     # Fill NaN values in Proteins column for decoy PSMs
     # But first check that NaN Proteins only occur for decoy PSMs, if so:
@@ -179,9 +180,18 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
     msms['Parsed modifications'] = ['|'.join(['{}|{}'.format(m.start(0) - 1 - i*4, modifications_mapping[m.group()]) for i, m in enumerate(re.finditer(pattern, s))]) for s in msms['Modified sequence']]
     msms['Parsed modifications'] = ['-' if mods == '' else mods for mods in msms['Parsed modifications']]
 
+    msms["psm_score"] = msms["Score"]
+
     # Bringing it all together
     msms = pd.concat([msms.reset_index(drop=True), top7_features, ion_current_features], axis=1)
-    peprec_columns = ['spec_id', 'Parsed modifications', 'Sequence', 'charge_ms2pip']
+    peprec_columns = [
+        'spec_id',
+        'Parsed modifications',
+        'Sequence',
+        'charge_ms2pip',
+        'psm_score',
+        'Retention time'
+    ]
     percolator_columns = [
         'Label', 'Modified sequence', 'Proteins', 'Score', 'Delta score',
         'Localization prob', 'PEP', 'lnExplainedIonCurrent',
@@ -197,6 +207,7 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
         'Score': 'RawScore',
         'Delta score': 'RawDeltaScore',
         'Localization prob': 'RawModLocProb',
+        'Retention time': 'observed_retention_time',
         'PEP': 'MaxQuantPEP',
         'Mass': 'Mass',
         'Length': 'PepLen',
@@ -205,7 +216,8 @@ def msms_to_peprec(msms_filename, modifications_mapping=None,
         'Missed cleavages': 'enzInt',
     }
 
-    peprec_percolator = msms[peprec_columns + percolator_columns + ['Raw file']].rename(columns=col_mapping)
+    all_columns = peprec_columns + percolator_columns + ['Raw file']
+    peprec_percolator = msms[all_columns].rename(columns=col_mapping)
     logging.debug("Finished parsing msms.txt file")
 
     return peprec_percolator
