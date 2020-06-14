@@ -15,6 +15,7 @@ import ms2rescore.maxquant_to_rescore as maxquant_to_rescore
 import ms2rescore.parse_mgf as parse_mgf
 import ms2rescore.msgf_to_rescore as msgf_to_rescore
 import ms2rescore.tandem_to_rescore as tandem_to_rescore
+from ms2rescore.retention_time import RetentionTimeIntegration
 
 
 def run():
@@ -24,8 +25,10 @@ def run():
     # Check if Percolator is installed and callable
     if config['general']['run_percolator']:
         if subprocess.getstatusoutput('percolator -h')[0] != 0:
-            logging.critical("Could not call Percolator. Install Percolator or\
-                Set `run_percolator` to false")
+            logging.critical(
+                "Could not call Percolator. Install Percolator or set `run_percolator` "
+                "to false"
+            )
             exit(1)
 
     # Check if MS2PIP is callable
@@ -51,7 +54,7 @@ def run():
     # Run general MS2ReScore stuff
     ms2pip_config_filename = outname + '_ms2pip_config.txt'
     rescore_core.make_ms2pip_config(config, filename=ms2pip_config_filename)
-    ms2pip_command = "ms2pip {} -c {} -s {} -m {}".format(
+    ms2pip_command = "ms2pip {} -c {} -s {} -n {}".format(
         peprec_filename,
         ms2pip_config_filename,
         mgf_filename,
@@ -70,10 +73,28 @@ def run():
         show_progress_bar=config['general']['show_progress_bar']
     )
 
+    retention_time = True
+    if retention_time:
+        logging.info("Adding retention time features with DeepLC.")
+        rt_int = RetentionTimeIntegration(
+            peprec_filename,
+            outname + "_rtfeatures.csv",
+            num_cpu=int(config["general"]["num_cpu"]),
+        )
+        rt_int.run()
+
+    peprec_filename = "examples/id/msms.peprec"
+    outname = config['general']['output_filename']
+    ms2pip_config_filename = outname + '_ms2pip_config.txt'
+    preds_filename = peprec_filename.replace('.peprec', '') + "_" + \
+        config["ms2pip"]["model"] + "_pred_and_emp.csv"
+
     logging.info("Generating PIN files")
     rescore_core.write_pin_files(
-        outname + "_ms2pipfeatures.csv",
-        peprec_filename, outname,
+        peprec_filename,
+        outname,
+        ms2pip_features_path=outname + "_ms2pipfeatures.csv",
+        rt_features_path=outname + "_rtfeatures.csv",
         feature_sets=config['general']['feature_sets']
     )
 

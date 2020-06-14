@@ -31,7 +31,8 @@ setup(
         'tqdm>=4.31.0,<5',
         'pyteomics>=4.1.0,<5',
         'xmltodict>=0.12.0,<1',
-        'lxml>=4.5,<5'
+        'lxml>=4.5,<5',
+        'ms2pip>=3.6,<4'
     ],
     test_suite='ms2rescore.tests.test_ms2rescore.Tests',
     tests_require=[

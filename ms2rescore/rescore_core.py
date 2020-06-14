@@ -8,6 +8,7 @@ import logging
 import warnings
 import multiprocessing
 import os
+from typing import Union
 
 # Third party
 import pandas as pd
@@ -300,46 +301,69 @@ def redo_pin_tabs(pin_filename):
     os.rename(pin_filename + '_tmp', pin_filename)
 
 
-def write_pin_files(path_to_features, path_to_pep, savepath, feature_sets=None):
+def write_pin_files(
+        peprec_path: str,
+        savepath: str,
+        ms2pip_features_path: Union[str, None] = None,
+        rt_features_path: Union[str, None] = None,
+        feature_sets: Union[list, None] = None
+):
     """
-    Given a dataframe with all the features, writes three PIN files.
-    Writes three PIN files: search_engine_features, ms2pip_features and
-    all_features
-    Arguments:
-    path_to_features: str of path to features or pd.DataFrame with features
-    path_to_pep: str of path to peprec or pd.DataFrame with peprec
-    save_path: path to save PIN files into
-    feature_sets: list with feature sets for which to write PIN files. Can
-    contain `all`, `search_engine` and `ms2pip`.
-    """
+    Write Percolator IN file.
 
+    Write PIN files for each requested feature_set: search_engine_features,
+    ms2pip_features, rt_features and all_features.
+
+    Parameters
+    ----------
+    peprec_path: str
+        Path to PEPREC file.
+    save_path: str
+        Directory and basename for PIN files.
+    ms2pip_features_path: {str, None}
+        Path to CSV with ms2pip features.
+    rt_features_path: {str, None}
+        Path to CSV with rt features.
+    feature_sets: {list, None}
+        Feature sets for which to write PIN files. Can contain `all`, `search_engine`,
+        `ms2pip`, and `rt`.
+
+    """
     if not feature_sets:
-        feature_sets = ['all', 'ms2pip', 'searchengine']
+        feature_sets = ['all', 'searchengine', 'ms2pip', 'rt']
 
-    all_features = pd.read_csv(path_to_features, sep=',')
-
-    if type(path_to_pep) == str:
-        with open(path_to_pep, 'rt') as f:
-            line = f.readline()
-            if line[:7] != 'spec_id':
-                logging.critical('PEPREC file should start with header column')
-                exit(1)
-            sep = line[7]
-
-        # Convert Protein literal list to pseudo-PIN notation:
-        # not yet tab-separated, but pipe-separated
-        # to avoid isues in pd.DataFrame.to_csv()
-        protein_converter = lambda prot_list: '|||'.join(prot_list.strip("[]'").split("', '"))
-        pep = pd.read_csv(path_to_pep,
-                           sep=sep,
-                           index_col=False,
-                           dtype={"spec_id": str, "modifications": str},
-                           converters={
-                               'Proteins': protein_converter,
-                               'protein_list': protein_converter
-                            })
+    # Read MS²PIP features
+    if ms2pip_features_path:
+        ms2pip_features = pd.read_csv(ms2pip_features_path, sep=',', index_col=None)
     else:
-        pep = path_to_pep
+        ms2pip_features = None
+
+    # Read RT features
+    if rt_features_path:
+        rt_features = pd.read_csv(rt_features_path, sep=',', index_col=None)
+    else:
+        rt_features = None
+
+    # Read PEPEC
+    with open(peprec_path, 'rt') as f:
+        line = f.readline()
+        if line[:7] != 'spec_id':
+            logging.critical('PEPREC file should start with header column')
+            exit(1)
+        sep = line[7]
+
+    # Convert Protein literal list to pseudo-PIN notation:
+    # not yet tab-separated, but pipe-separated
+    # to avoid isues in pd.DataFrame.to_csv()
+    protein_converter = lambda prot_list: '|||'.join(prot_list.strip("[]'").split("', '"))
+    pep = pd.read_csv(peprec_path,
+                        sep=sep,
+                        index_col=False,
+                        dtype={"spec_id": str, "modifications": str},
+                        converters={
+                            'Proteins': protein_converter,
+                            'protein_list': protein_converter
+                        })
 
     pep['modifications'].fillna("-", inplace=True)
     pep = pep.replace(-np.inf, 0.0).replace(np.inf, 0.0)
@@ -367,10 +391,18 @@ def write_pin_files(path_to_features, path_to_pep, savepath, feature_sets=None):
 
     # Get list with feature names split by type of feature
     search_engine_feature_names = [col for col in pep.columns if (col not in peprec_cols) and (col not in pin_columns)]
-    ms2pip_feature_names = [col for col in all_features.columns if (col not in peprec_cols) and (col not in pin_columns)]
+    ms2pip_feature_names = [col for col in ms2pip_features.columns if (col not in peprec_cols) and (col not in pin_columns)]
+    rt_feature_names = [col for col in rt_features.columns if (col not in peprec_cols) and (col not in pin_columns)]
 
     # Merge ms2pip_features and peprec DataFrames
-    complete_df = pd.merge(all_features, pep, on=['spec_id', 'charge'])
+    complete_df = pep
+    for other in [ms2pip_features, rt_features]:
+        if isinstance(other, pd.DataFrame):
+            on_cols = ['spec_id', 'charge']
+            cols_to_use = set(other.columns)\
+                .difference(set(complete_df.columns))\
+                .union(set(on_cols))
+            complete_df = pd.merge(complete_df, other[cols_to_use], on=on_cols)
     complete_df = complete_df.fillna(value=0).reset_index(drop=True)
 
     # Add missing columns if necessary
@@ -384,11 +416,17 @@ def write_pin_files(path_to_features, path_to_pep, savepath, feature_sets=None):
     # PSMId <tab> Label <tab> ScanNr <tab> feature1name <tab> ... <tab> featureNname <tab> Peptide <tab> Proteins
 
     if 'all' in feature_sets:
-        complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + search_engine_feature_names + ['Peptide', 'Proteins']]\
+        complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + rt_feature_names + search_engine_feature_names + ['Peptide', 'Proteins']]\
             .to_csv('{}_allfeatures.pin'.format(savepath), sep='\t', header=True, index=False)
+    if 'ms2pip_rt' in feature_sets:
+        complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + rt_feature_names + ['Peptide', 'Proteins']]\
+            .to_csv('{}_ms2pip_rtfeatures.pin'.format(savepath), sep='\t', header=True, index=False)
     if 'ms2pip' in feature_sets:
         complete_df[['SpecId', 'Label', 'ScanNr'] + ms2pip_feature_names + ['Peptide', 'Proteins']]\
             .to_csv('{}_ms2pipfeatures.pin'.format(savepath), sep='\t', header=True, index=False)
+    if 'rt' in feature_sets:
+        complete_df[['SpecId', 'Label', 'ScanNr'] + rt_feature_names + ['Peptide', 'Proteins']]\
+            .to_csv('{}_rtfeatures.pin'.format(savepath), sep='\t', header=True, index=False)
     if 'searchengine' in feature_sets:
         complete_df[['SpecId', 'Label', 'ScanNr'] + search_engine_feature_names + ['Peptide', 'Proteins']]\
             .to_csv('{}_searchenginefeatures.pin'.format(savepath), sep='\t', header=True, index=False)
