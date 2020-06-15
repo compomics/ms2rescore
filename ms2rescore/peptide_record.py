@@ -4,6 +4,8 @@ Peptide record (PEPREC).
 TODO: Move module to ms2pip
 """
 
+from typing import Union, List
+
 import pandas as pd
 
 
@@ -16,9 +18,40 @@ class InvalidPeprecError(Exception):
 class PeptideRecord:
     """Peptide record (PEPREC)."""
 
-    def __init__(self, path=None, extra_required_columns=None):
-        """Peptide record (PEPREC)."""
+    def __init__(
+        self,
+        path: Union[str, None] = None,
+        context: str = 'default',
+        extra_required_columns: Union[List[str], None] = None
+    ):
+        """
+        Peptide record (PEPREC).
+
+        Parameters
+        ----------
+        path: str, None
+            Path to PEPREC file. If not None, file is read on instance creation.
+        context: str
+            Context of PEPREC. Is used for determining the required columns. Can be any
+            of the following: {default, ms2rescore}.
+        extra_required_columns: List[str]
+            Extra required columns to be validated.
+
+        Attributes
+        ----------
+        df: pandas.DataFrame
+            DataFrame containing peptide record content.
+
+        Methods
+        -------
+        from_csv(path, **kwargs)
+            Read PEPREC from CSV.
+        to_csv(path, **kwargs)
+            Save PEPREC to CSV, if Path is None, overwrite existing PEPREC file.
+
+        """
         self.path = path
+        self.context = context
         self.extra_required_columns = extra_required_columns
         self.df = None
 
@@ -34,7 +67,7 @@ class PeptideRecord:
         with open(path, "rt") as f:
             line = f.readline()
             if line[:7] != "spec_id":
-                raise InvalidPeprecError("PEPREC header should start with `spec_id`")
+                raise InvalidPeprecError("PEPREC header should start with `spec_id`.")
 
     def _infer_separater(self, path: str) -> str:
         """Infer separator in PEPREC file."""
@@ -43,7 +76,7 @@ class PeptideRecord:
             separater = line[7]
         return separater
 
-    def _validate_columns(self, path: str):
+    def _validate_column_names(self, df: pd.DataFrame):
         """Validate header of PEPREC file."""
         required_columns_default = [
             "spec_id",
@@ -51,32 +84,39 @@ class PeptideRecord:
             "modifications",
             "charge",
         ]
+        if self.context == "ms2rescore":
+            required_columns_default.extend([
+                "psm_score",
+                "observed_retention_time",
+            ])
 
-        required_columns_rt = [
-            "psm_score",
-            "observed_retention_time",
-        ]
+        for col in required_columns_default:
+            if col not in df.columns:
+                raise InvalidPeprecError(
+                    f"Required column `{col}` missing from header."
+                )
 
-        all_columns = required_columns_default + required_columns_rt
-        separator = self._infer_separater(path)
+    @property
+    def df(self) -> Union[pd.DataFrame, None]:
+        """Get DataFrame with PeptideRecord."""
+        return self._df
 
-        with open(path, "rt") as f:
-            line = f.readline()
-            line = line.split(separator)
-            for col in all_columns:
-                if col not in line:
-                    raise InvalidPeprecError("Required column missing from header", col)
+    @df.setter
+    def df(self, value: Union[pd.DataFrame, None]):
+        """Set DataFrame with PeptideRecord."""
+        if isinstance(value, pd.DataFrame):
+            self._validate_column_names(value)
+        self._df = value
 
-    def from_csv(self, path, **kwargs):
+    def from_csv(self, path: str, **kwargs):
         """Read PEPREC from CSV."""
         self._validate_header(path)
-        self._validate_columns(path)
         sep = self._infer_separater(path)
         self.df = pd.read_csv(path, sep=sep, index_col=None, **kwargs)
 
         self.df["modifications"] = self.df["modifications"].fillna("-")
 
-    def to_csv(self, path=None, **kwargs):
+    def to_csv(self, path: Union[str, None] = None, **kwargs):
         """Save PEPREC to CSV, if Path is None, overwrite existing PEPREC file."""
         if not path and self.path:
             path = self.path
