@@ -15,6 +15,7 @@ import ms2rescore.maxquant_to_rescore as maxquant_to_rescore
 import ms2rescore.parse_mgf as parse_mgf
 import ms2rescore.msgf_to_rescore as msgf_to_rescore
 import ms2rescore.tandem_to_rescore as tandem_to_rescore
+import ms2rescore.peptideshaker_to_rescore as peptideshaker_to_rescore
 from ms2rescore.retention_time import RetentionTimeIntegration
 
 
@@ -45,9 +46,10 @@ def run():
         peprec_filename, mgf_filename = msgf_to_rescore.msgf_pipeline(config)
     elif config['general']['pipeline'].lower() in ['tandem', 'xtandem', 'x!tandem']:
         peprec_filename, mgf_filename = tandem_to_rescore.tandem_pipeline(config)
+    elif config['general']['pipeline'].lower() == 'peptideshaker':
+        peprec_filename, mgf_filename = peptideshaker_to_rescore.pipeline(config)
     else:
-        logging.critical("Could not recognize the requested pipeline.")
-        exit(1)
+        NotImplementedError(config['general']['pipeline'])
 
     outname = config['general']['output_filename']
 
@@ -83,12 +85,6 @@ def run():
         )
         rt_int.run()
 
-    peprec_filename = "examples/id/msms.peprec"
-    outname = config['general']['output_filename']
-    ms2pip_config_filename = outname + '_ms2pip_config.txt'
-    preds_filename = peprec_filename.replace('.peprec', '') + "_" + \
-        config["ms2pip"]["model"] + "_pred_and_emp.csv"
-
     logging.info("Generating PIN files")
     rescore_core.write_pin_files(
         peprec_filename,
@@ -104,7 +100,9 @@ def run():
             ms2pip_config_filename, preds_filename,
             outname + "_ms2pipfeatures.csv",
             outname + "_" + config['ms2pip']['model'] + "_correlations.csv",
-            outname + '.mgf', outname + '.peprec'
+            outname + '.mgf',
+            outname + '.peprec',
+            outname + '_rtfeatures.csv'
         ]
         for filename in to_remove:
             try:

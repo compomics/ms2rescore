@@ -208,3 +208,15 @@ For each feature set (`all`, `ms2pip` and/or `searchengine`):
 - `<file>.pout_dec` Percolator OUT file with decoy PSMs
 - `<file>.weights` Internal feature weights used by Percolator's scoring
 function.
+
+
+## Development
+Conda environment:
+```
+conda create -y --name ms2rescore-dev -c bioconda -c defaults -c conda-forge python=3.7 percolator deeplc pyteomics numpy pandas scipy scikit-learn tqdm xmltodict pylint pydocstyle pytest seaborn matplotlib biopython numexpr tables tomlkit ms2pip
+```
+
+Install MS²ReScore in "editable" mode:
+```
+pip install --editable .
+```
