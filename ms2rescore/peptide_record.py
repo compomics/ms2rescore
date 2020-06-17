@@ -4,7 +4,7 @@ Peptide record (PEPREC).
 TODO: Move module to ms2pip
 """
 
-from typing import Union, List
+from typing import List, Optional
 
 import pandas as pd
 
@@ -20,9 +20,9 @@ class PeptideRecord:
 
     def __init__(
         self,
-        path: Union[str, None] = None,
-        context: str = 'default',
-        extra_required_columns: Union[List[str], None] = None
+        path: Optional[str] = None,
+        context: str = "default",
+        extra_required_columns: Optional[List[str]] = None,
     ):
         """
         Peptide record (PEPREC).
@@ -85,10 +85,9 @@ class PeptideRecord:
             "charge",
         ]
         if self.context == "ms2rescore":
-            required_columns_default.extend([
-                "psm_score",
-                "observed_retention_time",
-            ])
+            required_columns_default.extend(
+                ["psm_score", "observed_retention_time",]
+            )
 
         for col in required_columns_default:
             if col not in df.columns:
@@ -97,12 +96,12 @@ class PeptideRecord:
                 )
 
     @property
-    def df(self) -> Union[pd.DataFrame, None]:
+    def df(self) -> Optional[pd.DataFrame]:
         """Get DataFrame with PeptideRecord."""
         return self._df
 
     @df.setter
-    def df(self, value: Union[pd.DataFrame, None]):
+    def df(self, value: Optional[pd.DataFrame]):
         """Set DataFrame with PeptideRecord."""
         if isinstance(value, pd.DataFrame):
             self._validate_column_names(value)
@@ -116,7 +115,7 @@ class PeptideRecord:
 
         self.df["modifications"] = self.df["modifications"].fillna("-")
 
-    def to_csv(self, path: Union[str, None] = None, **kwargs):
+    def to_csv(self, path: Optional[str] = None, **kwargs):
         """Save PEPREC to CSV, if Path is None, overwrite existing PEPREC file."""
         if not path and self.path:
             path = self.path
