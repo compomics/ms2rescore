@@ -1,7 +1,7 @@
 """Add retention time related features to rescoring."""
 
 import logging
-from typing import Union
+from typing import Optional
 
 import click
 import pandas as pd
@@ -19,7 +19,7 @@ class RetentionTimeIntegration:
         feature_path: str,
         higher_psm_score_better: bool = True,
         num_calibration_psms: int = 500,
-        num_cpu: Union[int, None] = None,
+        num_cpu: Optional[int] = None,
     ):
         """
         Retention time integration for MS²ReScore, using DeepLC.
@@ -41,10 +41,10 @@ class RetentionTimeIntegration:
 
         Properties
         ----------
-        calibration_df: pandas.DataFrame
-            Get calibration DataFrame with N best PSMs.
-        prediction_df: pandas.DataFrame
-            Get prediction DataFrame with peptides to predict.
+        calibration_data: pandas.DataFrame
+            Get calibration peptides (N best PSMs in PEPREC).
+        prediction_data: pandas.DataFrame
+            Get prediction peptides.
 
         Methods
         -------
@@ -69,8 +69,8 @@ class RetentionTimeIntegration:
             self.peprec = PeptideRecord(path=self.peprec_path)
 
     @property
-    def calibration_df(self):
-        """Get calibration DataFrame with N best PSMs."""
+    def calibration_data(self):
+        """Get calibration peptides (N best PSMs in PEPREC)."""
         if self.num_calibration_psms > len(self.peprec.df):
             logging.warning(
                 "Requested number of calibration PSMs is larger than total number of "
@@ -87,20 +87,20 @@ class RetentionTimeIntegration:
         )
 
     @property
-    def prediction_df(self):
-        """Get prediction DataFrame with peptides to predict."""
+    def prediction_data(self):
+        """Get prediction peptides."""
         return self.peprec.df[["peptide", "modifications"]].rename(
             columns={"peptide": "seq",}
         )
 
     def _calibrate_predictor(self):
         """Calibrate retention time predictor."""
-        self.deeplc_predictor.calibrate_preds(seq_df=self.calibration_df)
+        self.deeplc_predictor.calibrate_preds(seq_df=self.calibration_data)
 
     def _get_predictions(self):
         """Get retention time predictions."""
         self.predicted_rts = pd.Series(
-            self.deeplc_predictor.make_preds(seq_df=self.prediction_df)
+            self.deeplc_predictor.make_preds(seq_df=self.prediction_data)
         )
 
     def _calculate_features(self):
