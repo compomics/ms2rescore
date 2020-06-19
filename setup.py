@@ -33,7 +33,7 @@ setup(
         'xmltodict>=0.12.0,<1',
         'lxml>=4.5,<5',
         'ms2pip>=3.6,<4',
-        'click>=7'
+        'click>=7,<8',
     ],
     test_suite='ms2rescore.tests.test_ms2rescore.Tests',
     tests_require=[

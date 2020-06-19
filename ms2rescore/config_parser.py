@@ -4,6 +4,7 @@ import argparse
 import logging
 import json
 import os
+import multiprocessing as mp
 
 from ms2rescore import setup_logging
 
@@ -71,8 +72,9 @@ def parse_config():
         with open(args.config_file) as f:
             config = json.load(f)
     except json.decoder.JSONDecodeError:
-        logging.critical("Could not read JSON config file. Please use correct \
-            JSON formatting.")
+        logging.critical(
+            "Could not read JSON config file. Please use correct JSON formatting."
+        )
         exit(1)
 
     # Add CLI arguments to config
@@ -83,5 +85,15 @@ def parse_config():
         config['general']['log_level'] = args.log_level
     if args.output_filename:
         config['general']['output_filename'] = args.output_filename
+
+    # Process num_cpu
+    n_available = mp.cpu_count()
+    if (config['general']['num_cpu'] == -1) or (config['general']['num_cpu'] > n_available):
+        config['general']['num_cpu'] = n_available
+    logging.debug(
+        "Using %i of %i available CPUs.",
+        config['general']['num_cpu'],
+        n_available
+    )
 
     return config
