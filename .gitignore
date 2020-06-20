@@ -100,3 +100,5 @@ ENV/
 
 # vscode
 .vscode/
+.pytest_cache/v/cache/nodeids
+.pytest_cache/v/cache/stepwise
