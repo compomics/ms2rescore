@@ -29,6 +29,11 @@ TEST_MODIFIED_SEQUENCES = [
         "0|Gln->pyro-Glu|1|Carbamidomethyl|7|Carbamidomethyl",
         "CLNLQLCDIK",
     ),
+    (
+        "R.Q[-17.02655]DYC[57.02147]PMDPLGADHDDAR.L",
+        "1|Gln->pyro-Glu|4|Carbamidomethyl",
+        "QDYCPMDPLGADHDDAR",
+    )
 ]
 MODIFICATION_MAPPING = {
     42.010565: "Acetyl",
@@ -43,9 +48,9 @@ class TestPercolatorIn:
     def test_get_peprec_modifications(self):
         pin = PercolatorIn(modification_mapping=MODIFICATION_MAPPING)
         for mod_seq, expected_mods, _ in TEST_MODIFIED_SEQUENCES:
-            assert expected_mods == pin.get_peprec_modifications(mod_seq)
+            assert expected_mods == pin._get_peprec_modifications(mod_seq)
 
     def test_get_unmodified_sequence(self):
         pin = PercolatorIn(modification_mapping=MODIFICATION_MAPPING)
         for mod_seq, _, expected_seq in TEST_MODIFIED_SEQUENCES:
-            assert expected_seq == pin.get_unmodified_sequence(mod_seq)
+            assert expected_seq == pin._get_unmodified_sequence(mod_seq)

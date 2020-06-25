@@ -1,7 +1,7 @@
 """Add retention time related features to rescoring."""
 
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import click
 import pandas as pd
@@ -18,7 +18,7 @@ class RetentionTimeIntegration:
         peprec_path: str,
         feature_path: str,
         higher_psm_score_better: bool = True,
-        num_calibration_psms: int = 500,
+        calibration_set_size: Optional[Union[int, float]] = 0.20,
         num_cpu: Optional[int] = None,
     ):
         """
@@ -33,9 +33,9 @@ class RetentionTimeIntegration:
         higher_psm_score_better: bool
             Wheter a higher PSM score (`psm_score` column in PEPREC) denotes a better
             score. (default: True)
-        num_calibration_psms: int
-            Number of best PSMs to use for DeepLC calibration. If this value is lower
-            than the number of available PSMs, all PSMs will be used. (default: 100)
+        calibration_set_size: int or float
+            Amount of best PSMs to use for DeepLC calibration. If this value is lower
+            than the number of available PSMs, all PSMs will be used. (default: 0.20)
         num_cpu: {int, None}
             Number of processes to use in DeepLC
 
@@ -55,7 +55,7 @@ class RetentionTimeIntegration:
         self.peprec_path = peprec_path
         self.feature_path = feature_path
         self.higher_psm_score_better = higher_psm_score_better
-        self.num_calibration_psms = num_calibration_psms
+        self.calibration_set_size = calibration_set_size
         self.num_cpu = num_cpu
 
         self.deeplc_predictor = DeepLC(
@@ -69,22 +69,57 @@ class RetentionTimeIntegration:
             self.peprec = PeptideRecord(path=self.peprec_path)
 
     @property
+    def num_calibration_psms(self):
+        """Get number of calibration PSMs given `calibration_set_size` and total number of PSMs."""
+        if isinstance(self.calibration_set_size, float):
+            if self.calibration_set_size > 1:
+                raise ValueError("`calibration_set_size` cannot be larger than 1.")
+            elif self.calibration_set_size <= 0:
+                raise ValueError(
+                    "`calibration_set_size` cannot be smaller than or equal to 0."
+                )
+            else:
+                num_calibration_psms = round(
+                    len(self.peprec.df) * self.calibration_set_size
+                )
+        elif isinstance(self.calibration_set_size, int):
+            if self.calibration_set_size > len(self.peprec.df):
+                logging.warning(
+                    "Requested number of calibration PSMs (%s) is larger than total number "
+                    "of PSMs in PEPREC (%s). Using all PSMs for calibration.",
+                    self.calibration_set_size,
+                    self.peprec.df
+                )
+                num_calibration_psms = len(self.peprec.df)
+            else:
+                num_calibration_psms = self.calibration_set_size
+        else:
+            raise TypeError(
+                "Expected float or int for `calibration_set_size`. Got "
+                f"{type(self.calibration_set_size)} instead"
+            )
+        logging.debug("Using %i PSMs for calibration", num_calibration_psms)
+        return num_calibration_psms
+
+    @property
     def calibration_data(self):
         """Get calibration peptides (N best PSMs in PEPREC)."""
-        if self.num_calibration_psms > len(self.peprec.df):
-            logging.warning(
-                "Requested number of calibration PSMs is larger than total number of "
-                "PSMs in PEPREC. Using all PSMs for calibration."
-            )
-            self.num_calibration_psms = len(self.peprec.df)
-
         ascending = not self.higher_psm_score_better
-        return (
-            self.peprec.df.sort_values(["psm_score"], ascending=ascending)
-            .sample(self.num_calibration_psms)
-            .copy()
+        if "label" in self.peprec.df.columns:
+            label_col = "label"
+        elif "Label" in self.peprec.df.columns:
+            label_col = "Label"
+        else:
+            raise ValueError("No label column found in peptide record.")
+        calibration_data = (
+            self.peprec.df[self.peprec.df[label_col] == 1]
+            .sort_values(["psm_score"], ascending=ascending)
+            .head(self.num_calibration_psms)
             .rename(columns={"observed_retention_time": "tr", "peptide": "seq",})
+            [["tr", "seq", "modifications"]]
+            .copy()
         )
+        return calibration_data
 
     @property
     def prediction_data(self):
@@ -137,7 +172,7 @@ class RetentionTimeIntegration:
 
         # Merging minimum RT difference features to full set
         self.feature_df = self.feature_df.merge(
-            min_rt_diff, on=["peptide", "modifications"]
+            min_rt_diff, on=["peptide", "modifications"], how="left"
         )
 
         # Only keep feature columns
@@ -157,7 +192,6 @@ class RetentionTimeIntegration:
         self._calibrate_predictor()
         self._get_predictions()
         self.peprec.df["predicted_retention_time"] = self.predicted_rts
-        self.peprec.to_csv()
         self._calculate_features()
         self.feature_df.to_csv(self.feature_path, index=False)
 

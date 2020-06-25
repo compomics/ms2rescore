@@ -51,13 +51,19 @@ def run():
         raise NotImplementedError(config["general"]["pipeline"])
 
     outname = config["general"]["output_filename"]
+    ms2pip_config_filename = outname + "_ms2pip_config.txt"
+    preds_filename = (
+        peprec_filename.replace(".peprec", "")
+        + "_"
+        + config["ms2pip"]["model"]
+        + "_pred_and_emp.csv"
+    )
 
     if any(
         fset in config["general"]["feature_sets"]
         for fset in ["ms2pip", "all", "ms2pip_rt"]
     ):
         # Run general MS2ReScore stuff
-        ms2pip_config_filename = outname + "_ms2pip_config.txt"
         rescore_core.make_ms2pip_config(config, filename=ms2pip_config_filename)
         ms2pip_command = "ms2pip {} -c {} -s {} -n {}".format(
             peprec_filename,
@@ -70,12 +76,6 @@ def run():
         subprocess.run(ms2pip_command, shell=True, check=True)
 
         logging.info("Calculating features from predicted spectra")
-        preds_filename = (
-            peprec_filename.replace(".peprec", "")
-            + "_"
-            + config["ms2pip"]["model"]
-            + "_pred_and_emp.csv"
-        )
         rescore_core.calculate_features(
             preds_filename,
             outname + "_ms2pipfeatures.csv",
@@ -117,8 +117,8 @@ def run():
         for filename in to_remove:
             try:
                 os.remove(filename)
-            except FileNotFoundError as e:
-                logging.debug(e)
+            except FileNotFoundError:
+                pass
 
     # Run Percolator with different feature subsets
     if config["general"]["run_percolator"]:

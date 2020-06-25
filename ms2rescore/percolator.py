@@ -19,10 +19,13 @@ class PercolatorIn:
 
         Parameters
         ----------
+        path: str, optional
+            Path to PIN file.
         modification_mapping: dict, optional
             Mapping of mass shifts -> modification name, e.g.
             {-17.02655: "Gln->pyro-Glu"}. For matching, mass shifts are rounded to three
             decimals to avoid rounding issues.
+
         """
         # Parameters
         self.path = path
@@ -33,7 +36,6 @@ class PercolatorIn:
 
         if self.path:
             self.read()
-
 
     @property
     def modification_mapping(self):
@@ -53,7 +55,12 @@ class PercolatorIn:
     def _find_mods_recursively(
         self, mod_seq: str, mod_list: Optional[List[str]] = None
     ) -> List[str]:
-        """Find modifications in modified sequence string recursively."""
+        """
+        Find modifications in modified sequence string recursively.
+
+        TODO: Fix handing of modifications on different residues with identical mass
+        shifts, while also handing residue-aspecific modifications (e.g. N-terminal).
+        """
         if not mod_list:
             mod_list = []
         match = re.search(self.modification_pattern, mod_seq)
@@ -96,36 +103,74 @@ class PercolatorIn:
             self._get_peprec_modifications
         )
 
+    def add_tandem_id_column(
+        self,
+        pattern: Optional[str] = r".+_([0-9]+)_[0-9]+_[0-9]+",
+        label: Optional[str] = "tandem_id"
+    ):
+        """
+        Add tandem ID column, parsed from Percolator SpecId.
+
+        See https://github.com/percolator/percolator/issues/147 for pattern explanation.
+        """
+        self.df[label] = self.df['SpecId'].str.extract(pattern).astype(int)
+
+    def get_spectrum_filename(
+        self, pattern: Optional[str] = r"(.+)_[0-9]+_[0-9]+_[0-9]+"
+    ) -> str:
+        """
+        Get spectrum filename, parsed from Percolator SpecId.
+
+        See https://github.com/percolator/percolator/issues/147 for pattern explanation.
+        """
+        spectrum_filenames = self.df['SpecId'].str.extract(pattern, expand=False).unique()
+        if len(spectrum_filenames) == 1:
+            return spectrum_filenames[0]
+        else:
+            raise ValueError(
+        "Multiple spectrum filenames found in single X!Tandem XML."
+    )
+
     @staticmethod
-    def fix_tabs(path: str, prot_sep: Optional[str] = '|||'):
+    def fix_tabs(path: str, id_column: str = "SpecId", prot_sep: Optional[str] = '|||'):
         """
-        Make tmp version of PIN file with fixed Proteins column separator.
+        Return StringIO instance of PIN/POUT file with fixed Proteins column separator.
 
-        In a PIN file, multiple proteins in the Proteins column are separated by a tab,
-        which is the same separator used to separate different columns in the file. This
-        makes it impossible to read with pandas. This function makes a temporary copy of
-        the PIN file with the Proteins tab-separations replaced with another string.
+        In a PIN/POUT file, multiple proteins in the Proteins column are separated by a
+        tab, which is the same separator used to separate different columns in the file.
+        This makes it impossible to read with pandas. This function makes a temporary
+        copy of the PIN file with the Proteins tab-separations replaced with another
+        string.
+
+        Parameters
+        ----------
+        path: str
+            Path to input file
+        id_column: str
+            Label of the ID column: `SpecId` for PIN files, `PSMId` for POUT files.
+        prot_sep: str
+            Separator to use in proteins column.
 
         """
-        fixed_pin = StringIO()
-        with open(path, 'rt') as pin_in:
+        fixed_file = StringIO()
+        with open(path, 'rt') as file_in:
             numcol = None
-            for i, line in enumerate(pin_in):
-                if i == 0 & line.startswith('SpecId'):
+            for i, line in enumerate(file_in):
+                if i == 0 & line.startswith(id_column):
                     numcol = len(line.split('\t'))
-                    fixed_pin.write(line)
+                    fixed_file.write(line)
                 elif i == 1 & line.startswith('DefaultDirection'):
                     pass
-                    #fixed_pin.write(line)
+                    #fixed_file.write(line)
                 else:
                     r = line.strip().split('\t')
                     r_cols = r[:numcol-1]
                     r_proteins = r[numcol-1:]
                     r_cols.append(prot_sep.join(r_proteins))
-                    fixed_pin.write('\t'.join(r_cols) + '\n')
+                    fixed_file.write('\t'.join(r_cols) + '\n')
 
-        fixed_pin.seek(0)
-        return fixed_pin
+        fixed_file.seek(0)
+        return fixed_file
 
     @staticmethod
     def write_with_tabs(file_object: StringIO, path: str, prot_sep: Optional[str] = "|||"):
