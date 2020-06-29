@@ -1,7 +1,7 @@
 {
   "general":{
     "pipeline":"MaxQuant",
-    "feature_sets":["all", "ms2pip", "searchengine"],
+    "feature_sets":["all", "ms2pip_rt", "ms2pip", "rt", "searchengine"],
     "run_percolator":true,
     "keep_tmp_files":false,
     "show_progress_bar":true,

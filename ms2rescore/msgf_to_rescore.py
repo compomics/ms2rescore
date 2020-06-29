@@ -175,9 +175,11 @@ def msgf_pipeline(config):
     outname = config['general']['output_filename']
     mzid_file = config['general']['identification_file']
     if not os.path.isfile(config['general']['mgf_file']):
-        logging.critical("MGF file %s not found. Please specify the correct \
-path to the MGF file.", config['general']['mgf_file'])
-    exit(1)
+        logging.critical(
+            "MGF file %s not found. Please specify the correct path to the MGF file.",
+            config['general']['mgf_file']
+        )
+        exit(1)
 
     logging.info("Running msgf2pin")
     # Convert .mzid to pin. XXX is the decoy pattern from MSGF+

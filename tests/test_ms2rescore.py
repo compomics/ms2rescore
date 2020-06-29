@@ -1,18 +1,14 @@
-# Standard library
-from unittest import TestCase
+"""Test ms2rescore.maxquant_to_rescore."""
 
-# Third party
 import pandas as pd
-
-# Package
 import ms2rescore.maxquant_to_rescore
 
 
-class Tests(TestCase):
+class Tests:
 
     def test_msms_to_peprec(self):
-        test_msms_file = 'ms2rescore/tests/data/msms_sample.txt'
-        expected_peprec_file = 'ms2rescore/tests/data/msms_sample_expected.pkl'
+        test_msms_file = 'tests/data/msms_sample.txt'
+        expected_peprec_file = 'tests/data/msms_sample_expected.pkl'
 
         generated_peprec = ms2rescore.maxquant_to_rescore.msms_to_peprec(test_msms_file)
 

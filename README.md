@@ -7,8 +7,9 @@
 [![GitHub issues](https://img.shields.io/github/issues/compomics/ms2rescore?style=flat-square)](https://github.com/compomics/ms2rescore/issues)
 [![GitHub](https://img.shields.io/github/license/compomics/ms2rescore.svg?style=flat-square)](https://www.apache.org/licenses/LICENSE-2.0)
 
-Sensitive PSM rescoring with predicted MS² peak intensities using
-[MS²PIP](https://github.com/compomics/ms2pip_c) and
+Sensitive PSM rescoring with predicted spectra using
+[MS²PIP](https://github.com/compomics/ms2pip_c),
+[DeepLC](https://github.com/compomics/deeplc), and
 [Percolator](https://github.com/percolator/percolator/).
 
 ---
@@ -23,8 +24,9 @@ Sensitive PSM rescoring with predicted MS² peak intensities using
 ---
 
 ## About MS²ReScore
-Sensitive PSM rescoring with predicted MS² peak intensities using
-[MS²PIP](https://github.com/compomics/ms2pip_c) and
+Sensitive PSM rescoring with predicted spectra using
+[MS²PIP](https://github.com/compomics/ms2pip_c),
+[DeepLC](https://github.com/compomics/deeplc), and
 [Percolator](https://github.com/percolator/percolator/). This allows more
 peptide identifications at a lower false discovery rate.
 
@@ -36,6 +38,8 @@ MS²ReScore takes identifications from multiple search engines:
   identifications file and corresponding `.mgf`.
 - [X!Tandem](https://www.thegpm.org/tandem/): Start with an X!Tandem `.xml`
   identifications file and corresponding `.mgf`.
+- [PeptideShaker](http://compomics.github.io/projects/peptide-shaker): Start with a
+  PeptideShaker Extended PSM Report and corresponding `.mgf` file.
 
 If you use MS²ReScore for your research, please cite the following article:
 > **Accurate peptide fragmentation predictions allow data driven approaches to replace and improve upon proteomics search engine scoring functions.** Ana S C Silva, Robbin Bouwmeester, Lennart Martens, and Sven Degroeve. _Bioinformatics_ (2019) [doi:10.1093/bioinformatics/btz383](https://doi.org/10.1093/bioinformatics/btz383)
@@ -48,6 +52,8 @@ MS²ReScore requires:
 on Windows 10)
 - If the option `run_percolator` is set to `True`, [Percolator](https://github.com/percolator/percolator/) needs to be callable
 with the `percolator` command (tested with [version 3.02.1](https://github.com/percolator/percolator/releases/tag/rel-3-02-01))
+- For some pipelines, the Percolator converters, such as tandem2pin need to be
+  installed.
 
 Clone or download this repository and install:
 ```
@@ -79,7 +85,7 @@ optional arguments:
   ```
 
 ### Configuration file
-It is very important to configure MS²ReScore to your use case with the config
+It is important to configure MS²ReScore to your use case with the config
 file. The config file is written in JSON. Example files for each pipeline are
 provided in the GitHub repository.
 
@@ -98,7 +104,7 @@ pipeline. If false, the end result is a Percolator PIN file.
 files can be used for a more in-depth data-analysis. If set to true, only the
 PIN files and the Percolator output are kept.
 - `show_progress_bar`: Whether or not to display a tqdm progress bar.
-- `num_cpu`: Number of CPU cores to use.
+- `num_cpu`: Number of CPU cores to use. -1 to use all available.
 
 For example:
 ```json
@@ -108,15 +114,16 @@ For example:
   "run_percolator":true,
   "keep_tmp_files":false,
   "show_progress_bar":true,
-  "num_cpu":24
+  "num_cpu":8
 }
 ```
 
 #### MS2PIP
-These settings are passed to MS²PIP (see [github.com/compomics/ms2pip_c](https://github.com/compomics/ms2pip_c) for more info).
+These settings are passed to MS²PIP (see [github.com/compomics/ms2pip_c](https://github.com/compomics/ms2pip_c) for more info) and are required for some pipelines to parse
+the modification labels correctly.
 - `model`: MS²PIP model to use (e.g. `HCD`, see [MS²PIP models](http://compomics.github.io/projects/ms2pip_c#specialized-prediction-models) for more info)
 - `frag_error`: MS² mass error tolerance in Da
-- `Modifications`:
+- `modifications`:
     - `name`: as used in e.g. MaxQuant `modifications_mapping` (see below)
     - `unimod_accession`: Required for parsing MSGFPlus output (see [unimod.org](http://www.unimod.org/) for correct accession numbers)
     - `mass_shift`: Mono-isotopic mass shift
@@ -139,8 +146,10 @@ For example
 ```
 
 #### Percolator
-Command line options directly passed to Percolator (see the [Percolator wiki](https://github.com/percolator/percolator/wiki/Command-line-options) for more info). For
-example:
+This section is only required if `run_percolator` is set to `true` and can contain
+command line options, which are directly passed to Percolator (see the
+[Percolator wiki](https://github.com/percolator/percolator/wiki/Command-line-options)
+for more info). For example:
 
 ```json
 "percolator":{
@@ -193,8 +202,20 @@ section in the config file is required.
 :warning: **Be sure to run MSGFPlus as a concatenated target-decoy search, with the `-addFeatures 1` flag.**
 
 #### X!Tandem
-The X!Tandem pipeline starts with the identifications `.xml` file.  No extra
-section in the config file is required.
+The X!Tandem pipeline starts with the identifications `.xml` file.
+- `mgf_dir`: Path to directory containing MGF files.
+- `decoy_label`: Label for decoy protein names. By default, this is `random`. If
+  X!Tandem was run within SearchGUI, the decoy label is `REVERSED`.
+
+```json
+"tandem": {
+  "mgf_dir":"mgf",
+  "decoy_label": "random"
+}
+```
+
+#### PeptideShaker
+The PeptideShakerStart pipeline starts with a PeptideShaker Extended PSM Report and corresponding .mgf file.
 
 ### Output
 Several intermediate files are created when the entire pipeline is run. Their
@@ -208,3 +229,25 @@ For each feature set (`all`, `ms2pip` and/or `searchengine`):
 - `<file>.pout_dec` Percolator OUT file with decoy PSMs
 - `<file>.weights` Internal feature weights used by Percolator's scoring
 function.
+
+
+## Development
+Conda environment:
+```
+conda create -y --name ms2rescore-dev -c bioconda -c defaults -c conda-forge python=3.7 percolator deeplc pyteomics numpy pandas scipy scikit-learn tqdm xmltodict pylint pydocstyle pytest seaborn matplotlib biopython numexpr tomlkit
+```
+
+Activatate the environment:
+```
+conda activate ms2rescore-dev
+```
+
+Install MS²PIP, which is not in any conda channel:
+```
+pip install ms2pip
+```
+
+Install MS²ReScore in "editable" mode:
+```
+pip install --editable .
+```
