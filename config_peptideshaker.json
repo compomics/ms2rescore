@@ -5,7 +5,8 @@
     "run_percolator":true,
     "keep_tmp_files":true,
     "show_progress_bar":true,
-    "num_cpu":24
+    "num_cpu":-1,
+    "mgf_file": "path/to/file.mgf"
   },
   "ms2pip": {
     "model": "HCD",
