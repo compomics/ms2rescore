@@ -202,8 +202,20 @@ section in the config file is required.
 :warning: **Be sure to run MSGFPlus as a concatenated target-decoy search, with the `-addFeatures 1` flag.**
 
 #### X!Tandem
-The X!Tandem pipeline starts with the identifications `.xml` file.  No extra
-section in the config file is required.
+The X!Tandem pipeline starts with the identifications `.xml` file.
+- `mgf_dir`: Path to directory containing MGF files.
+- `decoy_label`: Label for decoy protein names. By default, this is `random`. If
+  X!Tandem was run within SearchGUI, the decoy label is `REVERSED`.
+
+```json
+"tandem": {
+  "mgf_dir":"mgf",
+  "decoy_label": "random"
+}
+```
+
+#### PeptideShaker
+The PeptideShakerStart pipeline starts with a PeptideShaker Extended PSM Report and corresponding .mgf file.
 
 ### Output
 Several intermediate files are created when the entire pipeline is run. Their
