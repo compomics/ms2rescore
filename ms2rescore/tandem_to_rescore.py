@@ -42,12 +42,12 @@ def tandem_pipeline(config):
             "z": "charge",
             "rt": "observed_retention_time",
             "expect": "e-value",
-            "hyperscore": "hyperscore",
+            "hyperscore": "hyperscore_tandem",
             "id": "tandem_id"
         }
     )
     # Set PSM score as -log(e-value)
-    peprec_df["psm_score"] = - np.log(tandem_df["e-value"])
+    peprec_df["psm_score"] = - np.log(peprec_df["e-value"])
 
     logging.debug("Adding search engine features from PIN to PEPREC...")
     pin = PercolatorIn(
@@ -61,7 +61,8 @@ def tandem_pipeline(config):
     )
 
     # Validate merge by comparing the hyperscore columns
-    assert (peprec.df["hyperscore"] == peprec.df["hyperscore"]).all()
+    assert (peprec.df["hyperscore_tandem"] == peprec.df["hyperscore"]).all()
+    peprec.df.drop("hyperscore_tandem", axis="columns", inplace=True)
 
     peprec.reorder_columns()
     peprec.to_csv(outname + ".peprec")
