@@ -6,6 +6,8 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
+from ms2rescore.peptide_record import PeptideRecord
+
 class PercolatorIn:
     """Percolator In (PIN)."""
 
@@ -23,16 +25,18 @@ class PercolatorIn:
             Path to PIN file.
         modification_mapping: dict, optional
             Mapping of mass shifts -> modification name, e.g.
-            {-17.02655: "Gln->pyro-Glu"}. For matching, mass shifts are rounded to three
-            decimals to avoid rounding issues.
+            {-17.02655: "Gln->pyro-Glu"}. Keys can either be strings or floats
+            (representing mass shifts). If the keys are floats, they are rounded to
+            three decimals to avoid rounding issues while matching. If None, the
+            original modification labels from the PIN file will be used.
 
         """
+        # Attributes
+        self.modification_pattern = r"\[([^\[^\]]*)\]"
+
         # Parameters
         self.path = path
         self.modification_mapping = modification_mapping
-
-        # Attributes
-        self.modification_pattern = r"\[([0-9\-\.]*)\]"
 
         if self.path:
             self.read()
@@ -46,11 +50,25 @@ class PercolatorIn:
     def modification_mapping(self, value):
         """Set modification_mapping."""
         if value:
-            self._modification_mapping = {
-                round(shift, 3): name for shift, name in value.items()
-            }
+            if all([isinstance(label, str) for label in value.keys()]):
+                self.modification_pattern = r"\[([^\[^\]]*)\]"
+                self._modification_label_type = "str"
+                self._modification_mapping = value
+            elif all([isinstance(label, float) for label in value.keys()]):
+                self.modification_pattern = r"\[([0-9\-\.]*)\]"
+                self._modification_label_type = "float"
+                self._modification_mapping = {
+                    round(shift, 3): name for shift, name in value.items()
+                }
+            else:
+                raise TypeError(
+                    "modification_mapping keys cannot have mixed types and should "
+                    "either be string or float."
+                )
         else:
-            self._modification_mapping = value
+            self.modification_pattern = r"\[([^\[^\]]*)\]"
+            self._modification_mapping = None
+            self._modification_label_type = None
 
     def _find_mods_recursively(
         self, mod_seq: str, mod_list: Optional[List[str]] = None
@@ -58,7 +76,7 @@ class PercolatorIn:
         """
         Find modifications in modified sequence string recursively.
 
-        TODO: Fix handing of modifications on different residues with identical mass
+        TODO: Fix handling of modifications on different residues with identical mass
         shifts, while also handing residue-aspecific modifications (e.g. N-terminal).
         """
         if not mod_list:
@@ -66,8 +84,20 @@ class PercolatorIn:
         match = re.search(self.modification_pattern, mod_seq)
         if match:
             mod_location = str(match.start())
-            mod_shift = round(float(match.group(1)), 3)
-            mod_name = self.modification_mapping[mod_shift]
+            if self.modification_mapping:
+                if self._modification_label_type == "float":
+                    mod_label = round(float(match.group(1)), 3)
+                elif self._modification_label_type == "str":
+                    mod_label = match.group(1)
+                else:
+                    raise ValueError(
+                        "Unsupported modification_label_type {}".format(
+                            self._modification_label_type
+                        )
+                    )
+                mod_name = self.modification_mapping[mod_label]
+            else:
+                mod_name = match.group(1)
             mod_list.extend([mod_location, mod_name])
             mod_seq = re.sub(self.modification_pattern, "", mod_seq, count=1)
             mod_list = self._find_mods_recursively(mod_seq, mod_list)
@@ -97,11 +127,35 @@ class PercolatorIn:
         unmod_seq = re.sub(self.modification_pattern, "", unmod_seq, count=0)
         return unmod_seq
 
+    def _get_peprec_modifications_column(self):
+        """Get PEPREC-style modifications column to PIN DataFrame."""
+        return self.df["Peptide"].apply(self._get_peprec_modifications)
+
+    def _get_sequence_column(self):
+        """Get unmodified sequence column to PIN DataFrame."""
+        return self.df["Peptide"].apply(self._get_unmodified_sequence)
+
+    def _get_charge_column(self):
+        """Get charge column from one-hot encoded `ChargeX` columns."""
+        charge_cols = [col for col in self.df.columns if col.startswith("Charge")]
+        assert (self.df[charge_cols] == 1).any(axis=1).all(), ("Not all PSMs have"
+            " an assigned charge state."
+        )
+        return self.df[charge_cols].rename(columns={
+            col: int(col.replace("Charge", "")) for col in charge_cols
+        }).idxmax(1)
+
     def add_peprec_modifications_column(self):
         """Add PEPREC-style modifications column to PIN DataFrame."""
-        self.df["modifications"] = self.df["Peptide"].apply(
-            self._get_peprec_modifications
-        )
+        self.df["modifications"] = self._get_peprec_modifications_column()
+
+    def add_sequence_column(self):
+        """Add unmodified sequence column to PIN DataFrame."""
+        self.df["sequence"] = self._get_sequence_column()
+
+    def add_charge_column(self):
+        """Add charge column from one-hot encoded `ChargeX` columns."""
+        self.df["charge"] = self._get_charge_column()
 
     def add_tandem_id_column(
         self,
@@ -128,7 +182,7 @@ class PercolatorIn:
             return spectrum_filenames[0]
         else:
             raise ValueError(
-        "Multiple spectrum filenames found in single X!Tandem XML."
+        "Multiple spectrum filenames found in single PIN file."
     )
 
     @staticmethod
@@ -201,3 +255,13 @@ class PercolatorIn:
     def write(self, path: Optional[str] = None):
         """Write PIN to file."""
         raise NotImplementedError
+
+    def to_peptide_record(self) -> PeptideRecord:
+        """Convert to peptide record."""
+        peprec_df = pd.DataFrame()
+        peprec_df["spec_id"] = self.df["SpecId"]
+        peprec_df["peptide"] = self._get_sequence_column()
+        peprec_df["modifications"] = self._get_peprec_modifications_column()
+        peprec_df["charge"] = self._get_charge_column()
+        peprec_df["is_decoy"] = self.df["Label"] == -1
+        return PeptideRecord.from_dataframe(peprec_df)
