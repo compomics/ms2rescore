@@ -55,7 +55,7 @@ def tandem_pipeline(config):
         modification_mapping=modification_mapping
     )
     pin.add_peprec_modifications_column()
-    pin.add_tandem_id_column()
+    pin.add_spectrum_index_column(label="tandem_id")
     peprec = PeptideRecord.from_dataframe(
         peprec_df.merge(pin.df, on="tandem_id").drop(columns="tandem_id")
     )
