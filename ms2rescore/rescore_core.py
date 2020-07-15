@@ -470,10 +470,10 @@ def write_pin_files(
     if not "ModPeptide" in pep.columns:
         pep["ModPeptide"] = pep["peptide"]
     pep.rename(
-        columns={"peptide": "peptide_peprec", "ModPeptide": "Peptide"}, inplace=True
+        columns={"peptide": "peptide_peprec", "ModPeptide": "Peptide", "label": "Label"}, inplace=True
     )
 
-    peprec_cols = ["spec_id", "peptide", "peptide_peprec", "modifications", "charge"]
+    peprec_cols = ["spec_id", "peptide", "peptide_peprec", "modifications", "charge", "label"]
     pin_columns = [
         "SpecId",
         "ScanNr",
@@ -501,7 +501,7 @@ def write_pin_files(
         if (col not in peprec_cols) and (col not in pin_columns)
     ]
 
-    # Merge ms2pip_features and peprec DataFrames
+    # Merge features and peprec DataFrames
     complete_df = pep
     for other in [ms2pip_features, rt_features]:
         if isinstance(other, pd.DataFrame):
@@ -519,6 +519,8 @@ def write_pin_files(
         complete_df["ScanNr"] = complete_df.index
     if not "SpecId" in complete_df.columns:
         complete_df["SpecId"] = complete_df["spec_id"]
+    if not "Label" in complete_df.columns:
+        complete_df["Label"] = complete_df["label"]
 
     # Write PIN files with ordered columns
     # From Percolator documentation:

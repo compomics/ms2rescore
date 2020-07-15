@@ -327,6 +327,6 @@ class PercolatorIn:
         peprec_df["charge"] = self._get_charge_column()
         if score_column_label:
             peprec_df["psm_score"] = self.df[score_column_label]
-        peprec_df["is_decoy"] = self.df["Label"] == -1
+        peprec_df["label"] = self.df["Label"]
 
         return PeptideRecord.from_dataframe(peprec_df)
