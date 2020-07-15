@@ -72,6 +72,9 @@ class PercolatorIn:
             self._modification_mapping = None
             self._modification_label_type = None
 
+    def infer_modification_label_style(self):
+        raise NotImplementedError()
+
     def _find_mods_recursively(
         self, mod_seq: str, mod_list: Optional[List[str]] = None
     ) -> List[str]:

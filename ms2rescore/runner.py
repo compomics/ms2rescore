@@ -8,13 +8,15 @@ import os
 
 # From package
 from ms2rescore.config_parser import parse_config
-import ms2rescore.rescore_core as rescore_core
-import ms2rescore.maxquant_to_rescore as maxquant_to_rescore
-import ms2rescore.parse_mgf as parse_mgf
-import ms2rescore.msgf_to_rescore as msgf_to_rescore
-import ms2rescore.tandem_to_rescore as tandem_to_rescore
-import ms2rescore.peptideshaker_to_rescore as peptideshaker_to_rescore
 from ms2rescore.retention_time import RetentionTimeIntegration
+from ms2rescore import (
+    rescore_core,
+    pin_to_rescore,
+    maxquant_to_rescore,
+    msgf_to_rescore,
+    tandem_to_rescore,
+    peptideshaker_to_rescore,
+)
 
 
 def run():
@@ -38,17 +40,21 @@ def run():
         exit(0)
 
     # Prepare with specific pipeline
-    if config["general"]["pipeline"].lower() == "maxquant":
-        logging.info("Using %s pipeline", config["general"]["pipeline"])
-        peprec_filename, mgf_filename = maxquant_to_rescore.maxquant_pipeline(config)
+    if config["general"]["pipeline"].lower() == "pin":
+        pipeline = pin_to_rescore.pipeline
+    elif config["general"]["pipeline"].lower() == "maxquant":
+        pipeline = maxquant_to_rescore.maxquant_pipeline
     elif config["general"]["pipeline"].lower() in ["msgfplus", "msgf+", "ms-gf+"]:
-        peprec_filename, mgf_filename = msgf_to_rescore.msgf_pipeline(config)
+        pipeline = msgf_to_rescore.msgf_pipeline
     elif config["general"]["pipeline"].lower() in ["tandem", "xtandem", "x!tandem"]:
-        peprec_filename, mgf_filename = tandem_to_rescore.tandem_pipeline(config)
+        pipeline = tandem_to_rescore.tandem_pipeline
     elif config["general"]["pipeline"].lower() == "peptideshaker":
-        peprec_filename, mgf_filename = peptideshaker_to_rescore.pipeline(config)
+        pipeline = peptideshaker_to_rescore.pipeline
     else:
         raise NotImplementedError(config["general"]["pipeline"])
+
+    logging.info("Using %s pipeline", config["general"]["pipeline"])
+    peprec_filename, mgf_filename = pipeline(config)
 
     outname = config["general"]["output_filename"]
     ms2pip_config_filename = outname + "_ms2pip_config.txt"

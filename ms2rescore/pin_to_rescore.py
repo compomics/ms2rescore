@@ -16,7 +16,7 @@ SPEC_ID_PATTERNS = {
 
 
 def parse_mgf(path_to_mgf: str) -> Tuple[Dict[int, str], Dict[int, float]]:
-    """Parse MGF file to extract title and retention time fields."""
+    """Parse MGF file to extract title and retention time fields, by spectrum index."""
     titles = dict()
     retention_times = dict()
     with open(path_to_mgf, "rt") as mgf_in:
