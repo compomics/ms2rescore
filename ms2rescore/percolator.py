@@ -3,11 +3,16 @@
 import re
 import logging
 from io import StringIO
-from typing import Dict, List, Optional
+from typing import Dict, List, Tuple, Union, Optional
 
 import pandas as pd
 
 from ms2rescore.peptide_record import PeptideRecord
+
+
+class UnknownModificationLabelStyleError(Exception):
+    """Could not infer modification label style."""
+    pass
 
 
 class PercolatorIn:
@@ -16,7 +21,7 @@ class PercolatorIn:
     def __init__(
         self,
         path: Optional[str] = None,
-        modification_mapping: Optional[Dict[float, str]] = None,
+        modification_mapping: Optional[Dict[Tuple[Union[str, None], Union[float, str]], str]] = None,
     ):
         """
         Percolator In (PIN).
@@ -26,11 +31,13 @@ class PercolatorIn:
         path: str, optional
             Path to PIN file.
         modification_mapping: dict, optional
-            Mapping of mass shifts -> modification name, e.g.
-            {-17.02655: "Gln->pyro-Glu"}. Keys can either be strings or floats
-            (representing mass shifts). If the keys are floats, they are rounded to
-            three decimals to avoid rounding issues while matching. If None, the
-            original modification labels from the PIN file will be used.
+            Mapping of modification residue and PIN label to the modification name.
+            Modification residue is the one-letter amino acid code, or None.
+            Modification labels can either be strings (e.g.
+            `{("Q", "UNIMOD:28"): "Gln->pyro-Glu"}`) or floats representing mass shifts
+            (e.g. `{("Q", -17.02655): "Gln->pyro-Glu"}). If the keys are floats, they
+            are rounded to three decimals to avoid rounding issues while matching. If
+            None, the original modification labels from the PIN file will be used.
 
         """
         # Attributes
@@ -49,18 +56,19 @@ class PercolatorIn:
         return self._modification_mapping
 
     @modification_mapping.setter
-    def modification_mapping(self, value):
+    def modification_mapping(self, value: Optional[Dict[Tuple[Union[str, None], Union[float, str]], str]]):
         """Set modification_mapping."""
         if value:
-            if all([isinstance(label, str) for label in value.keys()]):
+            mod_labels = [key[1] for key in value.keys()]
+            if all([isinstance(label, str) for label in mod_labels]):
                 self.modification_pattern = r"\[([^\[^\]]*)\]"
                 self._modification_label_type = "str"
                 self._modification_mapping = value
-            elif all([isinstance(label, float) for label in value.keys()]):
+            elif all([isinstance(label, float) for label in mod_labels]):
                 self.modification_pattern = r"\[([0-9\-\.]*)\]"
                 self._modification_label_type = "float"
                 self._modification_mapping = {
-                    round(shift, 3): name for shift, name in value.items()
+                    (aa, round(shift, 3)): name for (aa, shift), name in value.items()
                 }
             else:
                 raise TypeError(
@@ -72,23 +80,59 @@ class PercolatorIn:
             self._modification_mapping = None
             self._modification_label_type = None
 
-    def infer_modification_label_style(self):
-        raise NotImplementedError()
+    def modification_mapping_from_config(self, config, label_style="infer"):
+        """
+        Generate modification_mapping from ms2rescore configuration.
+
+        Parameters
+        ----------
+        config: Dict
+            ms2rescore configuration
+        label_style: str
+            Modification label style, any of {"infer", "unimod_accession", "mass_shift"}
+            If `infer`, the style will be attempted to be infered from the PIN file.
+
+        """
+        if label_style == "infer":
+            label_style = self._infer_modification_label_style()
+            self.modification_mapping_from_config(config, label_style=label_style)
+        elif label_style == "unimod_accession":
+            self.modification_mapping = {
+                (mod["amino_acid"], f"UNIMOD:{mod['unimod_accession']}"): mod["name"] for mod in config["ms2pip"]["modifications"]
+            }
+        elif label_style == "mass_shift":
+            self.modification_mapping = {
+                (mod["amino_acid"], mod["mass_shift"]): mod["name"] for mod in config["ms2pip"]["modifications"]
+            }
+        else:
+            raise ValueError(label_style)
+
+    def _infer_modification_label_style(self) -> str:
+        """Infer modification label style (e.g. unimod_accession or mass shift)."""
+        # TODO: What happens if there are no mods? Crashes?
+        modified_peptides = self.df[
+            self.df['Peptide'].str.contains(r"\[([^\[^\]]*)\]", regex=True)
+        ]['Peptide']
+        if modified_peptides.str.extract(r"\[([^\[^\]]*)\]", expand=False).str.startswith("UNIMOD:").all():
+            mod_notation = "unimod_accession"
+        elif pd.to_numeric(modified_peptides.str.extract(r"\[([^\[^\]]*)\]", expand=False), errors='coerce').notnull().all():
+            mod_notation = "mass_shift"
+        else:
+            raise UnknownModificationLabelStyleError()
+        return mod_notation
 
     def _find_mods_recursively(
         self, mod_seq: str, mod_list: Optional[List[str]] = None
     ) -> List[str]:
         """
         Find modifications in modified sequence string recursively.
-
-        TODO: Fix handling of modifications on different residues with identical mass
-        shifts, while also handing residue-aspecific modifications (e.g. N-terminal).
         """
         if not mod_list:
             mod_list = []
         match = re.search(self.modification_pattern, mod_seq)
         if match:
-            mod_location = str(match.start())
+            mod_location = match.start()
+            mod_aa = mod_seq[mod_location - 1]
             if self.modification_mapping:
                 if self._modification_label_type == "float":
                     mod_label = round(float(match.group(1)), 3)
@@ -100,10 +144,14 @@ class PercolatorIn:
                             self._modification_label_type
                         )
                     )
-                mod_name = self.modification_mapping[mod_label]
+                # First try with specific amino acid, then try with None (e.g. N-term)
+                try:
+                    mod_name = self.modification_mapping[mod_aa, mod_label]
+                except KeyError:
+                    mod_name = self.modification_mapping[None, mod_label]
             else:
                 mod_name = match.group(1)
-            mod_list.extend([mod_location, mod_name])
+            mod_list.extend([str(mod_location), mod_name])
             mod_seq = re.sub(self.modification_pattern, "", mod_seq, count=1)
             mod_list = self._find_mods_recursively(mod_seq, mod_list)
         return mod_list
@@ -328,5 +376,12 @@ class PercolatorIn:
         if score_column_label:
             peprec_df["psm_score"] = self.df[score_column_label]
         peprec_df["label"] = self.df["Label"]
+        peprec_df["Proteins"] = self.df["Proteins"]
+
+        # TODO: Propagate search engine features seperately from PEPREC (Also other
+        # pipelines)
+        pin_cols = ["SpecId", "Label", "ScanNr", "Peptide", "Proteins"]
+        feature_cols = [col for col in self.df.columns if col not in pin_cols]
+        peprec_df[feature_cols] = self.df[feature_cols]
 
         return PeptideRecord.from_dataframe(peprec_df)

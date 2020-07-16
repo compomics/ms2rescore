@@ -473,7 +473,8 @@ def write_pin_files(
         columns={"peptide": "peptide_peprec", "ModPeptide": "Peptide", "label": "Label"}, inplace=True
     )
 
-    peprec_cols = ["spec_id", "peptide", "peptide_peprec", "modifications", "charge", "label"]
+    # TODO: Fix duality in `observed_retention_time`: peprec column, also rt feature
+    peprec_cols = ["spec_id", "peptide", "peptide_peprec", "modifications", "charge", "label", "observed_retention_time"]
     pin_columns = [
         "SpecId",
         "ScanNr",
@@ -495,7 +496,7 @@ def write_pin_files(
         for col in ms2pip_features.columns
         if (col not in peprec_cols) and (col not in pin_columns)
     ]
-    rt_feature_names = [
+    rt_feature_names = ["observed_retention_time"] + [
         col
         for col in rt_features.columns
         if (col not in peprec_cols) and (col not in pin_columns)
@@ -524,7 +525,7 @@ def write_pin_files(
 
     # Write PIN files with ordered columns
     # From Percolator documentation:
-    # PSMId <tab> Label <tab> ScanNr <tab> feature1name <tab> ... <tab> featureNname <tab> Peptide <tab> Proteins
+    # SpecId <tab> Label <tab> ScanNr <tab> feature1name <tab> ... <tab> featureNname <tab> Peptide <tab> Proteins
 
     if "all" in feature_sets:
         complete_df[

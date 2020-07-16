@@ -34,12 +34,15 @@ def parse_mgf(path_to_mgf: str) -> Tuple[Dict[int, str], Dict[int, float]]:
     return titles, retention_times
 
 
-def pipeline(config: Dict) -> Tuple[str, str]:
+def pipeline(config: Dict, spec_id_style="generic") -> Tuple[str, str]:
     """Convert PIN to PEPREC for MS²ReScore."""
     logging.info("Parsing PIN file...")
     # PIN to PEPREC
     pin = PercolatorIn(config["general"]["identification_file"])
-    peprec = pin.to_peptide_record(spectrum_index_pattern=SPEC_ID_PATTERNS["generic"])
+    pin.modification_mapping_from_config(config, label_style="infer")
+    peprec = pin.to_peptide_record(
+        spectrum_index_pattern=SPEC_ID_PATTERNS[spec_id_style]
+    )
 
     # Map MGF titles and observed retention times
     titles, retention_times = parse_mgf(config["general"]["mgf_file"])
