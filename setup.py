@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='ms2rescore',
-    version='0.2.2',
+    version='0.3.0.dev1',
     description='MS²ReScore: PSM rescoring with predicted MS² peak intensities.',
     author='Ana Sílvia C. Silva, Ralf Gabriels, Tim Van Den Bossche',
     author_email='compomics.list@gmail.com',
