@@ -12,6 +12,7 @@ from ms2rescore.peptide_record import PeptideRecord
 
 class UnknownModificationLabelStyleError(Exception):
     """Could not infer modification label style."""
+
     pass
 
 
@@ -21,7 +22,9 @@ class PercolatorIn:
     def __init__(
         self,
         path: Optional[str] = None,
-        modification_mapping: Optional[Dict[Tuple[Union[str, None], Union[float, str]], str]] = None,
+        modification_mapping: Optional[
+            Dict[Tuple[Union[str, None], Union[float, str]], str]
+        ] = None,
     ):
         """
         Percolator In (PIN).
@@ -56,7 +59,9 @@ class PercolatorIn:
         return self._modification_mapping
 
     @modification_mapping.setter
-    def modification_mapping(self, value: Optional[Dict[Tuple[Union[str, None], Union[float, str]], str]]):
+    def modification_mapping(
+        self, value: Optional[Dict[Tuple[Union[str, None], Union[float, str]], str]]
+    ):
         """Set modification_mapping."""
         if value:
             mod_labels = [key[1] for key in value.keys()]
@@ -98,11 +103,13 @@ class PercolatorIn:
             self.modification_mapping_from_config(config, label_style=label_style)
         elif label_style == "unimod_accession":
             self.modification_mapping = {
-                (mod["amino_acid"], f"UNIMOD:{mod['unimod_accession']}"): mod["name"] for mod in config["ms2pip"]["modifications"]
+                (mod["amino_acid"], f"UNIMOD:{mod['unimod_accession']}"): mod["name"]
+                for mod in config["ms2pip"]["modifications"]
             }
         elif label_style == "mass_shift":
             self.modification_mapping = {
-                (mod["amino_acid"], mod["mass_shift"]): mod["name"] for mod in config["ms2pip"]["modifications"]
+                (mod["amino_acid"], mod["mass_shift"]): mod["name"]
+                for mod in config["ms2pip"]["modifications"]
             }
         else:
             raise ValueError(label_style)
@@ -111,11 +118,22 @@ class PercolatorIn:
         """Infer modification label style (e.g. unimod_accession or mass shift)."""
         # TODO: What happens if there are no mods? Crashes?
         modified_peptides = self.df[
-            self.df['Peptide'].str.contains(r"\[([^\[^\]]*)\]", regex=True)
-        ]['Peptide']
-        if modified_peptides.str.extract(r"\[([^\[^\]]*)\]", expand=False).str.startswith("UNIMOD:").all():
+            self.df["Peptide"].str.contains(r"\[([^\[^\]]*)\]", regex=True)
+        ]["Peptide"]
+        if (
+            modified_peptides.str.extract(r"\[([^\[^\]]*)\]", expand=False)
+            .str.startswith("UNIMOD:")
+            .all()
+        ):
             mod_notation = "unimod_accession"
-        elif pd.to_numeric(modified_peptides.str.extract(r"\[([^\[^\]]*)\]", expand=False), errors='coerce').notnull().all():
+        elif (
+            pd.to_numeric(
+                modified_peptides.str.extract(r"\[([^\[^\]]*)\]", expand=False),
+                errors="coerce",
+            )
+            .notnull()
+            .all()
+        ):
             mod_notation = "mass_shift"
         else:
             raise UnknownModificationLabelStyleError()

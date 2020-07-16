@@ -470,11 +470,25 @@ def write_pin_files(
     if not "ModPeptide" in pep.columns:
         pep["ModPeptide"] = pep["peptide"]
     pep.rename(
-        columns={"peptide": "peptide_peprec", "ModPeptide": "Peptide", "label": "Label"}, inplace=True
+        columns={
+            "peptide": "peptide_peprec",
+            "ModPeptide": "Peptide",
+            "label": "Label",
+        },
+        inplace=True,
     )
 
     # TODO: Fix duality in `observed_retention_time`: peprec column, also rt feature
-    peprec_cols = ["spec_id", "peptide", "peptide_peprec", "modifications", "charge", "label", "observed_retention_time"]
+    peprec_cols = [
+        "spec_id",
+        "peptide",
+        "peptide_peprec",
+        "modifications",
+        "charge",
+        "label",
+        "psm_score",
+        "observed_retention_time",
+    ]
     pin_columns = [
         "SpecId",
         "ScanNr",

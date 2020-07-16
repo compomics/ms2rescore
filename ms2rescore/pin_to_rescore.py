@@ -1,7 +1,7 @@
 """Convert PIN file to PEPREC for MS²ReScore."""
 
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import click
 
@@ -34,11 +34,15 @@ def parse_mgf(path_to_mgf: str) -> Tuple[Dict[int, str], Dict[int, float]]:
     return titles, retention_times
 
 
-def pipeline(config: Dict, spec_id_style="generic") -> Tuple[str, str]:
+def pipeline(
+    config: Dict, path_to_pin: Optional[str] = None, spec_id_style="generic"
+) -> Tuple[str, str]:
     """Convert PIN to PEPREC for MS²ReScore."""
     logging.info("Parsing PIN file...")
     # PIN to PEPREC
-    pin = PercolatorIn(config["general"]["identification_file"])
+    if not path_to_pin:
+        path_to_pin = config["general"]["identification_file"]
+    pin = PercolatorIn(path_to_pin)
     pin.modification_mapping_from_config(config, label_style="infer")
     peprec = pin.to_peptide_record(
         spectrum_index_pattern=SPEC_ID_PATTERNS[spec_id_style]
