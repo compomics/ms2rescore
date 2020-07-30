@@ -22,12 +22,12 @@ def tandem_pipeline(config):
     outname = config['general']['output_filename']
 
     modification_mapping = {
-        mod["mass_shift"]: mod["name"] for mod in config["ms2pip"]["modifications"]
+        (mod["amino_acid"], mod["mass_shift"]): mod["name"] for mod in config["ms2pip"]["modifications"]
     }
 
     logging.debug("Running tandem2pin...")
     # X!Tandem uses REVERSED_ as decoy pattern
-    convert_command = "tandem2pin -P REVERSED {} > {}_original.pin".format(xml_file, outname)
+    convert_command = f"tandem2pin -P REVERSED -o {outname}_original.pin {xml_file}"
     subprocess.run(convert_command, shell=True)
 
     logging.debug("Converting X!Tandem XML to PEPREC...")

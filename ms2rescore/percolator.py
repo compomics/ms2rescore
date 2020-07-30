@@ -2,6 +2,7 @@
 
 import re
 import logging
+from math import floor
 from io import StringIO
 from typing import Dict, List, Tuple, Union, Optional
 
@@ -12,6 +13,12 @@ from ms2rescore.peptide_record import PeptideRecord
 
 class UnknownModificationLabelStyleError(Exception):
     """Could not infer modification label style."""
+
+    pass
+
+
+class UnknownModificationError(Exception):
+    """Modification not found in `modification_mapping`."""
 
     pass
 
@@ -39,8 +46,8 @@ class PercolatorIn:
             Modification labels can either be strings (e.g.
             `{("Q", "UNIMOD:28"): "Gln->pyro-Glu"}`) or floats representing mass shifts
             (e.g. `{("Q", -17.02655): "Gln->pyro-Glu"}). If the keys are floats, they
-            are rounded to three decimals to avoid rounding issues while matching. If
-            None, the original modification labels from the PIN file will be used.
+            are rounded up to three decimals to avoid rounding issues while matching.
+            If None, the original modification labels from the PIN file will be used.
 
         """
         # Attributes
@@ -52,6 +59,11 @@ class PercolatorIn:
 
         if self.path:
             self.read()
+
+    @staticmethod
+    def _round_half_up(n, decimals=0):
+        multiplier = 10 ** decimals
+        return floor(n*multiplier + 0.5) / multiplier
 
     @property
     def modification_mapping(self):
@@ -73,7 +85,7 @@ class PercolatorIn:
                 self.modification_pattern = r"\[([0-9\-\.]*)\]"
                 self._modification_label_type = "float"
                 self._modification_mapping = {
-                    (aa, round(shift, 3)): name for (aa, shift), name in value.items()
+                    (aa, self._round_half_up(shift)): name for (aa, shift), name in value.items()
                 }
             else:
                 raise TypeError(
@@ -153,7 +165,7 @@ class PercolatorIn:
             mod_aa = mod_seq[mod_location - 1]
             if self.modification_mapping:
                 if self._modification_label_type == "float":
-                    mod_label = round(float(match.group(1)), 3)
+                    mod_label = self._round_half_up(float(match.group(1)))
                 elif self._modification_label_type == "str":
                     mod_label = match.group(1)
                 else:
@@ -163,10 +175,17 @@ class PercolatorIn:
                         )
                     )
                 # First try with specific amino acid, then try with None (e.g. N-term)
-                try:
+                if (mod_aa, mod_label) in self.modification_mapping:
                     mod_name = self.modification_mapping[mod_aa, mod_label]
-                except KeyError:
+                elif (None, mod_label) in self.modification_mapping:
                     mod_name = self.modification_mapping[None, mod_label]
+                else:
+                    print(match.group(1))
+                    raise UnknownModificationError(
+                        f"No modification with label `{mod_label}` for amino acid "
+                        f"`{mod_aa}` found in modification_mapping "
+                        f"`{self.modification_mapping}`."
+                    )
             else:
                 mod_name = match.group(1)
             mod_list.extend([str(mod_location), mod_name])
@@ -270,7 +289,9 @@ class PercolatorIn:
             raise ValueError("Multiple spectrum filenames found in single PIN file.")
 
     @staticmethod
-    def fix_tabs(path: str, id_column: str = "SpecId", prot_sep: Optional[str] = "|||"):
+    def fix_tabs(
+        path: str, id_column: str = "SpecId", prot_sep: Optional[str] = "|||"
+    ) -> StringIO:
         """
         Return StringIO instance of PIN/POUT file with fixed Proteins column separator.
 
@@ -288,6 +309,11 @@ class PercolatorIn:
             Label of the ID column: `SpecId` for PIN files, `PSMId` for POUT files.
         prot_sep: str
             Separator to use in proteins column.
+
+        Returns
+        -------
+        io.StringIO
+            io.StringIO object with fixed PIN/POUT file.
 
         """
         fixed_file = StringIO()
