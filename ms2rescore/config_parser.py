@@ -1,13 +1,18 @@
 """ms2rescore config and CLI argument parsing."""
 
 import argparse
-import logging
+import collections.abc
+import importlib.resources as pkg_resources
 import json
-import os
+import logging
 import multiprocessing as mp
+import os
+from typing import Dict, Optional
+
+import jsonschema
 
 from ms2rescore._version import __version__
-from ms2rescore import setup_logging
+from ms2rescore import setup_logging, package_data
 
 
 def parse_arguments():
@@ -33,8 +38,7 @@ def parse_arguments():
 
     parser.add_argument(
         "-c", metavar="FILE", action="store", dest="config_file",
-        default="config.json", help="Path to JSON MS²ReScore configuration\
-            file. See README.md for more info. (default: config.json)"
+        help="Path to MS²ReScore JSON configuration file. See README.md for more info."
     )
 
     parser.add_argument(
@@ -46,6 +50,43 @@ def parse_arguments():
         default="info", help="Logging level (default: `info`)")
 
     return parser.parse_args()
+
+
+def update_dict_recursively(d, u):
+    """Update dict recursively (from https://stackoverflow.com/a/3233356/13374619)."""
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = update_dict_recursively(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
+def load_config_file(path_to_config: Optional[str] = None) -> Dict:
+    """Read default and user config files, validate against schema, and join."""
+    config_schema = json.load(
+        pkg_resources.open_text(package_data, "config_schema.json")
+    )
+    config_default = json.load(
+        pkg_resources.open_text(package_data, "config_default.json")
+    )
+    jsonschema.validate(instance=config_default, schema=config_schema)
+
+    config = config_default
+
+    if path_to_config:
+        try:
+            with open(path_to_config) as f:
+                config_user = json.load(f)
+        except json.decoder.JSONDecodeError:
+            logging.critical(
+                "Could not read JSON config file. Please use correct JSON formatting."
+            )
+            exit(1)
+        jsonschema.validate(instance=config_user, schema=config_schema)
+        config = update_dict_recursively(config, config_user)
+
+    return config
 
 
 def parse_config():
@@ -72,15 +113,7 @@ def parse_config():
     else:
         args.output_filename = os.path.splitext(args.identification_file)[0]
 
-    # Read config
-    try:
-        with open(args.config_file) as f:
-            config = json.load(f)
-    except json.decoder.JSONDecodeError:
-        logging.critical(
-            "Could not read JSON config file. Please use correct JSON formatting."
-        )
-        exit(1)
+    config = load_config_file(args.config_file)
 
     # Add CLI arguments to config
     config['general']['identification_file'] = args.identification_file

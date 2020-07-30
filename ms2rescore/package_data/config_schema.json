@@ -1,0 +1,128 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MS²ReScore configuration.",
+    "description": "MS²ReScore configuration.",
+    "type": "object",
+    "properties": {
+        "general": {
+            "description": "General MS²ReScore settings.",
+            "type": "object",
+            "properties": {
+                "pipeline": {
+                    "description": "Pipeline to use, depending on input format",
+                    "type": "string",
+                    "enum": ["pin", "tandem", "maxquant", "msgfplus", "peptideshaker"],
+                    "default": "pin"
+                },
+                "feature_sets": {
+                    "description": "Feature sets for which to generate PIN files and optionally run Percolator.",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["all", "ms2pip_rt", "searchengine", "rt", "ms2pip"]
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "default": ["all"]
+                },
+                "run_percolator": {
+                    "description": "Run Percolator within MS²ReScore",
+                    "type": "boolean",
+                    "default": false
+                },
+                "keep_tmp_files": {
+                    "description": "Keep temporary output files",
+                    "type": "boolean",
+                    "default": false
+                },
+                "show_progress_bar": {
+                    "description": "Show progress bar during some subprocesses",
+                    "type": "boolean"
+                }
+            }
+        },
+        "ms2pip": {
+            "description": "MS²PIP settings.",
+            "type": "object",
+            "properties": {
+                "model": {
+                    "description": "MS²PIP model to use (see MS²PIP documentation)",
+                    "type": "string",
+                    "default": "HCD"
+                },
+                "frag_error": {
+                    "description": "MS2 error tolerance in Da",
+                    "type": "number",
+                    "minimum": 0,
+                    "default": 0.02
+                },
+                "modifications": {
+                    "description": "Array of peptide mass modifications",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/modifications"
+                    }
+                }
+            }
+        },
+        "percolator": {
+            "description": "Command line options directly passed to Percolator (see the Percolator wiki)",
+            "type": "object"
+        },
+        "maxquant_to_rescore":{
+            "description": "Settings specific to the MaxQuant pipeline",
+            "type": "object",
+            "properties": {
+                "mgf_dir": {
+                    "description": "Path to directory with MGF files",
+                    "type": "string"
+                },
+                "modifications_mapping": {
+                    "description": "Mapping of MaxQuant modification labels to modifications names for MS²PIP",
+                    "type": "object",
+                    "default": {}
+                },
+                "fixed_modifications": {
+                    "description": "Mapping of amino acids with fixed modifications to the modification name",
+                    "type": "object",
+                    "default": {}
+                }
+            },
+            "required": ["mgf_dir", "modifications_mapping", "fixed_modifications"]
+          }
+
+    },
+    "definitions": {
+        "modifications": {
+            "description": "Peptide mass modifications, per amino acid",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Unique name for modification",
+                    "type": "string"
+                },
+                "unimod_accession": {
+                    "description": "Unimod accession of modification",
+                    "type": "number",
+                    "multipleOf": 1
+                },
+                "mass_shift": {
+                    "description": "Mono-isotopic mass shift",
+                    "type": "number"
+                },
+                "amino_acid": {
+                    "description": "Amino acid one-letter code, or null if amino acid-agnostic (e.g. N-term acetylation)",
+                    "oneOf": [
+                        {"type": "string", "minLength": 1, "maxLength": 1},
+                        {"type": "null"}
+                    ]
+                },
+                "n_term": {
+                    "description": "Modification is N-terminal",
+                    "type": "boolean"
+                }
+            },
+            "required": ["name", "unimod_accession", "mass_shift", "amino_acid", "n_term"]
+        }
+    }
+}
