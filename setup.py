@@ -2,10 +2,11 @@
 """Setup ms2rescore."""
 
 from setuptools import setup
+from ms2rescore._version import __version__
 
 setup(
     name='ms2rescore',
-    version='0.3.0.dev1',
+    version=__version__,
     description='MS²ReScore: PSM rescoring with predicted MS² peak intensities.',
     author='Ana Sílvia C. Silva, Ralf Gabriels, Tim Van Den Bossche',
     author_email='compomics.list@gmail.com',

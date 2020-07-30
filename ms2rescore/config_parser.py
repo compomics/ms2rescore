@@ -6,6 +6,7 @@ import json
 import os
 import multiprocessing as mp
 
+from ms2rescore._version import __version__
 from ms2rescore import setup_logging
 
 
@@ -15,6 +16,9 @@ def parse_arguments():
         description="MS²ReScore: Sensitive PSM rescoring with predicted MS²\
             peak intensities."
     )
+
+    parser.add_argument(
+        '-v', '--version', action='version', version=__version__)
 
     parser.add_argument(
         "identification_file", help="Path to identification file (mzid,\
@@ -58,6 +62,7 @@ def parse_config():
         if not os.path.isfile(args.mgf_file):
             raise FileNotFoundError(args.mgf_file)
     else:
+        # Assume MGF filename is identical to identification file, with other extension
         args.mgf_file = os.path.splitext(args.identification_file)[0] + '.mgf'
 
     if args.output_filename:
