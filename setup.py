@@ -35,6 +35,7 @@ setup(
         'lxml>=4.5,<5',
         'ms2pip>=3.6,<4',
         'click>=7,<8',
+        'jsonschema>=3,<4',
     ],
     test_suite='ms2rescore.tests.test_ms2rescore.Tests',
     tests_require=[

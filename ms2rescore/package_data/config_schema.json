@@ -38,8 +38,16 @@
                 "show_progress_bar": {
                     "description": "Show progress bar during some subprocesses",
                     "type": "boolean"
+                },
+                "num_cpu": {
+                    "description": "Number of parallel processes to use; -1 for all available",
+                    "type": "number",
+                    "multipleOf": 1,
+                    "minimum": -1,
+                    "default": -1
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "ms2pip": {
             "description": "MS²PIP settings.",
@@ -63,7 +71,8 @@
                         "$ref": "#/definitions/modifications"
                     }
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "percolator": {
             "description": "Command line options directly passed to Percolator (see the Percolator wiki)",
@@ -88,9 +97,10 @@
                     "default": {}
                 }
             },
-            "required": ["mgf_dir", "modifications_mapping", "fixed_modifications"]
-          }
-
+            "required": ["mgf_dir", "modifications_mapping", "fixed_modifications"],
+            "additionalProperties": false
+        },
+    "additionalProperties": false
     },
     "definitions": {
         "modifications": {
@@ -122,7 +132,8 @@
                     "type": "boolean"
                 }
             },
-            "required": ["name", "unimod_accession", "mass_shift", "amino_acid", "n_term"]
+            "required": ["name", "unimod_accession", "mass_shift", "amino_acid", "n_term"],
+            "additionalProperties": false
         }
     }
 }
