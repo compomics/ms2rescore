@@ -26,20 +26,20 @@ def make_ms2pip_config(options, filename="ms2pip_config.txt"):
     cwd = os.getcwd()
     ms2pip_config = open(os.path.join(cwd, filename), "wt")
 
-    if "frag" in options["ms2pip"]:
-        ms2pip_config.write("frag_method={}\n".format(options["ms2pip"]["frag"]))
-    if "model" in options["ms2pip"]:
-        ms2pip_config.write("model={}\n".format(options["ms2pip"]["model"]))
+    if "frag" in options:
+        ms2pip_config.write("frag_method={}\n".format(options["frag"]))
+    if "model" in options:
+        ms2pip_config.write("model={}\n".format(options["model"]))
     else:
         # Assume HCD
         ms2pip_config.write("frag_method=HCD\n")
 
-    if "frag_error" in options["ms2pip"]:
-        ms2pip_config.write("frag_error={}\n".format(options["ms2pip"]["frag_error"]))
+    if "frag_error" in options:
+        ms2pip_config.write("frag_error={}\n".format(options["frag_error"]))
     else:
-        if options["ms2pip"]["frag"] == "CID":
+        if options["frag"] == "CID":
             ms2pip_config.write("frag_error=0.8\n")
-        elif options["ms2pip"]["frag"] == "phospho":
+        elif options["frag"] == "phospho":
             ms2pip_config.write("frag_error=0.02\n")
         else:
             # Assume HCD
@@ -47,7 +47,7 @@ def make_ms2pip_config(options, filename="ms2pip_config.txt"):
 
     ms2pip_config.write("\n")
 
-    modifications = options["ms2pip"]["modifications"]
+    modifications = options["modifications"]
     for mod in modifications:
         if mod["amino_acid"] is None and mod["n_term"]:
             aa = "N-term"
