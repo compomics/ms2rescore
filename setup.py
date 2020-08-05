@@ -7,7 +7,7 @@ from ms2rescore._version import __version__
 setup(
     name='ms2rescore',
     version=__version__,
-    description='MS²ReScore: PSM rescoring with predicted MS² peak intensities.',
+    description='MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and retention times.',
     author='Ana Sílvia C. Silva, Ralf Gabriels, Tim Van Den Bossche',
     author_email='compomics.list@gmail.com',
     url='https://compomics.github.io/projects/ms2rescore/',
@@ -35,7 +35,7 @@ setup(
         'lxml>=4.5,<5',
         'ms2pip>=3.6,<4',
         'click>=7,<8',
-        'jsonschema>=3,<4',
+        'cascade-config'
     ],
     test_suite='ms2rescore.tests.test_ms2rescore.Tests',
     tests_require=[
