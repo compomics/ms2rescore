@@ -4,12 +4,17 @@ import argparse
 import importlib.resources as pkg_resources
 import multiprocessing as mp
 import os
-from typing import Dict
+from typing import Optional, Dict
 
 from cascade_config import CascadeConfig
 
 from ms2rescore._version import __version__
 from ms2rescore import package_data
+
+
+class MS2ReScoreConfigurationError(Exception):
+    """Invalid MS2ReScore configuration."""
+    pass
 
 
 def _parse_arguments() -> argparse.Namespace:
@@ -98,17 +103,48 @@ def _validate_num_cpu(config: Dict) -> Dict:
     return config
 
 
-def parse_config() -> Dict:
-    """Parse config file, merge with CLI arguments and check if input files exist."""
+def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = None) -> Dict:
+    """
+    Parse and validate MS²ReScore configuration files and arguments.
+
+    Default configuration, user configuration files, and CLI/class arguments are parsed
+    in cascading order.
+
+    Parameters
+    ----------
+    parse_cli_args : bool
+        parse command line arguments or not, default True
+    config_class : Dict
+        dictionary with arguments from the Python class; required if `parse_cli_args`
+        is False
+    """
     config_schema = pkg_resources.open_text(package_data, "config_schema.json")
     config_default = pkg_resources.open_text(package_data, "config_default.json")
-    args = _parse_arguments()
+
+    # MS²ReScore can be run from the CLI, or as a Python module
+    if parse_cli_args:
+        args = _parse_arguments()
+        config_user = args.config_file
+        if config_class:
+            raise MS2ReScoreConfigurationError(
+            "If `parse_cli_args` is True, `config_class` must be None."
+        )
+    elif config_class:
+        args = None
+        config_user = config_class["config_file"]
+    else:
+        raise MS2ReScoreConfigurationError(
+            "If `parse_cli_args` is False, `config_class` arguments are required."
+        )
 
     cascade_conf = CascadeConfig(validation_schema=config_schema)
     cascade_conf.add_json(config_default)
-    if args.config_file:
-        cascade_conf.add_json(args.config_file)
-    cascade_conf.add_namespace(args, subkey="general")
+    if config_user:
+        cascade_conf.add_json(config_user)
+    if parse_cli_args:
+        cascade_conf.add_namespace(args, subkey="general")
+    elif config_class:
+        cascade_conf.add_dict(config_class, subkey="general")
     config = cascade_conf.parse()
 
     config = _validate_filenames(config)

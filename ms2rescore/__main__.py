@@ -1,11 +1,12 @@
-"""ms2rescore."""
+"""MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and retention times."""
 
-from ms2rescore.runner import run
+from ms2rescore import MS2ReScore
 
 
 def main():
-    """ms2rescore."""
-    run()
+    """Run MS²ReScore."""
+    rescore = MS2ReScore(parse_cli_args=True, configuration=None)
+    rescore.run()
 
 
 if __name__ == "__main__":
