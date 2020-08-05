@@ -45,6 +45,27 @@
                     "multipleOf": 1,
                     "minimum": -1,
                     "default": -1
+                },
+                "config_file": {
+                    "description": "Path to configuration file",
+                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                },
+                "identification_file": {
+                    "description": "Path to identification file",
+                    "type": "string"
+                },
+                "mgf_path": {
+                    "description": "Path to MGF file or directory with MGF files",
+                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                },
+                "output_filename": {
+                    "description": "Path and root name for output files",
+                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                },
+                "log_level": {
+                    "description": "Logging level",
+                    "type": "string",
+                    "enum": ["debug", "info", "warning", "error", "critical"]
                 }
             },
             "additionalProperties": false

@@ -5,11 +5,13 @@
 import logging
 import subprocess
 import os
+from multiprocessing import cpu_count
 
 # From package
 from ms2rescore.config_parser import parse_config
 from ms2rescore.retention_time import RetentionTimeIntegration
 from ms2rescore import (
+    setup_logging,
     rescore_core,
     pin_to_rescore,
     maxquant_to_rescore,
@@ -22,6 +24,11 @@ from ms2rescore import (
 def run():
     """Run ms2rescore."""
     config = parse_config()
+    setup_logging.setup_logging(config["general"]["log_level"])
+
+    logging.debug(
+        "Using %i of %i available CPUs.", config["general"]["num_cpu"], cpu_count()
+    )
 
     # Check if Percolator is installed and callable
     if config["general"]["run_percolator"]:
@@ -40,15 +47,15 @@ def run():
         exit(0)
 
     # Prepare with specific pipeline
-    if config["general"]["pipeline"].lower() == "pin":
+    if config["general"]["pipeline"] == "pin":
         pipeline = pin_to_rescore.pipeline
-    elif config["general"]["pipeline"].lower() == "maxquant":
+    elif config["general"]["pipeline"] == "maxquant":
         pipeline = maxquant_to_rescore.maxquant_pipeline
-    elif config["general"]["pipeline"].lower() in ["msgfplus", "msgf+", "ms-gf+"]:
+    elif config["general"]["pipeline"] == "msgfplus":
         pipeline = msgf_to_rescore.msgf_pipeline
-    elif config["general"]["pipeline"].lower() in ["tandem", "xtandem", "x!tandem"]:
+    elif config["general"]["pipeline"] == "tandem":
         pipeline = tandem_to_rescore.tandem_pipeline
-    elif config["general"]["pipeline"].lower() == "peptideshaker":
+    elif config["general"]["pipeline"]== "peptideshaker":
         pipeline = peptideshaker_to_rescore.pipeline
     else:
         raise NotImplementedError(config["general"]["pipeline"])
