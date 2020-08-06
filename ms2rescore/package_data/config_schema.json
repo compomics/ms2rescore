@@ -11,8 +11,8 @@
                 "pipeline": {
                     "description": "Pipeline to use, depending on input format",
                     "type": "string",
-                    "enum": ["pin", "tandem", "maxquant", "msgfplus", "peptideshaker"],
-                    "default": "pin"
+                    "enum": ["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker"],
+                    "default": "infer"
                 },
                 "feature_sets": {
                     "description": "Feature sets for which to generate PIN files and optionally run Percolator.",
@@ -29,15 +29,6 @@
                     "description": "Run Percolator within MS²ReScore",
                     "type": "boolean",
                     "default": false
-                },
-                "keep_tmp_files": {
-                    "description": "Keep temporary output files",
-                    "type": "boolean",
-                    "default": false
-                },
-                "show_progress_bar": {
-                    "description": "Show progress bar during some subprocesses",
-                    "type": "boolean"
                 },
                 "num_cpu": {
                     "description": "Number of parallel processes to use; -1 for all available",
@@ -56,6 +47,10 @@
                 },
                 "mgf_path": {
                     "description": "Path to MGF file or directory with MGF files",
+                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                },
+                "tmp_path": {
+                    "description": "Path to directory to place temporary files",
                     "oneOf": [{"type": "string"}, {"type": "null"}]
                 },
                 "output_filename": {

@@ -2,8 +2,10 @@
 
 # Standard library
 import os
+import re
 import logging
 import subprocess
+from typing import Union
 
 # Third party
 import click
@@ -16,10 +18,72 @@ from ms2rescore.peptide_record import PeptideRecord
 from ms2rescore.percolator import PercolatorIn
 
 
+def infer_mgf_path(
+    passed_path: Union[None, str, os.PathLike],
+    default_dir: Union[str, os.PathLike],
+    expected_rootname: Union[str, os.PathLike],
+    expected_ext: str = ".mgf"
+):
+    """
+    Infer MGF path from passed path and expected filename (e.g. from ID file).
+
+    Parameters
+    ----------
+    passed_path : None, string, os.PathLike
+        user-defined path to MGF file or directory containing MGF file
+    default_dir : str, os.PathLike
+        default directory for MGF file, used in combination with `expected_rootname and
+        `expected_ext` if `passed_path` is None
+    expected_rootname : str, os.PathLike
+        rootname of MGF file, as expected from, e.g., identification file
+    expected_ext : str, optional
+        expected filename extension, including period, default: ".mgf"
+
+    """
+    # Make sure that expected_rootname is in fact rootname without expected extension
+    expected_rootname = os.path.basename(expected_rootname)
+    if expected_rootname.endswith(expected_ext):
+        expected_rootname = re.sub(".mgf$", "", expected_rootname)
+
+    # If no mgf path configured, return expected rootname + ext in default directory
+    if not passed_path:
+        mgf_path = os.path.join(default_dir, expected_rootname + expected_ext)
+
+    # If passed path is directory, join with expected rootname + ext
+    elif os.path.isdir(passed_path):
+        mgf_path = os.path.join(
+            passed_path,
+            expected_rootname + expected_ext
+        )
+
+    # If passed path is file, use that, but warn if basename doesn't match expected
+    elif os.path.isfile(passed_path):
+        passed_rootname = os.path.splitext(os.path.basename(passed_path))[0]
+        if passed_rootname != expected_rootname:
+            logging.warning(
+                "Passed MGF name root `%s` does not match MGF name root `%s` from "
+                "identifications file. Continuing with passed MGF name.",
+                passed_rootname,
+                expected_rootname
+            )
+        mgf_path = passed_path
+
+    else:
+        raise ValueError(
+            "Configured `mgf_path` must be None or a path to a file or "
+            "directory."
+        )
+
+    return mgf_path
+
+
 def tandem_pipeline(config):
     """Convert X!Tandem XML file to PEPREC with search engine features."""
     xml_file = config['general']['identification_file']
-    outname = config['general']['output_filename']
+    tmp_basename = os.path.join(
+        config["general"]["tmp_path"],
+        os.path.splitext(os.path.basename(xml_file))[0]
+    )
 
     modification_mapping = {
         (mod["amino_acid"], mod["mass_shift"]): mod["name"] for mod in config["ms2pip"]["modifications"]
@@ -27,7 +91,7 @@ def tandem_pipeline(config):
 
     logging.debug("Running tandem2pin...")
     # X!Tandem uses REVERSED_ as decoy pattern
-    convert_command = f"tandem2pin -P REVERSED -o {outname}_original.pin {xml_file}"
+    convert_command = f"tandem2pin -P REVERSED -o {tmp_basename}_original.pin {xml_file}"
     subprocess.run(convert_command, shell=True)
 
     logging.debug("Converting X!Tandem XML to PEPREC...")
@@ -51,7 +115,7 @@ def tandem_pipeline(config):
 
     logging.debug("Adding search engine features from PIN to PEPREC...")
     pin = PercolatorIn(
-        path=outname + "_original.pin",
+        path=tmp_basename + "_original.pin",
         modification_mapping=modification_mapping
     )
     pin.add_peprec_modifications_column()
@@ -65,14 +129,15 @@ def tandem_pipeline(config):
     peprec.df.drop("hyperscore_tandem", axis="columns", inplace=True)
 
     peprec.reorder_columns()
-    peprec.to_csv(outname + ".peprec")
+    peprec.to_csv(tmp_basename + ".peprec")
 
-    mgf_file = os.path.join(
-        config["tandem"]["mgf_dir"],
-        pin.get_spectrum_filename() + ".mgf"
+    mgf_file = infer_mgf_path(
+        config["general"]["mgf_path"],
+        os.path.dirname(config["general"]["identification_file"]),
+        pin.get_spectrum_filename(),
     )
 
-    return outname + ".peprec", mgf_file
+    return tmp_basename + ".peprec", mgf_file
 
 
 @click.command()

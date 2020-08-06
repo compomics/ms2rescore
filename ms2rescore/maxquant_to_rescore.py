@@ -244,7 +244,6 @@ def maxquant_pipeline(config):
         outname=outname + '.mgf',
         filename_col='Raw file', spec_title_col='spec_id',
         title_parsing_method='TRFP_MQ',
-        show_progress_bar=config['general']['show_progress_bar']
     )
 
     peprec.drop('Raw file', axis=1, inplace=True)

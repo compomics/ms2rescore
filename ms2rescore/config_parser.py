@@ -9,12 +9,8 @@ from typing import Optional, Dict
 from cascade_config import CascadeConfig
 
 from ms2rescore._version import __version__
+from ms2rescore._exceptions import MS2ReScoreConfigurationError
 from ms2rescore import package_data
-
-
-class MS2ReScoreConfigurationError(Exception):
-    """Invalid MS2ReScore configuration."""
-    pass
 
 
 def _parse_arguments() -> argparse.Namespace:
@@ -45,6 +41,14 @@ def _parse_arguments() -> argparse.Namespace:
         type=str,
         dest="config_file",
         help="path to MS²ReScore configuration file (see README.md)",
+    )
+    parser.add_argument(
+        "-t",
+        metavar="PATH",
+        action="store",
+        type=str,
+        dest="tmp_path",
+        help="path to directory to place temporary files"
     )
     parser.add_argument(
         "-o",

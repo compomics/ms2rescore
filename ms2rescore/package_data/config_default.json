@@ -1,13 +1,12 @@
 {
     "$schema": "./config_schema.json",
     "general":{
-        "pipeline":"pin",
+        "pipeline":"infer",
         "feature_sets":["all"],
         "run_percolator":true,
-        "keep_tmp_files":false,
-        "show_progress_bar":true,
         "num_cpu":-1,
         "config_file":null,
+        "tmp_path":null,
         "mgf_path":null,
         "output_filename":null,
         "log_level": "info"
