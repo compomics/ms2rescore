@@ -2,11 +2,19 @@
 """Setup ms2rescore."""
 
 from setuptools import setup
-from ms2rescore._version import __version__
+
+
+def get_version(path):
+    """Get __version__ from Python file."""
+    with open(path, "rt") as f:
+        for line in f:
+            if line.startswith("__version__ = "):
+                return line.strip().split(" = ")[1].strip("\"'")
+
 
 setup(
     name='ms2rescore',
-    version=__version__,
+    version=get_version("ms2rescore/_version.py"),
     description='MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and retention times.',
     author='Ana Sílvia C. Silva, Ralf Gabriels, Tim Van Den Bossche',
     author_email='compomics.list@gmail.com',
