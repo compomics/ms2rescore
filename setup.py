@@ -43,18 +43,12 @@ setup(
         'lxml>=4.5,<5',
         'ms2pip>=3.6,<4',
         'click>=7,<8',
+        'deeplc',
         'cascade-config'
     ],
     test_suite='ms2rescore.tests.test_ms2rescore.Tests',
     tests_require=[
-        'numpy>=1.16.0,<2',
-        'pandas>=0.24.0,<2',
-        'scipy>=1.2.0,<2',
-        'scikit-learn>=0.20.0,<1',
-        'tqdm>=4.31.0,<5',
-        'pyteomics>=4.1.0,<5',
-        'xmltodict>=0.12.0,<1',
-        'lxml>=4.5,<5'
+        'ms2rescore',
         'pytest>=4.3.0,<5',
     ],
 )
