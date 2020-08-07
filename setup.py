@@ -42,6 +42,7 @@ setup(
         "lxml>=4.5,<5",
         "ms2pip>=3.6,<4",
         "click>=7,<8",
+        "deeplc>=0.1.17"
         "cascade-config",
     ],
     test_suite="ms2rescore.tests.test_ms2rescore.Tests",
