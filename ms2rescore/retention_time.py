@@ -8,7 +8,6 @@ import click
 import pandas as pd
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-from deeplc import DeepLC
 
 from ms2rescore.peptide_record import PeptideRecord
 
@@ -60,6 +59,8 @@ class RetentionTimeIntegration:
         self.higher_psm_score_better = higher_psm_score_better
         self.calibration_set_size = calibration_set_size
         self.num_cpu = num_cpu
+
+        from deeplc import DeepLC
 
         self.deeplc_predictor = DeepLC(
             split_cal=10,
