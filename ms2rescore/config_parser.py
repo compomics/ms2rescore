@@ -1,7 +1,6 @@
 """Parse configuration from command line arguments and configuration files."""
 
 import argparse
-import importlib.resources as pkg_resources
 import multiprocessing as mp
 import os
 from typing import Optional, Dict
@@ -11,6 +10,11 @@ from cascade_config import CascadeConfig
 from ms2rescore._version import __version__
 from ms2rescore._exceptions import MS2ReScoreConfigurationError
 from ms2rescore import package_data
+
+try:
+    import importlib.resources as pkg_resources
+except ImportError:
+    import importlib_resources as pkg_resources
 
 
 def _parse_arguments() -> argparse.Namespace:
