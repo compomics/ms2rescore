@@ -31,16 +31,24 @@ class ExtendedPsmReport:
 
         Methods
         -------
-        from_tsv(path: str = None)
-            Read Extended PSM Report from tsv file.
         to_peprec()
             Convert Extended PSM Report to PEPREC.
 
         """
         self.path = path
-        self.df = None
+
         if self.path:
-            self.from_tsv(self.path)
+            self.df = pd.read_csv(path, sep="\t")
+        else:
+            self.df = None
+
+    @classmethod
+    def from_tsv(cls, path: str):
+        """Read Extended PSM Report from TSV file."""
+        df = pd.read_csv(path, sep="\t")
+        ext_psm_report = cls(path)
+        ext_psm_report.df = df
+        return ext_psm_report
 
     @staticmethod
     def _parse_modification(modified_seq):
@@ -118,12 +126,6 @@ class ExtendedPsmReport:
 
         return mods_peprec
 
-    def from_tsv(self, path: Optional[str] = None):
-        """Read Extended PSM Report from tsv file."""
-        if not path:
-            path = self.path
-        self.df = pd.read_csv(path, sep="\t")
-
     def to_peprec(self):
         """Convert Extended PSM Report to PEPREC."""
         column_mapping = {
@@ -153,21 +155,10 @@ class ExtendedPsmReport:
         peprec.df = df
         return peprec
 
-
-def pipeline(config):
-    """
-    Convert PeptideShaker Extended PSM Report to PEPREC for MS²ReScore.
-
-    Temporary function until rescore.runner is refactored.
-
-    """
-    logging.info("Parsing Extended PSM Report...")
-    psm_report = ExtendedPsmReport(config['general']["identification_file"])
-    peprec = psm_report.to_peprec()
-    peprec_path = config['general']['output_filename'] + ".peprec"
-    peprec.to_csv(peprec_path)
-    return peprec_path, config['general']['mgf_file']
-
+    def get_search_engine_features(self):
+        """Get pandas.DataFrame with search engine features."""
+        # TODO: Implement this!
+        raise NotImplementedError
 
 @click.command()
 @click.argument("input-psm-report")

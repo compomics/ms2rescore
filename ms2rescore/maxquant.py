@@ -275,7 +275,8 @@ class MSMS(pd.DataFrame):
                 "protein_list",
                 "psm_score",
                 "observed_retention_time",
-                "Label"
+                "Label",
+                "Raw file"
             ]
         )
         peprec["spec_id"] = self._get_spec_id()
@@ -303,6 +304,7 @@ class MSMS(pd.DataFrame):
         peprec["psm_score"] = self["Score"]
         peprec["observed_retention_time"] = self["Retention time"]
         peprec["Label"] = self["Reverse"].isna().apply(lambda x: 1 if x else -1)
+        peprec["Raw file"] = self["Raw file"]
         peprec.sort_values("spec_id", inplace=True)
         peprec.reset_index(drop=True, inplace=True)
 
@@ -376,7 +378,6 @@ class MSMS(pd.DataFrame):
             top7_features,
             ion_current_features,
         ], axis=1)
-        print(features.columns)
         features.rename(columns=col_mapping, inplace=True)
         features.sort_values("spec_id", inplace=True)
         features.reset_index(drop=True, inplace=True)

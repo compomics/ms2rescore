@@ -25,6 +25,11 @@
                     "uniqueItems": true,
                     "default": ["all"]
                 },
+                "id_decoy_pattern": {
+                    "description": "Pattern used to identify the decoy PSMs in identification file. Passed to `--pattern` option of Percolator converters.",
+                    "oneOf": [{"type": "string"}, {"type": "null"}],
+                    "default": null
+                },
                 "run_percolator": {
                     "description": "Run Percolator within MS²ReScore",
                     "type": "boolean",
@@ -102,7 +107,7 @@
                     "description": "Path to directory with MGF files",
                     "type": "string"
                 },
-                "modifications_mapping": {
+                "modification_mapping": {
                     "description": "Mapping of MaxQuant modification labels to modifications names for MS²PIP",
                     "type": "object",
                     "default": {}
@@ -113,7 +118,7 @@
                     "default": {}
                 }
             },
-            "required": ["mgf_dir", "modifications_mapping", "fixed_modifications"],
+            "required": ["mgf_dir", "modification_mapping", "fixed_modifications"],
             "additionalProperties": false
         },
     "additionalProperties": false

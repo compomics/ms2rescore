@@ -4,6 +4,7 @@
         "pipeline":"infer",
         "feature_sets":["all"],
         "run_percolator":true,
+        "id_decoy_pattern": null,
         "num_cpu":-1,
         "config_file":null,
         "tmp_path":null,
@@ -33,7 +34,7 @@
     },
     "maxquant_to_rescore": {
         "mgf_dir": "",
-        "modifications_mapping":{
+        "modification_mapping":{
             "ox":"Oxidation",
             "ac":"Acetyl",
             "cm":"Carbamidomethyl",

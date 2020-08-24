@@ -81,14 +81,11 @@ def _validate_filenames(config: Dict) -> Dict:
     if not os.path.isfile(id_file):
         raise FileNotFoundError(id_file)
 
-    # MGF path should either be None, or path to file or dir
+    # MGF path should either be None, or existing path to file or dir
     mgf_path = config["general"]["mgf_path"]
     if mgf_path:
         if not os.path.exists(mgf_path):
             raise FileNotFoundError(mgf_path)
-    else:
-        # Assume MGF filename is identical to identification file, with other extension
-        config["general"]["mgf_path"] = os.path.splitext(id_file)[0] + ".mgf"
 
     # Output filename should be None or its path should exist. If not, make path.
     if config["general"]["output_filename"]:

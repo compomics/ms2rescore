@@ -383,6 +383,7 @@ def redo_pin_tabs(pin_filename):
 def write_pin_files(
     peprec_path: str,
     savepath: str,
+    searchengine_features_path: Optional[str] = None,
     ms2pip_features_path: Optional[str] = None,
     rt_features_path: Optional[str] = None,
     feature_sets: Optional[list] = None,
@@ -399,6 +400,8 @@ def write_pin_files(
         Path to PEPREC file.
     save_path: str
         Directory and basename for PIN files.
+    searchengine_features_path: {str, None}
+        Path to CSV with search engine features.
     ms2pip_features_path: {str, None}
         Path to CSV with ms2pip features.
     rt_features_path: {str, None}
@@ -411,14 +414,24 @@ def write_pin_files(
     if not feature_sets:
         feature_sets = ["all", "searchengine", "ms2pip", "rt"]
 
+    # Read search engine features
+    if ("searchengine" in feature_sets) or ("all" in feature_sets):
+        ms2pip_features = pd.read_csv(
+            searchengine_features_path,
+            sep=",",
+            index_col=None
+        )
+    else:
+        ms2pip_features = None
+
     # Read MS²PIP features
-    if ms2pip_features_path:
+    if ("ms2pip" in feature_sets) or ("all" in feature_sets):
         ms2pip_features = pd.read_csv(ms2pip_features_path, sep=",", index_col=None)
     else:
         ms2pip_features = None
 
     # Read RT features
-    if rt_features_path:
+    if ("rt" in feature_sets) or ("all" in feature_sets):
         rt_features = pd.read_csv(rt_features_path, sep=",", index_col=None)
     else:
         rt_features = None

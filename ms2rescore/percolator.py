@@ -1,7 +1,10 @@
 """Percolator integration."""
 
-import re
+
 import logging
+import os
+import re
+import subprocess
 from math import floor
 from io import StringIO
 from typing import Dict, List, Tuple, Union, Optional
@@ -61,9 +64,9 @@ class PercolatorIn:
             self.read()
 
     @staticmethod
-    def _round_half_up(n, decimals=0):
+    def _round(n, decimals=0):
         multiplier = 10 ** decimals
-        return floor(n*multiplier + 0.5) / multiplier
+        return floor(n * multiplier + 0.5) / multiplier
 
     @property
     def modification_mapping(self):
@@ -85,7 +88,8 @@ class PercolatorIn:
                 self.modification_pattern = r"\[([0-9\-\.]*)\]"
                 self._modification_label_type = "float"
                 self._modification_mapping = {
-                    (aa, self._round_half_up(shift)): name for (aa, shift), name in value.items()
+                    (aa, self._round(shift)): name
+                    for (aa, shift), name in value.items()
                 }
             else:
                 raise TypeError(
@@ -97,7 +101,9 @@ class PercolatorIn:
             self._modification_mapping = None
             self._modification_label_type = None
 
-    def modification_mapping_from_config(self, config, label_style="infer"):
+    def modification_mapping_from_list(
+        self, modification_config, label_style="infer"
+    ):
         """
         Generate modification_mapping from ms2rescore configuration.
 
@@ -112,16 +118,18 @@ class PercolatorIn:
         """
         if label_style == "infer":
             label_style = self._infer_modification_label_style()
-            self.modification_mapping_from_config(config, label_style=label_style)
+            self.modification_mapping_from_list(
+                modification_config, label_style=label_style
+            )
         elif label_style == "unimod_accession":
             self.modification_mapping = {
                 (mod["amino_acid"], f"UNIMOD:{mod['unimod_accession']}"): mod["name"]
-                for mod in config["ms2pip"]["modifications"]
+                for mod in modification_config
             }
         elif label_style == "mass_shift":
             self.modification_mapping = {
                 (mod["amino_acid"], mod["mass_shift"]): mod["name"]
-                for mod in config["ms2pip"]["modifications"]
+                for mod in modification_config
             }
         else:
             raise ValueError(label_style)
@@ -165,7 +173,7 @@ class PercolatorIn:
             mod_aa = mod_seq[mod_location - 1]
             if self.modification_mapping:
                 if self._modification_label_type == "float":
-                    mod_label = self._round_half_up(float(match.group(1)))
+                    mod_label = self._round(float(match.group(1)))
                 elif self._modification_label_type == "str":
                     mod_label = match.group(1)
                 else:
@@ -180,7 +188,6 @@ class PercolatorIn:
                 elif (None, mod_label) in self.modification_mapping:
                     mod_name = self.modification_mapping[None, mod_label]
                 else:
-                    print(match.group(1))
                     raise UnknownModificationError(
                         f"No modification with label `{mod_label}` for amino acid "
                         f"`{mod_aa}` found in modification_mapping "
@@ -368,6 +375,20 @@ class PercolatorIn:
         """Write PIN to file."""
         raise NotImplementedError
 
+    def get_feature_table(self) -> pd.DataFrame:
+        """Return pandas.DataFrame with PIN features."""
+        pin_cols = ["SpecId", "Label", "ScanNr", "Peptide", "Proteins"]
+        peprec_cols = [
+            "spec_id",
+            "peptide",
+            "modifications",
+            "charge",
+            "observed_retention_time"
+        ]
+        non_feature_cols = pin_cols + peprec_cols
+        feature_cols = [col for col in self.df.columns if col not in non_feature_cols]
+        return self.df[feature_cols]
+
     def to_peptide_record(
         self,
         extract_spectrum_index: Optional[bool] = True,
@@ -422,10 +443,52 @@ class PercolatorIn:
         peprec_df["label"] = self.df["Label"]
         peprec_df["Proteins"] = self.df["Proteins"]
 
-        # TODO: Propagate search engine features seperately from PEPREC (Also other
-        # pipelines)
-        pin_cols = ["SpecId", "Label", "ScanNr", "Peptide", "Proteins"]
-        feature_cols = [col for col in self.df.columns if col not in pin_cols]
-        peprec_df[feature_cols] = self.df[feature_cols]
+        peprec = PeptideRecord.from_dataframe(peprec_df)
 
-        return PeptideRecord.from_dataframe(peprec_df)
+        return peprec
+
+
+def run_percolator_converter(
+    converter_name: str,
+    path_to_id_file: str,
+    path_to_pin_file: str,
+    id_decoy_pattern: Optional[str] = None,
+    log_level: str = "info",
+):
+    """
+    Run Percolator PIN Converter.
+
+    Parameters
+    ----------
+    converter_name: str
+        name of the converter to use; currently supported are {"msgf2pin", "tandem2pin"}
+    path_to_id_file: str
+        path to identification file (input to converter)
+    path_to_pin_file: str'
+        path to pin file (output of converter)
+    id_decoy_pattern: str, optional
+        identifications file decoy pattern (e.g. REVERSED), passed to `-P` option of
+        Percolator converter; default depends on input filetype
+    log_level: str, optional
+        log_level, default is `info`
+
+    """
+    default_decoy_patterns = {"msgf2pin": "XXX", "tandem2pin": "REVERSED"}
+    if converter_name not in default_decoy_patterns.keys():
+        raise NotImplementedError(converter_name)
+    if not id_decoy_pattern:
+        id_decoy_pattern = default_decoy_patterns[converter_name]
+
+    command = [
+        converter_name,
+        "-P",
+        id_decoy_pattern,
+        "-o",
+        os.path.abspath(path_to_pin_file),
+        os.path.abspath(path_to_id_file),
+    ]
+
+    logging.info("Running Percolator PIN converter")
+    logging.debug(''.join(command))
+
+    subprocess.run(command, capture_output=log_level == "debug", check=True)

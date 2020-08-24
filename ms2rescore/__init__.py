@@ -16,15 +16,7 @@ from ms2rescore._exceptions import MS2ReScoreError
 from ms2rescore.config_parser import parse_config
 from ms2rescore.retention_time import RetentionTimeIntegration
 
-from ms2rescore import (
-    setup_logging,
-    rescore_core,
-    pin_to_rescore,
-    maxquant_to_rescore,
-    msgf_to_rescore,
-    tandem_to_rescore,
-    peptideshaker_to_rescore,
-)
+from ms2rescore import setup_logging, rescore_core, id_file_parser
 
 
 class MS2ReScore:
@@ -68,17 +60,19 @@ class MS2ReScore:
             self.tmp_path = tempfile.TemporaryDirectory()
             self.config["general"]["tmp_path"] = self.tmp_path.name
         else:
-            self.tmp_path = None
+            self.tmp_path = self.config["general"]["tmp_path"]
+            os.makedirs(self.tmp_path, exist_ok=True)
 
         self.tmpfile_basepath = os.path.join(
-            self.config["general"]["tmp_path"],
+            self.tmp_path,
             os.path.basename(
                 os.path.splitext(self.config["general"]["identification_file"])[0]
             ),
         )
 
-        self.pipeline = self._select_pipeline()
-        logging.info("Using %s pipeline", self.config["general"]["pipeline"])
+        selected_pipeline = self._select_pipeline()
+        self.pipeline = selected_pipeline(self.config, self.tmpfile_basepath)
+        logging.info("Using %s.", selected_pipeline.__name__)
 
     @staticmethod
     def _validate_cli_dependency(command):
@@ -90,6 +84,25 @@ class MS2ReScore:
             )
             exit(1)
 
+    @staticmethod
+    def _infer_pipeline(identification_file: str):
+        """Infer pipeline from identification file."""
+        logging.debug("Inferring pipeline from identification filename...")
+        if identification_file.lower().endswith(".pin"):
+            pipeline = id_file_parser.PinPipeline
+        elif identification_file.lower().endswith(".t.xml"):
+            pipeline = id_file_parser.TandemPipeline
+        elif identification_file.endswith("msms.txt"):
+            pipeline = id_file_parser.MaxQuantPipeline
+        elif identification_file.lower().endswith(".mzid"):
+            pipeline = id_file_parser.MSGFPipeline
+        else:
+            raise MS2ReScoreError(
+                "Could not infer pipeline from identification filename. Please specify "
+                "`general` > `pipeline` in your configuration file."
+            )
+        return pipeline
+
     def _select_pipeline(self):
         """Select specific rescoring pipeline."""
         if self.config["general"]["pipeline"] == "infer":
@@ -97,35 +110,17 @@ class MS2ReScore:
                 self.config["general"]["identification_file"]
             )
         elif self.config["general"]["pipeline"] == "pin":
-            pipeline = pin_to_rescore.pipeline
+            pipeline = id_file_parser.PinPipeline
         elif self.config["general"]["pipeline"] == "maxquant":
-            pipeline = maxquant_to_rescore.maxquant_pipeline
+            pipeline = id_file_parser.MaxQuantPipeline
         elif self.config["general"]["pipeline"] == "msgfplus":
-            pipeline = msgf_to_rescore.msgf_pipeline
+            pipeline = id_file_parser.MSGFPipeline
         elif self.config["general"]["pipeline"] == "tandem":
-            pipeline = tandem_to_rescore.tandem_pipeline
+            pipeline = id_file_parser.TandemPipeline
         elif self.config["general"]["pipeline"] == "peptideshaker":
-            pipeline = peptideshaker_to_rescore.pipeline
+            pipeline = id_file_parser.PeptideShakerPipeline
         else:
             raise NotImplementedError(self.config["general"]["pipeline"])
-        return pipeline
-
-    @staticmethod
-    def _infer_pipeline(identification_file: Union[str, os.PathLike]):
-        """Infer pipeline from identification file."""
-        if identification_file.lower().endswith(".pin"):
-            pipeline = pin_to_rescore.pipeline
-        elif identification_file.lower().endswith(".t.xml"):
-            pipeline = tandem_to_rescore.tandem_pipeline
-        elif identification_file == "msms.txt":
-            pipeline = maxquant_to_rescore.maxquant_pipeline
-        elif identification_file.lower().endswith(".mzid"):
-            pipeline = msgf_to_rescore.msgf_pipeline
-        else:
-            raise MS2ReScoreError(
-                "Could not infer pipeline from identification filename. Please specify "
-                "`general` > `pipeline` in your configuration file."
-            )
         return pipeline
 
     @staticmethod
@@ -140,6 +135,12 @@ class MS2ReScore:
         logging.info("Adding MS2 peak intensity features with MS²PIP.")
         ms2pip_config_filename = output_filename + "_ms2pip_config.txt"
         rescore_core.make_ms2pip_config(ms2pip_config, filename=ms2pip_config_filename)
+
+        # Check if input files exist
+        for f in [peprec_filename, mgf_filename]:
+            if not os.path.isfile(f):
+                raise FileNotFoundError(f)
+
         ms2pip_command = "ms2pip {} -c {} -s {} -n {}".format(
             peprec_filename, ms2pip_config_filename, mgf_filename, num_cpu,
         )
@@ -200,7 +201,13 @@ class MS2ReScore:
 
     def run(self):
         """Run MS²ReScore."""
-        peprec_filename, mgf_filename = self.pipeline(self.config)
+        peprec = self.pipeline.get_peprec()
+        peprec_filename = self.tmpfile_basepath + ".peprec"
+        peprec.to_csv(peprec_filename)
+
+        search_engine_features = self.pipeline.get_search_engine_features()
+        search_engine_features_filename = self.tmpfile_basepath + "_search_engine_features.csv"
+        search_engine_features.to_csv(search_engine_features_filename)
 
         if any(
             fset in self.config["general"]["feature_sets"]
@@ -209,7 +216,7 @@ class MS2ReScore:
             self.get_ms2pip_features(
                 self.config["ms2pip"],
                 peprec_filename,
-                mgf_filename,
+                self.pipeline.path_to_mgf_file,
                 self.tmpfile_basepath,
                 self.config["general"]["num_cpu"],
             )
@@ -228,6 +235,7 @@ class MS2ReScore:
         rescore_core.write_pin_files(
             peprec_filename,
             self.config["general"]["output_filename"],
+            searchengine_features_path=search_engine_features_filename,
             ms2pip_features_path=self.tmpfile_basepath + "_ms2pipfeatures.csv",
             rt_features_path=self.tmpfile_basepath + "_rtfeatures.csv",
             feature_sets=self.config["general"]["feature_sets"],
