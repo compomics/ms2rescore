@@ -1,0 +1,2 @@
+include ionbot/package_data/**/*
+include ionbot/package_data/*

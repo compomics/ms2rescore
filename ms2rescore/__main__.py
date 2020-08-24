@@ -1,11 +1,17 @@
-"""ms2rescore."""
+"""MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs."""
 
-from ms2rescore.runner import run
+import logging
+
+from ms2rescore import MS2ReScore
 
 
 def main():
-    """ms2rescore."""
-    run()
+    """Run MS²ReScore."""
+    try:
+        rescore = MS2ReScore(parse_cli_args=True, configuration=None, set_logger=True)
+        rescore.run()
+    except Exception:
+        logging.exception("Critical error occured in MS2ReScore")
 
 
 if __name__ == "__main__":

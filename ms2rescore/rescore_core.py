@@ -8,7 +8,7 @@ import logging
 import warnings
 import multiprocessing
 import os
-from typing import Optional
+from typing import Optional, Union, Dict
 
 # Third party
 import pandas as pd
@@ -18,51 +18,45 @@ from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm
 
 
-def make_ms2pip_config(options, filename="ms2pip_config.txt"):
-    """
-    write configuration file for ms2pip based on what's on the rescore config
-    file.
-    """
-    cwd = os.getcwd()
-    ms2pip_config = open(os.path.join(cwd, filename), "wt")
-
-    if "frag" in options["ms2pip"]:
-        ms2pip_config.write("frag_method={}\n".format(options["ms2pip"]["frag"]))
-    if "model" in options["ms2pip"]:
-        ms2pip_config.write("model={}\n".format(options["ms2pip"]["model"]))
-    else:
-        # Assume HCD
-        ms2pip_config.write("frag_method=HCD\n")
-
-    if "frag_error" in options["ms2pip"]:
-        ms2pip_config.write("frag_error={}\n".format(options["ms2pip"]["frag_error"]))
-    else:
-        if options["ms2pip"]["frag"] == "CID":
-            ms2pip_config.write("frag_error=0.8\n")
-        elif options["ms2pip"]["frag"] == "phospho":
-            ms2pip_config.write("frag_error=0.02\n")
+def make_ms2pip_config(
+    options: Dict,
+    filename: Optional[Union[str, os.PathLike]] = "ms2pip_config.txt"
+):
+    """Write ms2pip configuration file based on ms2pip config dict."""
+    with open(filename, "wt") as ms2pip_config:
+        if "frag" in options:
+            ms2pip_config.write("frag_method={}\n".format(options["frag"]))
+        if "model" in options:
+            ms2pip_config.write("model={}\n".format(options["model"]))
         else:
             # Assume HCD
-            ms2pip_config.write("frag_error=0.02\n")
+            ms2pip_config.write("frag_method=HCD\n")
 
-    ms2pip_config.write("\n")
-
-    modifications = options["ms2pip"]["modifications"]
-    for mod in modifications:
-        if mod["amino_acid"] is None and mod["n_term"]:
-            aa = "N-term"
+        if "frag_error" in options:
+            ms2pip_config.write("frag_error={}\n".format(options["frag_error"]))
         else:
-            aa = mod["amino_acid"]
-        tmp = ",".join([mod["name"], str(mod["mass_shift"]), "opt", aa])
-        ms2pip_config.write("ptm=" + tmp + "\n")
+            if options["frag"] == "CID":
+                ms2pip_config.write("frag_error=0.8\n")
+            elif options["frag"] == "phospho":
+                ms2pip_config.write("frag_error=0.02\n")
+            else:
+                # Assume HCD
+                ms2pip_config.write("frag_error=0.02\n")
 
-    ms2pip_config.close()
+        ms2pip_config.write("\n")
+
+        modifications = options["modifications"]
+        for mod in modifications:
+            if mod["amino_acid"] is None and mod["n_term"]:
+                aa = "N-term"
+            else:
+                aa = mod["amino_acid"]
+            tmp = ",".join([mod["name"], str(mod["mass_shift"]), "opt", aa])
+            ms2pip_config.write("ptm=" + tmp + "\n")
 
 
 def df_to_dict(df):
-    """
-    Create easy to access dict from pred_and_emp
-    """
+    """Create easy to access dict from pred_and_emp."""
     preds_dict = {}
     preds_list = df[
         ["spec_id", "charge", "ion", "target", "prediction"]
@@ -87,9 +81,7 @@ def df_to_dict(df):
 
 
 def compute_features(df):
-    """
-    Compute ReScore features
-    """
+    """Compute ReScore features."""
 
     preds_dict = df_to_dict(df)
 
@@ -391,6 +383,7 @@ def redo_pin_tabs(pin_filename):
 def write_pin_files(
     peprec_path: str,
     savepath: str,
+    searchengine_features_path: Optional[str] = None,
     ms2pip_features_path: Optional[str] = None,
     rt_features_path: Optional[str] = None,
     feature_sets: Optional[list] = None,
@@ -407,6 +400,8 @@ def write_pin_files(
         Path to PEPREC file.
     save_path: str
         Directory and basename for PIN files.
+    searchengine_features_path: {str, None}
+        Path to CSV with search engine features.
     ms2pip_features_path: {str, None}
         Path to CSV with ms2pip features.
     rt_features_path: {str, None}
@@ -419,14 +414,24 @@ def write_pin_files(
     if not feature_sets:
         feature_sets = ["all", "searchengine", "ms2pip", "rt"]
 
+    # Read search engine features
+    if ("searchengine" in feature_sets) or ("all" in feature_sets):
+        ms2pip_features = pd.read_csv(
+            searchengine_features_path,
+            sep=",",
+            index_col=None
+        )
+    else:
+        ms2pip_features = None
+
     # Read MS²PIP features
-    if ms2pip_features_path:
+    if ("ms2pip" in feature_sets) or ("all" in feature_sets):
         ms2pip_features = pd.read_csv(ms2pip_features_path, sep=",", index_col=None)
     else:
         ms2pip_features = None
 
     # Read RT features
-    if rt_features_path:
+    if ("rt" in feature_sets) or ("all" in feature_sets):
         rt_features = pd.read_csv(rt_features_path, sep=",", index_col=None)
     else:
         rt_features = None

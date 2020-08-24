@@ -57,6 +57,12 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
               title_parsing_method='full',
               show_progress_bar=True):
 
+    if not os.path.isdir(mgf_folder):
+        raise NotADirectoryError(mgf_folder)
+
+    if df_in[spec_title_col].duplicated().any():
+        logging.warning("Duplicate spec_id's found in PeptideRecord.")
+
     if df_in[filename_col].iloc[0][-4:] in ['.mgf', '.MGF']:
         file_suffix = ''
     else:
@@ -70,8 +76,6 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
         for run in runs:
             found = False
             current_mgf_file = os.path.join(mgf_folder, run + file_suffix)
-            assert os.path.isfile(current_mgf_file), "MGF file {} could not be found.".format(current_mgf_file)
-
             spec_set = set(df_in[(df_in[filename_col] == run)][spec_title_col].values)
 
             # Temporary fix: replace charges in MGF with ID'ed charges
@@ -105,5 +109,10 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
                     if found and line[-4:] != '0.0\n':
                         out.write(line)
 
-    logging.info("%i/%i spectra found and written to new MGF file.", count, len(df_in))
-    assert count == len(df_in), "Not all PSMs could be found in the provided MGF files"
+    num_expected = len(df_in[spec_title_col].unique())
+    logging.debug(
+        "%i/%i spectra found and written to new MGF file.", count, num_expected
+    )
+    assert (
+        count == num_expected
+    ), "Not all PSMs could be found in the provided MGF files"

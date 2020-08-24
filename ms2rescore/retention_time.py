@@ -1,11 +1,13 @@
 """Add retention time related features to rescoring."""
 
+import os
 import logging
 from typing import Optional, Union
 
 import click
 import pandas as pd
-from deeplc import DeepLC
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from ms2rescore.peptide_record import PeptideRecord
 
@@ -57,6 +59,8 @@ class RetentionTimeIntegration:
         self.higher_psm_score_better = higher_psm_score_better
         self.calibration_set_size = calibration_set_size
         self.num_cpu = num_cpu
+
+        from deeplc import DeepLC
 
         self.deeplc_predictor = DeepLC(
             split_cal=10,
