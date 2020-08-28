@@ -5,8 +5,7 @@ import logging
 import os
 import subprocess
 import tempfile
-from multiprocessing import Value, cpu_count
-from os import pipe
+from multiprocessing import cpu_count
 from typing import Dict, Optional, Union
 
 from ms2rescore import id_file_parser, rescore_core, setup_logging

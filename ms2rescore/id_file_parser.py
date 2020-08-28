@@ -13,7 +13,7 @@ from pyteomics import tandem
 from ms2rescore.maxquant import MSMSAccessor
 from ms2rescore.parse_mgf import parse_mgf
 from ms2rescore.peptide_record import PeptideRecord
-from ms2rescore.peptideshaker import ExtendedPsmReport
+from ms2rescore.peptideshaker import ExtendedPsmReportAccessor
 from ms2rescore.percolator import PercolatorIn, run_percolator_converter
 
 
@@ -356,7 +356,7 @@ class MaxQuantPipeline(_Pipeline):
     def parse_mgf_files(self, peprec):
         """Parse multiple MGF files into one for MS²PIP."""
         logging.debug("Parsing MGF files into one for MS²PIP")
-        path_to_new_mgf = self.output_basename + "unified.mgf"
+        path_to_new_mgf = self.output_basename + "_unified.mgf"
         parse_mgf(
             peprec.df,
             self.passed_mgf_path,
@@ -411,13 +411,15 @@ class PeptideShakerPipeline(_Pipeline):
     def extended_psm_report(self):
         """Get Extended PSM Report with identification results."""
         if self._extended_psm_report is None:
-            self._extended_psm_report = ExtendedPsmReport.from_tsv(self.path_to_id_file)
+            self._extended_psm_report = pd.DataFrame.ext_psm_report.from_tsv(
+                self.path_to_id_file
+            )
         return self._extended_psm_report
 
     def get_peprec(self) -> PeptideRecord:
         """Get PeptideRecord."""
-        return self.extended_psm_report.to_peprec()
+        return self.extended_psm_report.ext_psm_report.to_peprec()
 
     def get_search_engine_features(self) -> pd.DataFrame:
         """Get pandas.DataFrame with search engine features."""
-        return self.extended_psm_report.get_search_engine_features()
+        return self.extended_psm_report.ext_psm_report.get_search_engine_features()
