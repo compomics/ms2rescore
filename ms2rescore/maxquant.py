@@ -5,10 +5,14 @@ import os
 import re
 from typing import Dict, List, Optional, Tuple, Union
 
+import click
 import numpy as np
 import pandas as pd
 
 from ms2rescore.peptide_record import PeptideRecord
+
+
+logger = logging.getLogger(__name__)
 
 
 @pd.api.extensions.register_dataframe_accessor("msms")
@@ -96,14 +100,14 @@ class MSMSAccessor:
         ].index
         self._obj = self._obj.drop(duplicate_indices).sort_index().reset_index()
 
-        logging.debug(
+        logger.debug(
             f"Found {len(self._obj)} rank 1 PSMs of which "
             f"{len(self._obj[self._obj['Reverse'] == '+']) / len(self._obj):.0%} are "
             "decoy hits."
         )
         if len(duplicate_indices) > 0:
-            logging.info(
-                f"Removed {len(duplicate_indices)} non-rank 1 PSMs."
+            logger.warning(
+                "Removed %i non-rank 1 PSMs.", len(duplicate_indices)
             )
 
         return self._obj
@@ -116,7 +120,9 @@ class MSMSAccessor:
         self._obj = self._obj.drop(index=invalid_indices).reset_index(drop=True)
 
         if len(invalid_indices) > 0:
-            logging.info(f"Removed {len(invalid_indices)} PSMs with invalid amino acids.")
+            logger.warning(
+                "Removed %i PSMs with invalid amino acids.", len(invalid_indices)
+            )
 
         return self._obj
 
@@ -330,7 +336,7 @@ class MSMSAccessor:
         Percolator features are derived from the MSGF2PIN script. See table 1 of
         Percolator-MSGF+ article (doi.org/10.1021/pr400937n).
         """
-        logging.debug("Calculating search engine features...")
+        logger.debug("Calculating search engine features...")
 
         spec_id = self._get_spec_id()
 
@@ -396,3 +402,17 @@ class MSMSAccessor:
         features.reset_index(drop=True, inplace=True)
 
         return features
+
+
+@click.command()
+@click.argument("input-msms")
+@click.argument("output-peprec")
+def main(**kwargs):
+    """Convert msms.txt to PEPREC."""
+    msms_df = pd.DataFrame.msms.from_file(kwargs["input_psm_report"])
+    peprec = msms_df.msms.to_peprec()
+    peprec.to_csv(kwargs["output_peprec"])
+
+
+if __name__ == "__main__":
+    main()
