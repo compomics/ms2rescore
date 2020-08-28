@@ -421,6 +421,114 @@ class PeptideShakerPipeline(_Pipeline):
     def get_search_engine_features(self) -> pd.DataFrame:
         """Get pandas.DataFrame with search engine features."""
         return self.extended_psm_report.get_search_engine_features()
-    
 
-# test commit
+
+class CometPipeline(_Pipeline):
+    """Comet txt file to peprec and search engine features."""
+
+    default_columns = {
+        "Spectrum",
+        "ScanNr",
+        'Charge',
+        'RT',
+        'HLA.Class',
+        'Peptide',
+        'Sequence',
+        'Proteins',
+        'IsVariant',
+        'IsDecoy',
+        'Comet.Rank',
+        'Comet.XCorr',
+        'Comet.DeltaCn',
+        'Comet.SpScore',
+        'Comet.NegLogPv',
+        'Comet.massdiff',
+        'Comet.tot_num_ions',
+        'Comet.num_matched_ions',
+        'Comet.lFDR',
+    }
+
+    def __init__(self, config: Dict, output_basename: Union[str, os.PathLike]) -> None:
+        super().__init__(config, output_basename)
+
+        # Private attributes, specific to this pipeline
+
+    @property
+    def original_pin(self):
+        """Get PercolatorIn object from identification file."""
+        raise NotImplementedError(
+            "Property `original_pin` is not implemented in class "
+            "`CometPipeline`."
+        )
+
+    def peprec_from_pin(self):
+        """Get PeptideRecord from PIN file and MGF file."""
+        raise NotImplementedError(
+            "Method `peprec_from_pin` is not implemented in class "
+            "`CometPipeline`."
+        )
+
+    @staticmethod
+    def _get_peprec_modifications(sequences, mods_requiring_suffix=None) -> List:
+        """Get peprec-formatted modifications."""
+        if not mods_requiring_suffix:
+            mods_requiring_suffix = []
+        parsed_modifications = []
+        for sequence in sequences:
+            mod = []
+            if "(" not in sequence:
+                parsed_modifications.append("-")
+            else:
+                while re.match(r".*\(([^)]*)\).*", sequence):
+                    x = re.search(r"\(([^)]*)\)", sequence)
+                    loc = int(x.start())
+                    name = x.group().strip("()")
+                    if name in mods_requiring_suffix:
+                        name = name + sequence[loc-1]
+                    mod.extend([str(loc), name])
+                    sequence = re.sub(r"\(([^)]*)\)", "", sequence, 1)
+                mod = "|".join(mod)
+                parsed_modifications.append(mod)
+        return parsed_modifications
+
+    def get_peprec(self):
+
+        peprec = pd.DataFrame(
+           columns=[
+                "spec_id",
+                "peptide",
+                "modifications",
+                "charge",
+                "protein_list",
+                "psm_score",
+                "observed_retention_time",
+                "Label",
+                "Raw file"
+            ]
+        )
+        comet_df = pd.read_table(self.path_to_id_file, sep="\t")
+        peprec["spec_id"] = "controllerType=0 controllerNumber=1 scan=" + comet_df[
+            "ScanNr"
+        ].astype(str)
+        peprec["peptide"] = comet_df["Sequence"]
+        peprec["modifications"] = comet_df["Peptide"].apply(_get_peprec_modifications)
+        peprec["charge"] = comet_df["charge"]
+        peprec["protein_list"] = comet_df["Proteins"]
+        peprec["psm_score"] = comet_df["comet.SpScore"]
+        peprec["observed_retention_time"] = comet_df.["RT"]
+        peprec["Label"] = comet_df["IsDecoy"].replace([True: -1, False: 1])
+
+        raw_files = []
+        for i in comet_df.Spectrum:
+            raw_file, _, _ = i.partition(".")
+            raw_files.append(raw_file)
+        peprec["Raw File"] = raw_files
+        pep
+        return peprec
+
+    def get_search_engine_features(self) -> pd.DataFrame:
+        """Get pandas.DataFrame with search engine features."""
+        raise NotImplementedError(
+            "Method `get_search_engine_features` is not implemented in class "
+            "`CometPipeline`."
+        )
