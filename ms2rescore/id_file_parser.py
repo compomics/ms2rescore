@@ -13,7 +13,7 @@ from pyteomics import tandem
 from ms2rescore.percolator import PercolatorIn, run_percolator_converter
 from ms2rescore.peptide_record import PeptideRecord
 from ms2rescore.parse_mgf import parse_mgf
-from ms2rescore.maxquant import MSMS
+from ms2rescore.maxquant import MSMSAccessor
 from ms2rescore.peptideshaker import ExtendedPsmReport
 
 
@@ -320,7 +320,7 @@ class MaxQuantPipeline(_Pipeline):
         self._modification_mapping = mq_conf["modification_mapping"]
         self._fixed_modifications = mq_conf["fixed_modifications"]
         self._path_to_new_mgf = None
-        self._msms = None
+        self._msms_df = None
 
     @property
     def path_to_mgf_file(self):
@@ -347,11 +347,11 @@ class MaxQuantPipeline(_Pipeline):
         )
 
     @property
-    def msms(self):
+    def msms_df(self):
         """Get msms.txt identification results."""
-        if self._msms is None:
-            self._msms = MSMS.from_file(self.path_to_id_file)
-        return self._msms
+        if self._msms_df is None:
+            self._msms_df = pd.DataFrame.msms.from_file(self.path_to_id_file)
+        return self._msms_df
 
     def parse_mgf_files(self, peprec):
         """Parse multiple MGF files into one for MS²PIP."""
@@ -369,7 +369,7 @@ class MaxQuantPipeline(_Pipeline):
     def get_peprec(self, parse_mgf: bool = True) -> PeptideRecord:
         """Get PeptideRecord from msms.txt file, optionally parse MGF files into one."""
         logging.debug("Converting MaxQuant msms.txt to PEPREC...")
-        peprec = self.msms.to_peprec(
+        peprec = self.msms_df.msms.to_peprec(
             modification_mapping=self._modification_mapping,
             fixed_modifications=self._fixed_modifications
         )
@@ -380,7 +380,7 @@ class MaxQuantPipeline(_Pipeline):
 
     def get_search_engine_features(self) -> pd.DataFrame:
         """Get pandas.DataFrame with search engine features."""
-        return self.msms.get_search_engine_features()
+        return self.msms_df.msms.get_search_engine_features()
 
 
 class PeptideShakerPipeline(_Pipeline):
