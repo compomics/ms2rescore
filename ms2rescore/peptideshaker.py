@@ -21,9 +21,10 @@ class ExtendedPsmReportAccessor:
 
     Examples
     --------
+    >>> import pandas as pd
+    >>> from ms2rescore.peptideshaker import ExtendedPsmReportAccessor
     >>> psm_report = pd.DataFrame.ext_psm_report.from_tsv(kwargs["input_psm_report"])
     >>> peprec = psm_report.ext_psm_report.to_peprec()
-    >>> peprec.to_csv(kwargs["output_peprec"])
     """
 
     def __init__(self, pandas_obj: pd.DataFrame) -> None:
@@ -41,6 +42,25 @@ class ExtendedPsmReportAccessor:
         """Read Extended PSM Report from TSV file."""
         ext_psm_report = pd.read_csv(path, sep="\t", index_col=0)
         return ext_psm_report
+
+    @staticmethod
+    def from_xls(path: Union[str, os.PathLike]) -> pd.DataFrame:
+        """Read Extended PSM Report from XLS file."""
+        ext_psm_report = pd.read_excel(path, sheet_name=0, index_col=0)
+        return ext_psm_report
+
+    @staticmethod
+    def from_file(path: Union[str, os.PathLike]) -> pd.DataFrame:
+        """Read Extended PSM Report from file, inferring filetype from extension."""
+        ext = os.path.splitext(path)[-1].lower()
+        if (ext == ".tsv") or (ext == ".txt"):
+            return pd.DataFrame.ext_psm_report.from_tsv(path)
+        elif (ext == ".xls") or (ext == ".xlsx"):
+            return pd.DataFrame.ext_psm_report.from_xls(path)
+        else:
+            raise NotImplementedError(
+                f"Extended PSM Report with filetype extension {ext} is not supported."
+            )
 
     @staticmethod
     def _parse_modification(modified_seq):
@@ -158,7 +178,7 @@ class ExtendedPsmReportAccessor:
 @click.argument("output-peprec")
 def main(**kwargs):
     """Convert Extended PSM Report to PEPREC."""
-    psm_report = pd.DataFrame.ext_psm_report.from_tsv(kwargs["input_psm_report"])
+    psm_report = pd.DataFrame.ext_psm_report.from_file(kwargs["input_psm_report"])
     peprec = psm_report.ext_psm_report.to_peprec()
     peprec.to_csv(kwargs["output_peprec"])
 

@@ -411,7 +411,7 @@ class PeptideShakerPipeline(_Pipeline):
     def extended_psm_report(self):
         """Get Extended PSM Report with identification results."""
         if self._extended_psm_report is None:
-            self._extended_psm_report = pd.DataFrame.ext_psm_report.from_tsv(
+            self._extended_psm_report = pd.DataFrame.ext_psm_report.from_file(
                 self.path_to_id_file
             )
         return self._extended_psm_report
