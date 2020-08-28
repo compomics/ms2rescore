@@ -3,13 +3,13 @@
 import argparse
 import multiprocessing as mp
 import os
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 from cascade_config import CascadeConfig
 
-from ms2rescore._version import __version__
-from ms2rescore._exceptions import MS2ReScoreConfigurationError
 from ms2rescore import package_data
+from ms2rescore._exceptions import MS2ReScoreConfigurationError
+from ms2rescore._version import __version__
 
 try:
     import importlib.resources as pkg_resources

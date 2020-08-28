@@ -3,7 +3,7 @@
 import logging
 import os
 import re
-from typing import Optional, Union, List, Dict, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd

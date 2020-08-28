@@ -1,20 +1,20 @@
 """Extract PeptideRecord and search engine features from identification file."""
 
-import re
-import os
 import logging
+import os
+import re
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Dict, Tuple, List
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from pyteomics import tandem
 
-from ms2rescore.percolator import PercolatorIn, run_percolator_converter
-from ms2rescore.peptide_record import PeptideRecord
-from ms2rescore.parse_mgf import parse_mgf
 from ms2rescore.maxquant import MSMSAccessor
+from ms2rescore.parse_mgf import parse_mgf
+from ms2rescore.peptide_record import PeptideRecord
 from ms2rescore.peptideshaker import ExtendedPsmReport
+from ms2rescore.percolator import PercolatorIn, run_percolator_converter
 
 
 def parse_mgf_title_rt(
