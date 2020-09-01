@@ -3,16 +3,14 @@ Functions necessary to run the rescore algorithm. Currently supports MSGF+ with
 concatenated searches.
 """
 
-# Standard library
 import logging
-import warnings
 import multiprocessing
 import os
-from typing import Optional, Union, Dict
+import warnings
+from typing import Dict, Optional, Union
 
-# Third party
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm

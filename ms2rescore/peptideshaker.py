@@ -1,7 +1,8 @@
 """PeptideShaker Extended PSM Report."""
 
 import logging
-from typing import Optional
+import os
+from typing import Union
 
 import click
 import numpy as np
@@ -10,45 +11,56 @@ import pandas as pd
 from ms2rescore.peptide_record import PeptideRecord
 
 
-class ExtendedPsmReport:
-    """PeptideShaker Extended PSM Report."""
+logger = logging.getLogger(__name__)
 
-    def __init__(self, path: str = None):
-        """
-        PeptideShaker Extended PSM Report.
 
-        Parameters
-        ----------
-        path: str
-            Path to Extended PSM Report TSV file.
+@pd.api.extensions.register_dataframe_accessor("ext_psm_report")
+class ExtendedPsmReportAccessor:
+    """
+    Pandas extension for PeptideShaker Extended PSM Reports.
 
-        Attributes
-        ----------
-        path: str
-            Path to Extended PSM Report TSV file.
-        df: pandas.DataFrame
-            DataFrame with Extended PSM Report
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from ms2rescore.peptideshaker import ExtendedPsmReportAccessor
+    >>> psm_report = pd.DataFrame.ext_psm_report.from_tsv(kwargs["input_psm_report"])
+    >>> peprec = psm_report.ext_psm_report.to_peprec()
+    """
 
-        Methods
-        -------
-        to_peprec()
-            Convert Extended PSM Report to PEPREC.
+    def __init__(self, pandas_obj: pd.DataFrame) -> None:
+        """Pandas extension for PeptideShaker Extended PSM Reports."""
+        self._obj = pandas_obj
+        self._validate()
 
-        """
-        self.path = path
+    def _validate(self):
+        """Validate Pandas DataFrame as Extended PSM Report."""
+        # TODO: Implement validation of PSM report DataFrame
+        pass
 
-        if self.path:
-            self.df = pd.read_csv(path, sep="\t")
-        else:
-            self.df = None
-
-    @classmethod
-    def from_tsv(cls, path: str):
+    @staticmethod
+    def from_tsv(path: Union[str, os.PathLike]) -> pd.DataFrame:
         """Read Extended PSM Report from TSV file."""
-        df = pd.read_csv(path, sep="\t")
-        ext_psm_report = cls(path)
-        ext_psm_report.df = df
+        ext_psm_report = pd.read_csv(path, sep="\t", index_col=0)
         return ext_psm_report
+
+    @staticmethod
+    def from_xls(path: Union[str, os.PathLike]) -> pd.DataFrame:
+        """Read Extended PSM Report from XLS file."""
+        ext_psm_report = pd.read_excel(path, sheet_name=0, index_col=0)
+        return ext_psm_report
+
+    @staticmethod
+    def from_file(path: Union[str, os.PathLike]) -> pd.DataFrame:
+        """Read Extended PSM Report from file, inferring filetype from extension."""
+        ext = os.path.splitext(path)[-1].lower()
+        if (ext == ".tsv") or (ext == ".txt"):
+            return pd.DataFrame.ext_psm_report.from_tsv(path)
+        elif (ext == ".xls") or (ext == ".xlsx"):
+            return pd.DataFrame.ext_psm_report.from_xls(path)
+        else:
+            raise NotImplementedError(
+                f"Extended PSM Report with filetype extension {ext} is not supported."
+            )
 
     @staticmethod
     def _parse_modification(modified_seq):
@@ -94,7 +106,7 @@ class ExtendedPsmReport:
                 elif mod_name == 'deam':
                     mod_peprec += 'Deamidated'
                 else:
-                    print("Unknown internal modification: {}".format(mod_name))
+                    logger.warning("Unknown internal modification: %s", mod_name)
                 mod_list.append("{}".format(mod_peprec))  # peprec format
                 mod_peprec = ""
 
@@ -109,7 +121,7 @@ class ExtendedPsmReport:
                     elif char == 'P':
                         mod_name = "Pro->pyro-Glu"
                     else:
-                        print("Unknown N-terminal pyro modification from {}".format(char))
+                        logger.warning("Unknown N-terminal pyro modification from %s", char)
                     mod_list.append("1|{}".format(mod_name))
                     pyro_bool = False
                     mod_index += 1
@@ -139,7 +151,7 @@ class ExtendedPsmReport:
         }
 
         # Convert DataFrame to PEPREC
-        df = self.df[column_mapping.keys()].rename(columns=column_mapping)
+        df = self._obj[column_mapping.keys()].rename(columns=column_mapping)
         df["charge"] = df["charge"].str.strip("+")
         df["modifications"] = df["modifications"].apply(self._parse_modification)
         df["Label"] = df["Label"].apply(
@@ -160,13 +172,14 @@ class ExtendedPsmReport:
         # TODO: Implement this!
         raise NotImplementedError
 
+
 @click.command()
 @click.argument("input-psm-report")
 @click.argument("output-peprec")
 def main(**kwargs):
     """Convert Extended PSM Report to PEPREC."""
-    psm_report = ExtendedPsmReport(kwargs["input_psm_report"])
-    peprec = psm_report.to_peprec()
+    psm_report = pd.DataFrame.ext_psm_report.from_file(kwargs["input_psm_report"])
+    peprec = psm_report.ext_psm_report.to_peprec()
     peprec.to_csv(kwargs["output_peprec"])
 
 

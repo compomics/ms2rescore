@@ -7,7 +7,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from pyteomics.auxiliary import qvalues
 from statsmodels.distributions.empirical_distribution import ECDF
+
+from ms2rescore.percolator import PercolatorIn
 
 
 def target_decoy_distribution(
@@ -201,8 +204,6 @@ def qvalue_comparison(
 
     return ax
 
-from pyteomics.auxiliary import qvalues
-from ms2rescore.percolator import PercolatorIn
 
 def plot_rescoring_results(
     path_to_pin,

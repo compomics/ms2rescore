@@ -1,15 +1,15 @@
 """Add retention time related features to rescoring."""
 
-import os
 import logging
+import os
 from typing import Optional, Union
 
 import click
 import pandas as pd
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from ms2rescore.peptide_record import PeptideRecord
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 class RetentionTimeIntegration:

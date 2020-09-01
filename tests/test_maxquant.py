@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from ms2rescore.maxquant import MSMS
+from ms2rescore.maxquant import MSMSAccessor
 
 class TestMSMS:
     fixed_modifications = {
@@ -40,14 +40,13 @@ class TestMSMS:
             ]
         }
 
-        msms_mod_test = MSMS(
-            {
-                "Modified sequence": test_cases["input"],
-                "Mass error [Da]": [''] * len(test_cases["input"])
-            }
-        )
+        df = pd.DataFrame({
+            "Modified sequence": test_cases["input"],
+            "Mass error [Da]": [''] * len(test_cases["input"])
+        })
 
-        observed_output = msms_mod_test._get_peprec_modifications(
+        observed_output = df.msms._get_peprec_modifications(
+            df["Modified sequence"],
             modification_mapping=self.modification_mapping,
             fixed_modifications=self.fixed_modifications
         )
@@ -55,8 +54,8 @@ class TestMSMS:
         assert observed_output == test_cases["expected_output"]
 
     def test_to_peprec(self):
-        msms = MSMS.from_file("tests/data/msms_sample.txt")
-        generated_peprec = msms.to_peprec(
+        msms = pd.DataFrame.msms.from_file("tests/data/msms_sample.txt")
+        generated_peprec = msms.msms.to_peprec(
             modification_mapping=self.modification_mapping,
             fixed_modifications=self.fixed_modifications
         ).df
@@ -64,7 +63,7 @@ class TestMSMS:
         pd.testing.assert_frame_equal(expected_peprec, generated_peprec)
 
     def test_get_search_engine_features(self):
-        msms = MSMS.from_file("tests/data/msms_sample.txt")
-        generated_features = msms.get_search_engine_features()
+        msms = pd.DataFrame.msms.from_file("tests/data/msms_sample.txt")
+        generated_features = msms.msms.get_search_engine_features()
         expected_features = pd.read_pickle("tests/data/msms_sample_expected_features.pkl")
         pd.testing.assert_frame_equal(expected_features, generated_features)

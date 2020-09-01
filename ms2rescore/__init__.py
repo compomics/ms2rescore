@@ -1,22 +1,18 @@
 #! python
 """MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs."""
 
-# Standard library
 import logging
-from os import pipe
-import subprocess
 import os
+import subprocess
 import tempfile
-from multiprocessing import Value, cpu_count
-from typing import Optional, Union, Dict
+from multiprocessing import cpu_count
+from typing import Dict, Optional, Union
 
-# From package
-from ms2rescore._version import __version__
+from ms2rescore import id_file_parser, rescore_core, setup_logging
 from ms2rescore._exceptions import MS2ReScoreError
+from ms2rescore._version import __version__
 from ms2rescore.config_parser import parse_config
 from ms2rescore.retention_time import RetentionTimeIntegration
-
-from ms2rescore import setup_logging, rescore_core, id_file_parser
 
 
 class MS2ReScore:

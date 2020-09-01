@@ -3,16 +3,21 @@
 import logging
 import os
 import re
-from typing import Optional, Union, List, Dict, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
+import click
 import numpy as np
 import pandas as pd
 
 from ms2rescore.peptide_record import PeptideRecord
 
 
-class MSMS(pd.DataFrame):
-    """MaxQuant msms.txt file, as a pandas DataFrame with additional methods."""
+logger = logging.getLogger(__name__)
+
+
+@pd.api.extensions.register_dataframe_accessor("msms")
+class MSMSAccessor:
+    """Pandas extension for MaxQuant msms.txt files."""
     default_columns = {
         "Raw file",
         "Scan number",
@@ -40,9 +45,9 @@ class MSMS(pd.DataFrame):
     }
     _mass_error_unit = None
 
-    def __init__(self, *args, **kwargs) -> None:
-        """MaxQuant msms.txt file."""
-        super().__init__(*args, **kwargs)
+    def __init__(self, pandas_obj) -> None:
+        """Pandas extension for MaxQuant msms.txt files."""
+        self._obj = pandas_obj
         self._set_mass_error_unit()
 
     @classmethod
@@ -51,7 +56,7 @@ class MSMS(pd.DataFrame):
         path_to_msms: Union[str, os.PathLike],
         filter_rank1_psms: bool = True,
         validate_amino_acids: bool = True,
-    ):
+    ) -> pd.DataFrame:
         """
         Read msms.txt from file.
 
@@ -71,55 +76,69 @@ class MSMS(pd.DataFrame):
             MSMS object (pandas.DataFrame with additional methods)
         """
 
-        msms = cls(pd.read_csv(path_to_msms, sep="\t", usecols=cls.default_columns))
+        msms_df = pd.read_csv(path_to_msms, sep="\t", usecols=cls.default_columns)
         if filter_rank1_psms:
-            msms.filter_rank1_psms()
+            msms_df = msms_df.msms.filter_rank1_psms()
         if validate_amino_acids:
-            msms.remove_invalid_amino_acids()
-        return msms
+            msms_df = msms_df.msms.remove_invalid_amino_acids()
+        return msms_df
 
     def _set_mass_error_unit(self) -> None:
         """Get mass error unit from DataFrame columns."""
-        if "Mass error [Da]" in self.columns:
+        if "Mass error [Da]" in self._obj.columns:
             self._mass_error_unit = "Da"
-        elif "Mass Error [ppm]" in self.columns:
+        elif "Mass Error [ppm]" in self._obj.columns:
             self._mass_error_unit = "ppm"
         else:
             raise NotImplementedError(f"MSMS.txt mass error unit not supported.")
 
-    def filter_rank1_psms(self):
+    def filter_rank1_psms(self) -> pd.DataFrame:
         """Filter MSMS for rank 1 PSMs."""
-        self.sort_values("Score", ascending=False, inplace=True)
-        duplicate_indices = self[
-            self.duplicated(["Raw file", "Scan number"], keep="first")
+        self._obj = self._obj.sort_values("Score", ascending=False)
+        duplicate_indices = self._obj[
+            self._obj.duplicated(["Raw file", "Scan number"], keep="first")
         ].index
-        self.drop(duplicate_indices)\
-            .sort_index()\
-            .reset_index(drop=True, inplace=True)
+        self._obj = self._obj.drop(duplicate_indices).sort_index().reset_index()
 
-        logging.debug(
-            f"Found {len(self)} rank 1 PSMs of which "
-            f"{len(self[self['Reverse'] == '+']) / len(self):.0%} are decoy hits; "
-            f"removed {len(duplicate_indices)} non-rank 1 PSMs."
+        logger.debug(
+            f"Found {len(self._obj)} rank 1 PSMs of which "
+            f"{len(self._obj[self._obj['Reverse'] == '+']) / len(self._obj):.0%} are "
+            "decoy hits."
         )
+        if len(duplicate_indices) > 0:
+            logger.warning(
+                "Removed %i non-rank 1 PSMs.", len(duplicate_indices)
+            )
 
-    def remove_invalid_amino_acids(self):
+        return self._obj
+
+    def remove_invalid_amino_acids(self) -> pd.DataFrame:
         """Remove invalid amino acids from MSMS."""
-        invalid_indices = self["Sequence"].str.contains("[BJOUXZ]", regex=True).index
-        self.drop(invalid_indices).reset_index(drop=True, inplace=True)
+        invalid_indices = self._obj[self._obj["Sequence"].str.contains(
+            r"[BJOUXZ]", regex=True
+        )].index
+        self._obj = self._obj.drop(index=invalid_indices).reset_index(drop=True)
+
+        if len(invalid_indices) > 0:
+            logger.warning(
+                "Removed %i PSMs with invalid amino acids.", len(invalid_indices)
+            )
+
+        return self._obj
 
     def _get_spec_id(self):
         """Get PEPREC-style spec_id."""
         return (
-            self["Raw file"]
+            self._obj["Raw file"]
             + "."
-            + self["Scan number"].astype(str)
+            + self._obj["Scan number"].astype(str)
             + "."
-            + self["Scan number"].astype(str)
+            + self._obj["Scan number"].astype(str)
         ).rename("spec_id")
 
+    @staticmethod
     def _get_peprec_modifications(
-        self,
+        modified_sequences: pd.Series,
         modification_mapping: Optional[Dict] = None,
         fixed_modifications: Optional[List] = None
     ) -> List:
@@ -145,7 +164,6 @@ class MSMS(pd.DataFrame):
             }
 
         # Apply fixed modifications
-        modified_sequences = self["Modified sequence"]
         if fixed_modifications:
             for aa, mod in fixed_modifications.items():
                 modified_sequences = modified_sequences.str.replace(
@@ -280,31 +298,32 @@ class MSMS(pd.DataFrame):
             ]
         )
         peprec["spec_id"] = self._get_spec_id()
-        peprec["peptide"] = self["Sequence"]
+        peprec["peptide"] = self._obj["Sequence"]
         peprec["modifications"] = self._get_peprec_modifications(
+            self._obj["Modified sequence"],
             modification_mapping=modification_mapping,
             fixed_modifications=fixed_modifications
         )
-        peprec["charge"] = self["Charge"]
+        peprec["charge"] = self._obj["Charge"]
 
         # Fill NaN values in Proteins column for decoy PSMs
         # But first check that NaN Proteins only occur for decoy PSMs, if so:
         # fill these without the "REV_"
-        peprec["protein_list"] = self["Proteins"].str.split(";")
-        if (peprec["protein_list"].isna() & self["Reverse"].isna()).any():
-            req_cols = zip(self["Proteins"], self["Reverse"], self["Modified sequence"])
+        peprec["protein_list"] = self._obj["Proteins"].str.split(";")
+        if (peprec["protein_list"].isna() & self._obj["Reverse"].isna()).any():
+            req_cols = zip(self._obj["Proteins"], self._obj["Reverse"], self._obj["Modified sequence"])
             peprec["protein_list"] = [
                 [modseq] if (type(rev) == float) & (type(prot) == float) else prot
                 for prot, rev, modseq in req_cols
             ]
         peprec["protein_list"] = peprec["protein_list"].fillna(
-           "REV_" + self["Modified sequence"]
+           "REV_" + self._obj["Modified sequence"]
         )
 
-        peprec["psm_score"] = self["Score"]
-        peprec["observed_retention_time"] = self["Retention time"]
-        peprec["Label"] = self["Reverse"].isna().apply(lambda x: 1 if x else -1)
-        peprec["Raw file"] = self["Raw file"]
+        peprec["psm_score"] = self._obj["Score"]
+        peprec["observed_retention_time"] = self._obj["Retention time"]
+        peprec["Label"] = self._obj["Reverse"].isna().apply(lambda x: 1 if x else -1)
+        peprec["Raw file"] = self._obj["Raw file"]
         peprec.sort_values("spec_id", inplace=True)
         peprec.reset_index(drop=True, inplace=True)
 
@@ -317,11 +336,11 @@ class MSMS(pd.DataFrame):
         Percolator features are derived from the MSGF2PIN script. See table 1 of
         Percolator-MSGF+ article (doi.org/10.1021/pr400937n).
         """
-        logging.debug("Calculating search engine features...")
+        logger.debug("Calculating search engine features...")
 
         spec_id = self._get_spec_id()
 
-        directly_copied = self[[
+        directly_copied = self._obj[[
             "Score",
             "Delta score",
             "Localization prob",
@@ -332,15 +351,15 @@ class MSMS(pd.DataFrame):
             "Missed cleavages",
         ]]
 
-        absdM = self[f"Mass error [{self._mass_error_unit}]"].abs().rename("absdM")
+        absdM = self._obj[f"Mass error [{self._mass_error_unit}]"].abs().rename("absdM")
 
-        charges_encoded = pd.get_dummies(self["Charge"], prefix="Charge", prefix_sep='')
+        charges_encoded = pd.get_dummies(self._obj["Charge"], prefix="Charge", prefix_sep='')
 
         top7_features = pd.DataFrame([
             self._calculate_top7_peak_features(i, md)
             for i, md in zip(
-                self["Intensities"].str.split(";"),
-                self["Mass Deviations [Da]"].str.split(";"),
+                self._obj["Intensities"].str.split(";"),
+                self._obj["Mass Deviations [Da]"].str.split(";"),
             )],
             columns=["MeanErrorTop7", "sqMeanErrorTop7", "StdevErrorTop7"],
         )
@@ -348,9 +367,9 @@ class MSMS(pd.DataFrame):
         ion_current_features = pd.DataFrame([
             self._calculate_ion_current_features(m, i, ic)
             for m, i, ic in zip(
-                self["Matches"].str.split(";"),
-                self["Intensities"].str.split(";"),
-                self["Intensity coverage"],
+                self._obj["Matches"].str.split(";"),
+                self._obj["Intensities"].str.split(";"),
+                self._obj["Intensity coverage"],
             )],
             columns=[
                 "lnExplainedIonCurrent",
@@ -383,3 +402,17 @@ class MSMS(pd.DataFrame):
         features.reset_index(drop=True, inplace=True)
 
         return features
+
+
+@click.command()
+@click.argument("input-msms")
+@click.argument("output-peprec")
+def main(**kwargs):
+    """Convert msms.txt to PEPREC."""
+    msms_df = pd.DataFrame.msms.from_file(kwargs["input_psm_report"])
+    peprec = msms_df.msms.to_peprec()
+    peprec.to_csv(kwargs["output_peprec"])
+
+
+if __name__ == "__main__":
+    main()

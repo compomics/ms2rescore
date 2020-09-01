@@ -1,9 +1,9 @@
-# Standard library
-import os.path
+"""Parse MGF files."""
+
 import logging
 import mmap
+import os.path
 
-# Third party
 from tqdm import tqdm
 
 
