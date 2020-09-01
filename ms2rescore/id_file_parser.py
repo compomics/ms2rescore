@@ -356,7 +356,7 @@ class MaxQuantPipeline(_Pipeline):
     def parse_mgf_files(self, peprec):
         """Parse multiple MGF files into one for MS²PIP."""
         logging.debug("Parsing MGF files into one for MS²PIP")
-        path_to_new_mgf = self.output_basename + "_unified.mgf"
+        path_to_new_mgf = f"{self.output_basename}_unified.mgf"
         parse_mgf(
             peprec.df,
             self.passed_mgf_path,
