@@ -111,7 +111,7 @@ class PeptideRecord:
         ]
         if self.context == "ms2rescore":
             required_columns.extend(
-                ["psm_score", "observed_retention_time",]
+                ["psm_score", "observed_retention_time", ]
             )
         elif self.context == "retention_time":
             required_columns.remove("modifications")
@@ -154,3 +154,23 @@ class PeptideRecord:
             line = f.readline()
             separator = line[7]
         return separator
+
+    def add_modification_suffix(self, suffix_list):
+        """Add the amino acid to the modification if possible on multiple amino acids"""
+        # TODO infer suffix_list from peprec
+        added_suffix = []
+        modified_peptides, not_modified_peptides = [
+            x for _, x in self.df.groupby(self.df.modifications == "-")
+            ]
+        for tuples in list(zip(
+            modified_peptides.peptide,
+            modified_peptides.modifications.str.split("|"))
+                ):
+            for index, mod in enumerate(tuples[1]):
+                if mod in suffix_list:
+                    tuples[1][index] += tuples[0][int(tuples[1][index - 1])-1]
+                added_suffix.append("|".join(tuples[1]))
+        modified_peptides.modifications = added_suffix
+        self.df = pd.concat([
+            modified_peptides,
+            not_modified_peptides]).sort_index()
