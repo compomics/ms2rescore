@@ -604,3 +604,63 @@ class MzidPipeline(_Pipeline):
             "Method `get_search_engine_features` is not implemented in class "
             "`MzidPipeline`."
         )
+
+
+class SpectrumMillPipeline(_Pipeline):
+    """Pipeline for Spectrum Mill identification output files(.ssv)."""
+
+    def __init__(self, config: Dict, output_basename: Union[str, os.PathLike]) -> None:
+        super().__init__(config, output_basename)
+
+        # Private attributes, specific to this pipeline
+
+    @property
+    def original_pin(self):
+        """Get PercolatorIn object from identification file."""
+        raise NotImplementedError(
+            "Property `original_pin` is not implemented in class "
+            "`SpectrumMillPipeline`."
+        )
+
+    def peprec_from_pin(self):
+        """Get PeptideRecord from PIN file and MGF file."""
+        raise NotImplementedError(
+            "Method `peprec_from_pin` is not implemented in class "
+            "`SpectrumMillPipeline`."
+        )
+
+    @staticmethod
+    def _get_peprec_modifications(sequence: str):
+
+        modification_map = {
+                        'm': ('M', 'Oxidation'),
+                        'q': ('Q', 'Glu->pyro-Glu'),
+                        'n': ('N', 'Deamidated'),
+                        'y': ('Y', 'PhosphoY'),
+                        't': ('T', 'PhosphoT'),
+                        's': ('S', 'PhosphoS')
+                    }
+        modification = []
+        if sequence.isupper():
+            return sequence, "-"
+        else:
+            while re.match(".*[a-z].*", sequence):
+                lc = re.search("[a-z]", sequence)
+                modification.append(
+                    [str(lc.start()+1), modification_map[lc.group()][1]]
+                )
+                sequence = re.sub('[a-z]', modification_map[lc.group()][0], sequence, 1)
+            modification = ["|".join(tups) for tups in modification]
+            modification = "|".join(modification)
+        return sequence, modification
+
+    def get_peprec(self) -> PeptideRecord:
+
+        return "peprec"
+
+    def get_search_engine_features(self) -> pd.DataFrame:
+        """Get pandas.DataFrame with search engine features."""
+        raise NotImplementedError(
+            "Method `get_search_engine_features` is not implemented in class "
+            "`SpectrumMillPipeline`."
+        )

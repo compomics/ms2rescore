@@ -1,7 +1,5 @@
 """CometPipeline module unit tests."""
 
-import pandas as pd
-
 from ms2rescore.id_file_parser import CometPipeline
 
 
