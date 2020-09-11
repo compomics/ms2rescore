@@ -155,9 +155,11 @@ class PeptideRecord:
             separator = line[7]
         return separator
 
-    def add_modification_suffix(self, suffix_list):
+    def add_modification_suffix(self):
         """Add the amino acid to the modification if possible on multiple amino acids"""
         # TODO infer suffix_list from peprec
+        suffix_list = ["Phospho"]
+
         added_suffix = []
         modified_peptides, not_modified_peptides = [
             x for _, x in self.df.groupby(self.df.modifications == "-")

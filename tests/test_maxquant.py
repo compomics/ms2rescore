@@ -4,6 +4,7 @@ import pandas as pd
 
 from ms2rescore.maxquant import MSMS
 
+
 class TestMSMS:
     fixed_modifications = {
         "C": "Carbamidomethyl"

@@ -511,19 +511,20 @@ class CometPipeline(_Pipeline):
             "ScanNr"
         ].astype(str)
         peprec["peptide"] = comet_df["Sequence"]
-        peprec["modifications"] = comet_df["Peptide"].apply(_get_peprec_modifications)
+        peprec["modifications"] = comet_df["Peptide"].apply(
+            CometPipeline._get_peprec_modifications
+            )
         peprec["charge"] = comet_df["charge"]
         peprec["protein_list"] = comet_df["Proteins"]
         peprec["psm_score"] = comet_df["comet.SpScore"]
-        peprec["observed_retention_time"] = comet_df.["RT"]
-        peprec["Label"] = comet_df["IsDecoy"].replace([True: -1, False: 1])
-
+        peprec["observed_retention_time"] = comet_df["RT"]
+        peprec["Label"] = comet_df["IsDecoy"].apply(lambda x: 1 if x else -1)
         raw_files = []
         for i in comet_df.Spectrum:
             raw_file, _, _ = i.partition(".")
             raw_files.append(raw_file)
         peprec["Raw File"] = raw_files
-        pep
+
         return peprec
 
     def get_search_engine_features(self) -> pd.DataFrame:
@@ -531,4 +532,75 @@ class CometPipeline(_Pipeline):
         raise NotImplementedError(
             "Method `get_search_engine_features` is not implemented in class "
             "`CometPipeline`."
+        )
+
+
+class MzidPipeline(_Pipeline):
+    """Mzid identification output file from PEAKS to PeptideRecord
+    and search engine features."""
+
+    def __init__(self, config: Dict, output_basename: Union[str, os.PathLike]) -> None:
+        super().__init__(config, output_basename)
+
+        # Private attributes, specific to this pipeline
+
+    @property
+    def original_pin(self):
+        """Get PercolatorIn object from identification file."""
+        raise NotImplementedError(
+            "Property `original_pin` is not implemented in class "
+            "`MzidPipeline`."
+        )
+
+    def peprec_from_pin(self):
+        """Get PeptideRecord from PIN file and MGF file."""
+        raise NotImplementedError(
+            "Method `peprec_from_pin` is not implemented in class "
+            "`MzidPipeline`."
+        )
+
+    @staticmethod
+    def _get_peprec_modifications(modifications: List):
+        if isinstance(modifications, float):
+            return "-"
+        elif isinstance(modifications, List):
+            suffix_list = ["Phospho"]
+            return "|".join(f"{b['location']}|{b['name'] + b['residues'][0]}"
+                            if b['name'] in suffix_list
+                            else f"{b['location']}|{b['name']}" for b in modifications)
+        else:
+            raise TypeError
+
+    def get_peprec(self) -> PeptideRecord:
+
+        peprec = pd.DataFrame(
+           columns=[
+                "spec_id",
+                "peptide",
+                "modifications",
+                "charge",
+                "protein_list",
+                "psm_score",
+                "observed_retention_time",
+                "Label",
+                "Raw file"
+            ]
+        )
+        mzid_df = pd.read_table(self.path_to_id_file, sep="\t")
+        peprec["spec_id"] = mzid_df.spectrum_ID
+        [lambda x: ''.join(re.findall(r"\d+", x))]
+        peprec["peptide"] = mzid_df["PeptideSequence"]
+        peprec["modifications"] = mzid_df["Modifications"].apply(
+            MzidPipeline._get_peprec_modifications)
+        peprec["charge"] = mzid_df["chargeState"]
+        peprec["protein_list"] = mzid_df["accession"]
+        peprec["psm_score"] = mzid_df["PEAKS:peptideScore"]
+
+        return peprec
+
+    def get_search_engine_features(self) -> pd.DataFrame:
+        """Get pandas.DataFrame with search engine features."""
+        raise NotImplementedError(
+            "Method `get_search_engine_features` is not implemented in class "
+            "`MzidPipeline`."
         )

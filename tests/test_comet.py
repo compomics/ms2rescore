@@ -6,7 +6,7 @@ from ms2rescore.id_file_parser import CometPipeline
 
 
 class TestComet:
-    """ testing comet parser"""
+    """Testing comet parser."""
 
     def test_get_peprec_modifications(self):
 
@@ -28,7 +28,7 @@ class TestComet:
         required_suffix = ["Phospho"]
 
         generated_output = CometPipeline._get_peprec_modifications(
-            test_cases["input"], mods_requiring_suffix= required_suffix
+            test_cases["input"], mods_requiring_suffix=required_suffix
         )
 
         assert test_cases["expected_output"] == generated_output
