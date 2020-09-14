@@ -654,9 +654,41 @@ class SpectrumMillPipeline(_Pipeline):
             modification = "|".join(modification)
         return sequence, modification
 
-    def get_peprec(self) -> PeptideRecord:
+    @staticmethod
+    def _get_filename_and_scannumber(filename: str, separator: str):
+        rawfilename, _, scannumber = filename.partition(".")
+        scannumber = scannumber.split('.')
+        scannumber = scannumber[0]
+        return rawfilename, scannumber
 
-        return "peprec"
+    def get_peprec(self) -> PeptideRecord:
+        peprec = pd.DataFrame(
+           columns=[
+                "spec_id",
+                "peptide",
+                "modifications",
+                "charge",
+                "protein_list",
+                "psm_score",
+                "observed_retention_time",
+                "Label",
+                "Raw file"
+            ]
+        )
+        ssv_df = pd.read_table(self.path_to_id_file, sep="\t")
+        peprec[['raw file', 'spec_id']] = pd.DataFrame(
+            ssv_df['filename']
+            .apply(SpectrumMillPipeline._get_filename_and_scannumber)
+            .tolist(), index=ssv_df.index)
+        peprec[["peptide", "modifications"]] = pd.DataFrame(
+            ssv_df.sequence.apply(SpectrumMillPipeline._get_peprec_modifications)
+            .tolist(), index=peprec.index)
+        peprec['charge'] = ssv_df["parent_charge"]
+        peprec["protein_list"] = ssv_df["accession_numbers"]
+        peprec["psm_score"] = ssv_df["score"]
+        peprec["observed_retention_time"] = ssv_df["retentionTimeMin"]
+
+        return peprec
 
     def get_search_engine_features(self) -> pd.DataFrame:
         """Get pandas.DataFrame with search engine features."""
