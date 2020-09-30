@@ -511,19 +511,19 @@ class CometPipeline(_Pipeline):
             "ScanNr"
         ].astype(str)
         peprec["peptide"] = comet_df["Sequence"]
-        peprec["modifications"] = comet_df["Peptide"].apply(
-            CometPipeline._get_peprec_modifications
+        peprec["modifications"] = CometPipeline._get_peprec_modifications(
+            comet_df["Peptide"]
             )
-        peprec["charge"] = comet_df["charge"]
+        peprec["charge"] = comet_df["Charge"]
         peprec["protein_list"] = comet_df["Proteins"]
-        peprec["psm_score"] = comet_df["comet.SpScore"]
+        peprec["psm_score"] = comet_df["Comet.SpScore"]
         peprec["observed_retention_time"] = comet_df["RT"]
         peprec["Label"] = comet_df["IsDecoy"].apply(lambda x: 1 if x else -1)
         raw_files = []
         for i in comet_df.Spectrum:
             raw_file, _, _ = i.partition(".")
             raw_files.append(raw_file)
-        peprec["Raw File"] = raw_files
+        peprec["Raw file"] = raw_files
 
         return peprec
 
@@ -655,7 +655,7 @@ class SpectrumMillPipeline(_Pipeline):
         return sequence, modification
 
     @staticmethod
-    def _get_filename_and_scannumber(filename: str, separator: str):
+    def _get_filename_and_scannumber(filename: str):
         rawfilename, _, scannumber = filename.partition(".")
         scannumber = scannumber.split('.')
         scannumber = scannumber[0]
@@ -671,12 +671,12 @@ class SpectrumMillPipeline(_Pipeline):
                 "protein_list",
                 "psm_score",
                 "observed_retention_time",
-                "Label",
+                # "Label",
                 "Raw file"
             ]
         )
-        ssv_df = pd.read_table(self.path_to_id_file, sep="\t")
-        peprec[['raw file', 'spec_id']] = pd.DataFrame(
+        ssv_df = pd.read_table(self.path_to_id_file, sep=";")
+        peprec[['Raw file', 'spec_id']] = pd.DataFrame(
             ssv_df['filename']
             .apply(SpectrumMillPipeline._get_filename_and_scannumber)
             .tolist(), index=ssv_df.index)
