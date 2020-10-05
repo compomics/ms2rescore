@@ -9,6 +9,7 @@ from typing import Optional, Union, Dict, Tuple, List
 import numpy as np
 import pandas as pd
 from pyteomics import tandem
+from pyteomics import mzid
 
 from ms2rescore.percolator import PercolatorIn, run_percolator_converter
 from ms2rescore.peptide_record import PeptideRecord
@@ -543,6 +544,7 @@ class MzidPipeline(_Pipeline):
         super().__init__(config, output_basename)
 
         # Private attributes, specific to this pipeline
+        self._mzid_df = None
 
     @property
     def original_pin(self):
@@ -579,23 +581,26 @@ class MzidPipeline(_Pipeline):
                 "peptide",
                 "modifications",
                 "charge",
-                "protein_list",
+                "protein_list"
                 "psm_score",
-                "observed_retention_time",
+                # "observed_retention_time",
                 "Label",
                 "Raw file"
             ]
         )
-        mzid_df = pd.read_table(self.path_to_id_file, sep="\t")
-        peprec["spec_id"] = mzid_df.spectrum_ID
-        [lambda x: ''.join(re.findall(r"\d+", x))]
-        peprec["peptide"] = mzid_df["PeptideSequence"]
-        peprec["modifications"] = mzid_df["Modifications"].apply(
-            MzidPipeline._get_peprec_modifications)
-        peprec["charge"] = mzid_df["chargeState"]
-        peprec["protein_list"] = mzid_df["accession"]
-        peprec["psm_score"] = mzid_df["PEAKS:peptideScore"]
 
+        if self._mzid_df.empty:
+            self._mzid_df = mzid.DataFrame(self.path_to_id_file)
+
+        peprec["spec_id"] = self._mzid_df.spectrumID
+        [lambda x: ''.join(re.findall(r"\d+", x))]
+        peprec["peptide"] = self._mzid_df["PeptideSequence"]
+        peprec["modifications"] = self._mzid_df["Modification"].apply(
+            MzidPipeline._get_peprec_modifications)
+        peprec["charge"] = self._mzid_df["chargeState"]
+        peprec["protein_list"] = self._mzid_df["accession"]
+        peprec["psm_score"] = self._mzid_df["PEAKS:peptideScore"]
+        peprec["Label"] = self._mzid_df["isDecoy"].apply(lambda x: 1 if x else -1)
         return peprec
 
     def get_search_engine_features(self) -> pd.DataFrame:

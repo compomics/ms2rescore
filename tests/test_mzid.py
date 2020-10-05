@@ -2,6 +2,7 @@
 
 from cmath import nan
 import pandas as pd
+import json
 
 from ms2rescore.id_file_parser import MzidPipeline
 
@@ -33,3 +34,18 @@ class TestMzid:
                                     test_cases['input']))
 
         assert test_cases["expected_output"] == generated_output
+
+    def test_to_peprec(self):
+        with open(
+            "/home/compomics/arthur/ms2rescore/ms2rescore/"
+            "package_data/config_default.json"
+                ) as f:
+            config = json.load(f)
+        config["general"]["identification_file"] = None
+        mzid = MzidPipeline(config, "test")
+        mzid._mzid_df = pd.read_pickle("/home/compomics/arthur/ms2rescore/"
+                                       "tests/data/mzid_sample.pkl")
+        generated_peprec = mzid.get_peprec()
+        expected_peprec = pd.read_pickle("/home/compomics/arthur/ms2rescore/"
+                                         "tests/data/mzid_sample_expected_peprec.pkl")
+        pd.testing.assert_frame_equal(expected_peprec, generated_peprec)
