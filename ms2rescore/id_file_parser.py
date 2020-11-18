@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from pyteomics import tandem
 
-from ms2rescore.maxquant import MSMSAccessor
+from ms2rescore.maxquant import MSMSAccessor, logger
 from ms2rescore.parse_mgf import parse_mgf
 from ms2rescore.peptide_record import PeptideRecord
 from ms2rescore.peptideshaker import ExtendedPsmReportAccessor
@@ -111,7 +111,7 @@ class _Pipeline(ABC):
         elif os.path.isfile(passed_path):
             passed_rootname = os.path.splitext(os.path.basename(passed_path))[0]
             if passed_rootname != expected_rootname:
-                logging.warning(
+                logging.debug(
                     "Passed MGF name root `%s` does not match MGF name root `%s` from "
                     "identifications file. Continuing with passed MGF name.",
                     passed_rootname,
@@ -268,7 +268,7 @@ class TandemPipeline(_Pipeline):
             # Sometimes "RTINSECONDS" is in scan number column...
             tandem_df["scan"] = tandem_df["scan"].str.replace(" RTINSECONDS.*", "")
 
-        tandem_peprec_mapping = {
+        tandem_peprec_mapping = { 
             "scan": "spec_id",
             "seq": "peptide",
             "z": "charge",
@@ -289,7 +289,7 @@ class TandemPipeline(_Pipeline):
         pin.add_peprec_modifications_column()
         pin.add_spectrum_index_column(label="tandem_id")
         peprec_df = peprec_df.merge(
-            pin.df["modifications", "tandem_id", "hyperscore"],
+            pin.df[["modifications", "tandem_id", "hyperscore", "Label"]],
             on="tandem_id"
         )
         # Validate merge by comparing the hyperscore columns

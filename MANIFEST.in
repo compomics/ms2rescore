@@ -1,2 +1,2 @@
-include ionbot/package_data/**/*
-include ionbot/package_data/*
+include ms2rescore/package_data/**/*
+include ms2rescore/package_data/*

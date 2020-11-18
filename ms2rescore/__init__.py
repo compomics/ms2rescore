@@ -53,8 +53,8 @@ class MS2ReScore:
         )
 
         if not self.config["general"]["tmp_path"]:
-            self.tmp_path = tempfile.TemporaryDirectory()
-            self.config["general"]["tmp_path"] = self.tmp_path.name
+            self.tmp_path = tempfile.mkdtemp()
+            self.config["general"]["tmp_path"] = self.tmp_path
         else:
             self.tmp_path = self.config["general"]["tmp_path"]
             os.makedirs(self.tmp_path, exist_ok=True)

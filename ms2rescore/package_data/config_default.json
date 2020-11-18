@@ -44,5 +44,6 @@
         "fixed_modifications":{
             "C":"Carbamidomethyl"
         }
-    }
+    },
+    "percolator": {}
 }
