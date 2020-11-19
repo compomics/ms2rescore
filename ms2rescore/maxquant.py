@@ -11,7 +11,6 @@ import pandas as pd
 
 from ms2rescore.peptide_record import PeptideRecord
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -346,6 +345,7 @@ class MSMSAccessor:
             "Score",
             "Delta score",
             "Localization prob",
+            "Charge",
             "Mass",
             "Length",
             f"Mass error [{self._mass_error_unit}]",
