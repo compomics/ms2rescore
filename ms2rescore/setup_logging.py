@@ -18,7 +18,7 @@ def setup_logging(passed_level):
         exit(1)
 
     logging.basicConfig(
-        format='%(asctime)s - %(levelname)s - %(message)s',
+        format='%(asctime)s // %(levelname)s // %(name)s // %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
         level=log_mapping[passed_level]
     )

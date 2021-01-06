@@ -11,7 +11,6 @@ import pandas as pd
 
 from ms2rescore.peptide_record import PeptideRecord
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -126,7 +125,7 @@ class MSMSAccessor:
 
         return self._obj
 
-    def _get_spec_id(self):
+    def _get_spec_id(self) -> pd.Series:
         """Get PEPREC-style spec_id."""
         return (
             self._obj["Raw file"]
@@ -235,10 +234,11 @@ class MSMSAccessor:
         - ln_ms2_ion_current: Summed intensity of all observed fragment ions, logged
 
         """
+        pseudo_count = 0.00001
         if not isinstance(intensities, list):
             return np.nan, np.nan, np.nan, np.nan
         else:
-            ln_explained_ion_current = intensity_coverage
+            ln_explained_ion_current = intensity_coverage + pseudo_count
             summed_intensities = sum([float(i) for i in intensities])
 
             # Calculate ratio between matched b- and y-ion intensities
@@ -249,8 +249,8 @@ class MSMSAccessor:
             ])
             y_int_ratio = y_ion_int / summed_intensities
 
-            ln_nterm_ion_current_ratio = y_int_ratio * ln_explained_ion_current
-            ln_cterm_ion_current_ratio = (1 - y_int_ratio) * ln_explained_ion_current
+            ln_nterm_ion_current_ratio = (y_int_ratio + pseudo_count) * ln_explained_ion_current
+            ln_cterm_ion_current_ratio = (1 - y_int_ratio + pseudo_count) * ln_explained_ion_current
             ln_ms2_ion_current = summed_intensities / ln_explained_ion_current
 
             out = [
@@ -260,7 +260,7 @@ class MSMSAccessor:
                 ln_ms2_ion_current,
             ]
 
-        return tuple([np.log2(x) for x in out])
+        return tuple([np.log(x) for x in out])
 
     def to_peprec(
         self,
@@ -339,6 +339,7 @@ class MSMSAccessor:
         logger.debug("Calculating search engine features...")
 
         spec_id = self._get_spec_id()
+        charge = self._obj["Charge"].rename("charge")
 
         directly_copied = self._obj[[
             "Score",
@@ -349,7 +350,15 @@ class MSMSAccessor:
             "Length",
             f"Mass error [{self._mass_error_unit}]",
             "Missed cleavages",
-        ]]
+        ]].rename(columns={
+            "Score": "RawScore",
+            "Delta score": "RawDeltaScore",
+            "Localization prob": "RawModLocProb",
+            "Length": "PepLen",
+            f"Mass error [{self._mass_error_unit}]": "dM",
+            "Charge": "ChargeN",
+            "Missed cleavages": "enzInt",
+        })
 
         absdM = self._obj[f"Mass error [{self._mass_error_unit}]"].abs().rename("absdM")
 
@@ -379,27 +388,15 @@ class MSMSAccessor:
             ],
         )
 
-        col_mapping = {
-            "Score": "RawScore",
-            "Delta score": "RawDeltaScore",
-            "Localization prob": "RawModLocProb",
-            "Length": "PepLen",
-            f"Mass error [{self._mass_error_unit}]": "dM",
-            "Charge": "ChargeN",
-            "Missed cleavages": "enzInt",
-        }
-
         features = pd.concat([
             spec_id,
+            charge,
             directly_copied,
             absdM,
             charges_encoded,
             top7_features,
             ion_current_features,
-        ], axis=1)
-        features.rename(columns=col_mapping, inplace=True)
-        features.sort_values("spec_id", inplace=True)
-        features.reset_index(drop=True, inplace=True)
+        ], axis=1).sort_values("spec_id").reset_index(drop=True)
 
         return features
 

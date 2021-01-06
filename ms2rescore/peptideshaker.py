@@ -10,7 +10,6 @@ import pandas as pd
 
 from ms2rescore.peptide_record import PeptideRecord
 
-
 logger = logging.getLogger(__name__)
 
 

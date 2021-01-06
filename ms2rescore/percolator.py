@@ -14,6 +14,9 @@ import pandas as pd
 from ms2rescore.peptide_record import PeptideRecord
 
 
+logger = logging.getLogger(__name__)
+
+
 class UnknownModificationLabelStyleError(Exception):
     """Could not infer modification label style."""
 
@@ -418,14 +421,15 @@ class PercolatorIn:
         """
         # Assign one of the default score column labels, if available
         if not score_column_label:
-            for col in ["lnEValue", "Score", "hyperscore"]:
+            for col in ["lnEValue", "hyperscore", "Score"]:
                 if col in self.df.columns:
                     score_column_label = col
-                    logging.debug(
+                    logger.debug(
                         "Found score column in PIN with label %s", score_column_label
                     )
-            else:
-                logging.debug("No known score column found.")
+                    break
+            if not score_column_label:
+                logger.debug("No known score column found.")
 
         # Create new peprec
         peprec_df = pd.DataFrame()
@@ -488,7 +492,7 @@ def run_percolator_converter(
         os.path.abspath(path_to_id_file),
     ]
 
-    logging.info("Running Percolator PIN converter")
-    logging.debug(''.join(command))
+    logger.info("Running Percolator PIN converter")
+    logger.debug(' '.join(command))
 
     subprocess.run(command, capture_output=log_level == "debug", check=True)

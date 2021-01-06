@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,9 @@ from ms2rescore.parse_mgf import parse_mgf
 from ms2rescore.peptide_record import PeptideRecord
 from ms2rescore.peptideshaker import ExtendedPsmReportAccessor
 from ms2rescore.percolator import PercolatorIn, run_percolator_converter
+
+
+logger = logging.getLogger(__name__)
 
 
 def parse_mgf_title_rt(
@@ -111,7 +114,7 @@ class _Pipeline(ABC):
         elif os.path.isfile(passed_path):
             passed_rootname = os.path.splitext(os.path.basename(passed_path))[0]
             if passed_rootname != expected_rootname:
-                logging.warning(
+                logger.debug(
                     "Passed MGF name root `%s` does not match MGF name root `%s` from "
                     "identifications file. Continuing with passed MGF name.",
                     passed_rootname,
@@ -261,7 +264,7 @@ class TandemPipeline(_Pipeline):
     def get_peprec(self) -> PeptideRecord:
         """Convert X!Tandem XML file and PIN to PEPREC."""
         # Load tandem dataframe with Pyteomics
-        logging.debug("Converting X!Tandem XML to PEPREC...")
+        logger.debug("Converting X!Tandem XML to PEPREC...")
         tandem_df = tandem.DataFrame(self.path_to_id_file)
         tandem_df["id"] = tandem_df["id"].astype(int)
         if "RTINSECONDS" in tandem_df["scan"].loc[0]:
@@ -284,12 +287,12 @@ class TandemPipeline(_Pipeline):
         # Set PSM score as -log(e-value)
         peprec_df["psm_score"] = - np.log(peprec_df["psm_score"])
 
-        logging.debug("Adding modifications from original PIN to PEPREC...")
+        logger.debug("Adding modifications from original PIN to PEPREC...")
         pin = self.original_pin
         pin.add_peprec_modifications_column()
         pin.add_spectrum_index_column(label="tandem_id")
         peprec_df = peprec_df.merge(
-            pin.df["modifications", "tandem_id", "hyperscore"],
+            pin.df[["modifications", "tandem_id", "hyperscore", "Label"]],
             on="tandem_id"
         )
         # Validate merge by comparing the hyperscore columns
@@ -326,7 +329,7 @@ class MaxQuantPipeline(_Pipeline):
     def path_to_mgf_file(self):
         """Get path to single unified MGF file."""
         if not self._path_to_new_mgf:
-            logging.warning(
+            logger.warning(
                 "`_path_to_new_mgf` is not set yet; first run the `parse_mgf_files` "
                 "method"
             )
@@ -355,8 +358,8 @@ class MaxQuantPipeline(_Pipeline):
 
     def parse_mgf_files(self, peprec):
         """Parse multiple MGF files into one for MS²PIP."""
-        logging.debug("Parsing MGF files into one for MS²PIP")
-        path_to_new_mgf = f"{self.output_basename}_unified.mgf"
+        logger.debug("Parsing MGF files into one for MS²PIP")
+        path_to_new_mgf = self.output_basename + "_unified.mgf"
         parse_mgf(
             peprec.df,
             self.passed_mgf_path,
@@ -368,7 +371,7 @@ class MaxQuantPipeline(_Pipeline):
 
     def get_peprec(self, parse_mgf: bool = True) -> PeptideRecord:
         """Get PeptideRecord from msms.txt file, optionally parse MGF files into one."""
-        logging.debug("Converting MaxQuant msms.txt to PEPREC...")
+        logger.debug("Converting MaxQuant msms.txt to PEPREC...")
         peprec = self.msms_df.msms.to_peprec(
             modification_mapping=self._modification_mapping,
             fixed_modifications=self._fixed_modifications

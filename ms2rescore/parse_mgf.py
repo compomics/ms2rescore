@@ -6,6 +6,8 @@ import os.path
 
 from tqdm import tqdm
 
+logger = logging.getLogger(__name__)
+
 
 def get_num_lines(file_path):
     fp = open(file_path, "r+")
@@ -61,7 +63,7 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
         raise NotADirectoryError(mgf_folder)
 
     if df_in[spec_title_col].duplicated().any():
-        logging.warning("Duplicate spec_id's found in PeptideRecord.")
+        logger.warning("Duplicate spec_id's found in PeptideRecord.")
 
     if df_in[filename_col].iloc[0][-4:] in ['.mgf', '.MGF']:
         file_suffix = ''
@@ -69,7 +71,7 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
         file_suffix = '.mgf'
 
     runs = df_in[filename_col].unique()
-    logging.info("Parsing %i MGF files to single MGF containing all PSMs.", len(runs))
+    logger.info("Parsing %i MGF files to single MGF containing all PSMs.", len(runs))
 
     with open(outname, 'w') as out:
         count = 0
@@ -110,7 +112,7 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
                         out.write(line)
 
     num_expected = len(df_in[spec_title_col].unique())
-    logging.debug(
+    logger.debug(
         "%i/%i spectra found and written to new MGF file.", count, num_expected
     )
     assert (

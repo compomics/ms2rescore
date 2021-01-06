@@ -1,12 +1,14 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "MS²ReScore configuration.",
-    "description": "MS²ReScore configuration.",
+    "title": "MS²ReScore configuration",
+    "description": "MS²ReScore JSON configuration file.",
     "type": "object",
+    "required": ["general", "ms2pip", "percolator"],
     "properties": {
         "general": {
             "description": "General MS²ReScore settings.",
             "type": "object",
+            "additionalProperties": false,
             "properties": {
                 "pipeline": {
                     "description": "Pipeline to use, depending on input format",
@@ -67,12 +69,12 @@
                     "type": "string",
                     "enum": ["debug", "info", "warning", "error", "critical"]
                 }
-            },
-            "additionalProperties": false
+            }
         },
         "ms2pip": {
             "description": "MS²PIP settings.",
             "type": "object",
+            "additionalProperties": false,
             "properties": {
                 "model": {
                     "description": "MS²PIP model to use (see MS²PIP documentation)",
@@ -92,8 +94,7 @@
                         "$ref": "#/definitions/modifications"
                     }
                 }
-            },
-            "additionalProperties": false
+            }
         },
         "percolator": {
             "description": "Command line options directly passed to Percolator (see the Percolator wiki)",
@@ -102,6 +103,8 @@
         "maxquant_to_rescore":{
             "description": "Settings specific to the MaxQuant pipeline",
             "type": "object",
+            "required": ["mgf_dir", "modification_mapping", "fixed_modifications"],
+            "additionalProperties": false,
             "properties": {
                 "mgf_dir": {
                     "description": "Path to directory with MGF files",
@@ -117,16 +120,15 @@
                     "type": "object",
                     "default": {}
                 }
-            },
-            "required": ["mgf_dir", "modification_mapping", "fixed_modifications"],
-            "additionalProperties": false
-        },
-    "additionalProperties": false
+            }
+        }
     },
     "definitions": {
         "modifications": {
             "description": "Peptide mass modifications, per amino acid",
             "type": "object",
+            "required": ["name", "unimod_accession", "mass_shift", "amino_acid", "n_term"],
+            "additionalProperties": false,
             "properties": {
                 "name": {
                     "description": "Unique name for modification",
@@ -152,9 +154,7 @@
                     "description": "Modification is N-terminal",
                     "type": "boolean"
                 }
-            },
-            "required": ["name", "unimod_accession", "mass_shift", "amino_acid", "n_term"],
-            "additionalProperties": false
+            }
         }
     }
 }

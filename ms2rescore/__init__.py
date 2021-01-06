@@ -15,6 +15,9 @@ from ms2rescore.config_parser import parse_config
 from ms2rescore.retention_time import RetentionTimeIntegration
 
 
+logger = logging.getLogger(__name__)
+
+
 class MS2ReScore:
     """
     MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs.
@@ -46,15 +49,15 @@ class MS2ReScore:
         self._validate_cli_dependency("percolator -h")
         self._validate_cli_dependency("ms2pip -h")
 
-        logging.debug(
+        logger.debug(
             "Using %i of %i available CPUs.",
             self.config["general"]["num_cpu"],
             cpu_count(),
         )
 
         if not self.config["general"]["tmp_path"]:
-            self.tmp_path = tempfile.TemporaryDirectory()
-            self.config["general"]["tmp_path"] = self.tmp_path.name
+            self.tmp_path = tempfile.mkdtemp()
+            self.config["general"]["tmp_path"] = self.tmp_path
         else:
             self.tmp_path = self.config["general"]["tmp_path"]
             os.makedirs(self.tmp_path, exist_ok=True)
@@ -68,13 +71,13 @@ class MS2ReScore:
 
         selected_pipeline = self._select_pipeline()
         self.pipeline = selected_pipeline(self.config, self.tmpfile_basepath)
-        logging.info("Using %s.", selected_pipeline.__name__)
+        logger.info("Using %s.", selected_pipeline.__name__)
 
     @staticmethod
     def _validate_cli_dependency(command):
         """Validate that command returns zero exit status."""
         if subprocess.getstatusoutput(command)[0] != 0:
-            logging.critical(
+            logger.critical(
                 "`%s` returned non-zero exit status. Please verify installation.",
                 command,
             )
@@ -83,7 +86,7 @@ class MS2ReScore:
     @staticmethod
     def _infer_pipeline(identification_file: str):
         """Infer pipeline from identification file."""
-        logging.debug("Inferring pipeline from identification filename...")
+        logger.debug("Inferring pipeline from identification filename...")
         if identification_file.lower().endswith(".pin"):
             pipeline = id_file_parser.PinPipeline
         elif identification_file.lower().endswith(".t.xml"):
@@ -128,7 +131,7 @@ class MS2ReScore:
         num_cpu: int,
     ):
         """Get predicted MS² peak intensities from MS2PIP."""
-        logging.info("Adding MS2 peak intensity features with MS²PIP.")
+        logger.info("Adding MS2 peak intensity features with MS²PIP.")
         ms2pip_config_filename = output_filename + "_ms2pip_config.txt"
         rescore_core.make_ms2pip_config(ms2pip_config, filename=ms2pip_config_filename)
 
@@ -141,10 +144,10 @@ class MS2ReScore:
             peprec_filename, ms2pip_config_filename, mgf_filename, num_cpu,
         )
 
-        logging.debug("Running MS2PIP: %s", ms2pip_command)
+        logger.debug("Running MS2PIP: %s", ms2pip_command)
         subprocess.run(ms2pip_command, shell=True, check=True)
 
-        logging.info("Calculating features from predicted spectra")
+        logger.info("Calculating features from predicted spectra")
         preds_filename = (
             peprec_filename.replace(".peprec", "")
             + "_"
@@ -162,7 +165,7 @@ class MS2ReScore:
         num_cpu: int,
     ):
         """Get retention time features with DeepLC."""
-        logging.info("Adding retention time features with DeepLC.")
+        logger.info("Adding retention time features with DeepLC.")
         rt_int = RetentionTimeIntegration(
             peprec_filename, output_filename + "_rtfeatures.csv", num_cpu=num_cpu,
         )
@@ -189,11 +192,11 @@ class MS2ReScore:
                 )
             )
 
-            logging.info("Running Percolator: %s", percolator_cmd)
+            logger.info("Running Percolator: %s", percolator_cmd)
             subprocess.run(percolator_cmd, shell=True)
 
             if not os.path.isfile(subname + ".pout"):
-                logging.error("Error running Percolator")
+                logger.error("Error running Percolator")
 
     def run(self):
         """Run MS²ReScore."""
@@ -227,7 +230,7 @@ class MS2ReScore:
                 self.config["general"]["num_cpu"],
             )
 
-        logging.info("Generating PIN files")
+        logger.info("Generating PIN files")
         rescore_core.write_pin_files(
             peprec_filename,
             self.config["general"]["output_filename"],

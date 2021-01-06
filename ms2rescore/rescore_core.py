@@ -16,6 +16,9 @@ from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm
 
 
+logger = logging.getLogger(__name__)
+
+
 def make_ms2pip_config(
     options: Dict,
     filename: Optional[Union[str, os.PathLike]] = "ms2pip_config.txt"
@@ -324,13 +327,13 @@ def calculate_features(
     parallelize calculation of features and write them into a csv file
     """
 
-    logging.debug("Reading MS2PIP predictions file")
+    logger.debug("Reading MS2PIP predictions file")
     df = pd.read_csv(path_to_pred_and_emp)
     df[["prediction", "target"]] = df[["prediction", "target"]].clip(
         lower=np.log2(0.001)
     )
 
-    logging.debug("Computing features")
+    logger.debug("Computing features")
     if len(df["spec_id"].unique()) < 10000:
         all_results = compute_features(df)
     else:
@@ -343,7 +346,7 @@ def calculate_features(
                     spec_ids[
                         i
                         * len(spec_ids)
-                        // chunk_size : (i + 1)
+                        // chunk_size: (i + 1)
                         * len(spec_ids)
                         // chunk_size
                     ]
@@ -362,7 +365,7 @@ def calculate_features(
                 all_results = list(p.imap(compute_features, split_df))
         all_results = pd.concat(all_results)
 
-    logging.debug("Writing to file")
+    logger.debug("Writing to file")
     all_results.to_csv(path_to_out, index=False)
 
 
@@ -414,13 +417,13 @@ def write_pin_files(
 
     # Read search engine features
     if ("searchengine" in feature_sets) or ("all" in feature_sets):
-        ms2pip_features = pd.read_csv(
+        searchengine_features = pd.read_csv(
             searchengine_features_path,
             sep=",",
             index_col=None
         )
     else:
-        ms2pip_features = None
+        searchengine_features = None
 
     # Read MS²PIP features
     if ("ms2pip" in feature_sets) or ("all" in feature_sets):
@@ -438,7 +441,7 @@ def write_pin_files(
     with open(peprec_path, "rt") as f:
         line = f.readline()
         if line[:7] != "spec_id":
-            logging.critical("PEPREC file should start with header column")
+            logger.critical("PEPREC file should start with header column")
             exit(1)
         sep = line[7]
 
@@ -461,8 +464,8 @@ def write_pin_files(
 
     # Prepare Proteins column for PIN
     # If no Proteins column in PEPREC, fill with peptide
-    if not "Proteins" in pep.columns:
-        if "protein_list" in pep.columns:
+    if "Proteins" not in pep.columns:
+        if "protein_list" not in pep.columns:
             pep["Proteins"] = pep["protein_list"]
         elif "ModPeptide" in pep.columns:
             pep["Proteins"] = pep["ModPeptide"]
@@ -470,7 +473,7 @@ def write_pin_files(
             pep["Proteins"] = pep["peptide"]
 
     # ModPeptide contains sequence with modifications (e.g. from MaxQuant)
-    if not "ModPeptide" in pep.columns:
+    if "ModPeptide" not in pep.columns:
         pep["ModPeptide"] = pep["peptide"]
     pep.rename(
         columns={
@@ -505,39 +508,62 @@ def write_pin_files(
     # Get list with feature names split by type of feature
     search_engine_feature_names = [
         col
-        for col in pep.columns
+        for col in searchengine_features.columns
         if (col not in peprec_cols) and (col not in pin_columns)
     ]
-    ms2pip_feature_names = [
-        col
-        for col in ms2pip_features.columns
-        if (col not in peprec_cols) and (col not in pin_columns)
-    ]
-    rt_feature_names = ["observed_retention_time"] + [
-        col
-        for col in rt_features.columns
-        if (col not in peprec_cols) and (col not in pin_columns)
-    ]
+
+    if ("ms2pip" in feature_sets) or ("all" in feature_sets):
+        ms2pip_feature_names = [
+            col
+            for col in ms2pip_features.columns
+            if (col not in peprec_cols) and (col not in pin_columns)
+        ]
+    else:
+        ms2pip_feature_names = []
+
+    if ("rt" in feature_sets) or ("all" in feature_sets):
+        rt_feature_names = ["observed_retention_time"] + [
+            col
+            for col in rt_features.columns
+            if (col not in peprec_cols) and (col not in pin_columns)
+        ]
+    else:
+        rt_feature_names = []
 
     # Merge features and peprec DataFrames
     complete_df = pep
-    for other in [ms2pip_features, rt_features]:
-        if isinstance(other, pd.DataFrame):
+    for feature_set in [searchengine_features, ms2pip_features, rt_features]:
+        if isinstance(feature_set, pd.DataFrame):
             on_cols = ["spec_id", "charge"]
             cols_to_use = (
-                set(other.columns)
+                set(feature_set.columns)
                 .difference(set(complete_df.columns))
                 .union(set(on_cols))
             )
-            complete_df = pd.merge(complete_df, other[cols_to_use], on=on_cols)
+            # If spec_id and charge in feature_set columns, use merge
+            if all(c in feature_set.columns for c in on_cols):
+                complete_df = pd.merge(
+                    complete_df, feature_set[cols_to_use], on=on_cols
+                )
+            # Else, just use concat
+            else:
+                assert len(complete_df) == len(feature_set), (
+                    "Feature sets do not match."
+                )
+                complete_df = pd.concat(
+                    [
+                        complete_df.reset_index(drop=True),
+                        feature_set.reset_index(drop=True)
+                    ], axis=1
+                )
     complete_df = complete_df.fillna(value=0).reset_index(drop=True)
 
     # Add missing columns if necessary
-    if not "ScanNr" in complete_df.columns:
+    if "ScanNr" not in complete_df.columns:
         complete_df["ScanNr"] = complete_df.index
-    if not "SpecId" in complete_df.columns:
+    if "SpecId" not in complete_df.columns:
         complete_df["SpecId"] = complete_df["spec_id"]
-    if not "Label" in complete_df.columns:
+    if "Label" not in complete_df.columns:
         complete_df["Label"] = complete_df["label"]
 
     # Write PIN files with ordered columns

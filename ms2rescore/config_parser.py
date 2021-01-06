@@ -1,6 +1,7 @@
 """Parse configuration from command line arguments and configuration files."""
 
 import argparse
+import json
 import multiprocessing as mp
 import os
 from typing import Dict, Optional
@@ -132,8 +133,8 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
         config_user = args.config_file
         if config_class:
             raise MS2ReScoreConfigurationError(
-            "If `parse_cli_args` is True, `config_class` must be None."
-        )
+                "If `parse_cli_args` is True, `config_class` must be None."
+            )
     elif config_class:
         args = None
         config_user = config_class["config_file"]
@@ -142,8 +143,8 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
             "If `parse_cli_args` is False, `config_class` arguments are required."
         )
 
-    cascade_conf = CascadeConfig(validation_schema=config_schema)
-    cascade_conf.add_json(config_default)
+    cascade_conf = CascadeConfig(validation_schema=json.load(config_schema))
+    cascade_conf.add_dict(json.load(config_default))
     if config_user:
         cascade_conf.add_json(config_user)
     if parse_cli_args:

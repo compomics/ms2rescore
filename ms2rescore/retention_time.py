@@ -12,6 +12,9 @@ from ms2rescore.peptide_record import PeptideRecord
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
+logger = logging.getLogger(__name__)
+
+
 class RetentionTimeIntegration:
     """Retention time integration for MS²ReScore, using DeepLC."""
 
@@ -88,7 +91,7 @@ class RetentionTimeIntegration:
                 )
         elif isinstance(self.calibration_set_size, int):
             if self.calibration_set_size > len(self.peprec.df):
-                logging.warning(
+                logger.warning(
                     "Requested number of calibration PSMs (%s) is larger than total number "
                     "of PSMs in PEPREC (%s). Using all PSMs for calibration.",
                     self.calibration_set_size,
@@ -102,7 +105,7 @@ class RetentionTimeIntegration:
                 "Expected float or int for `calibration_set_size`. Got "
                 f"{type(self.calibration_set_size)} instead"
             )
-        logging.debug("Using %i PSMs for calibration", num_calibration_psms)
+        logger.debug("Using %i PSMs for calibration", num_calibration_psms)
         return num_calibration_psms
 
     @property
