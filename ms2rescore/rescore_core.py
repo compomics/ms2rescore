@@ -50,6 +50,8 @@ def make_ms2pip_config(
         for mod in modifications:
             if mod["amino_acid"] is None and mod["n_term"]:
                 aa = "N-term"
+            elif mod["amino_acid"] is None and mod["c_term"]:
+                aa = "C-term"
             else:
                 aa = mod["amino_acid"]
             tmp = ",".join([mod["name"], str(mod["mass_shift"]), "opt", aa])

@@ -127,7 +127,7 @@
         "modifications": {
             "description": "Peptide mass modifications, per amino acid",
             "type": "object",
-            "required": ["name", "unimod_accession", "mass_shift", "amino_acid", "n_term"],
+            "required": ["name", "unimod_accession", "mass_shift", "amino_acid", "n_term", "c_term"],
             "additionalProperties": false,
             "properties": {
                 "name": {
@@ -152,6 +152,10 @@
                 },
                 "n_term": {
                     "description": "Modification is N-terminal",
+                    "type": "boolean"
+                },
+                "c_term": {
+                    "description": "Modification is C-terminal (only implemented for MSGF+ mzid and Percolator PIN input formats)",
                     "type": "boolean"
                 }
             }
