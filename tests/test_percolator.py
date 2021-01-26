@@ -86,10 +86,21 @@ TEST_CASES = [
                 "-.M[UNIMOD:1]T[UNIMOD:21]SS[UNIMOD:21]EFKK.A",
                 "1|Acetyl|2|PhosphoT|4|PhosphoS",
                 "MTSSEFKK"
+            ),
+            (
+                "S.EYEECMPCEEGCLGCTEDDPGACT[UNIMOD:2].S",
+                "-1|Amidated",
+                "EYEECMPCEEGCLGCTEDDPGACT"
+            ),
+            (
+                "S.[UNIMOD:27]EYEECMPCEEGCLGCTEDDPGACT[UNIMOD:2].S",
+                "0|Glu->pyro-Glu|-1|Amidated",
+                "EYEECMPCEEGCLGCTEDDPGACT"
             )
         ],
         "mapping": {
             (None, "UNIMOD:1"): "Acetyl",
+            (None, "UNIMOD:2"): "Amidated",
             ("Q", "UNIMOD:28"): "Gln->pyro-Glu",
             ("E", "UNIMOD:27"): "Glu->pyro-Glu",
             ("C", "UNIMOD:385"): "Ammonia-loss",

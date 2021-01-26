@@ -30,7 +30,7 @@
             {"name":"Ammonia-loss", "unimod_accession":385, "mass_shift":-17.026549, "amino_acid":"C", "n_term":true, "c_term": false},
             {"name":"TMT6plexN", "unimod_accession":737, "mass_shift":229.162932, "amino_acid":"N", "n_term":false, "c_term": false},
             {"name":"TMT6plex", "unimod_accession":737, "mass_shift":229.162932, "amino_acid":null, "n_term":true, "c_term": false},
-            {"name": "Amidated", "unimod_accession": 2, "mass_shift": -0.984016, "amino_acid":null, "n_term": false, "c_term": true}
+            {"name":"Amidated", "unimod_accession": 2, "mass_shift": -0.984016, "amino_acid":null, "n_term": false, "c_term": true}
         ]
     },
     "maxquant_to_rescore": {
