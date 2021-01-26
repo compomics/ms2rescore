@@ -1,199 +1,248 @@
 #! python
-# Standard library
+"""MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs."""
+
 import logging
-import argparse
-import sys
-import subprocess
 import os
-import re
-import json
+import subprocess
+import tempfile
+from multiprocessing import cpu_count
+from typing import Dict, Optional, Union
 
-# From package
-import ms2rescore.setup_logging as setup_logging
-import ms2rescore.rescore_core as rescore_core
-import ms2rescore.maxquant_to_rescore as maxquant_to_rescore
-import ms2rescore.parse_mgf as parse_mgf
-import ms2rescore.msgf_to_rescore as msgf_to_rescore
-import ms2rescore.tandem_to_rescore as tandem_to_rescore
-
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="MS²ReScore: Sensitive PSM rescoring with predicted MS²\
-            peak intensities."
-    )
-
-    parser.add_argument(
-        "identification_file", help="Path to identification file (mzid,\
-            msms.txt, tandem xml)"
-    )
-
-    parser.add_argument(
-        "-m", metavar="FILE", action="store", dest="mgf_file",
-        help="Path to MGF file (default: derived from identifications file).\
-            Not applicable to MaxQuant pipeline."
-    )
-
-    parser.add_argument(
-        "-c", metavar="FILE", action="store", dest="config_file",
-        default="config.json", help="Path to JSON MS²ReScore configuration\
-            file. See README.md for more info. (default: config.json)"
-    )
-
-    parser.add_argument(
-        "-o", metavar="FILE", action="store", dest="output_filename",
-        help="Name for output files (default: derive from identification file")
-
-    parser.add_argument(
-        "-l", metavar="LEVEL", action="store", dest="log_level",
-        default="info", help="Logging level (default: `info`)")
-
-    return parser.parse_args()
+from ms2rescore import id_file_parser, rescore_core, setup_logging
+from ms2rescore._exceptions import MS2ReScoreError
+from ms2rescore._version import __version__
+from ms2rescore.config_parser import parse_config
+from ms2rescore.retention_time import RetentionTimeIntegration
 
 
-def parse_config():
+logger = logging.getLogger(__name__)
+
+
+class MS2ReScore:
     """
-    Parse config file, merge with CLI arguments and check if input files exist.
+    MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs.
+
+    Parameters
+    ----------
+    parse_cli_args : bool, optional
+        parse command line arguments, default True
+    configuration : dict, optional
+        dict containing general ms2rescore configuration; should at least contain
+        `identification_file`; required if `parse_cli_args` is False
+    set_logger : bool, optional
+        set custom logger or not, default False
     """
 
-    args = parse_arguments()
-    
-    setup_logging.setup_logging(args.log_level)
+    def __init__(
+        self,
+        parse_cli_args: bool = True,
+        configuration: Optional[Dict] = None,
+        set_logger: bool = False,
+    ) -> None:
+        """Initialize MS2ReScore object."""
+        self.config = parse_config(
+            parse_cli_args=parse_cli_args, config_class=configuration
+        )
+        if set_logger:
+            setup_logging.setup_logging(self.config["general"]["log_level"])
 
-    # Validate identification file
-    if not os.path.isfile(args.identification_file):
-        raise FileNotFoundError(args.identification_file)
+        self._validate_cli_dependency("percolator -h")
+        self._validate_cli_dependency("ms2pip -h")
 
-    if args.mgf_file:
-        if not os.path.isfile(args.mgf_file):
-            raise FileNotFoundError(args.mgf_file)
-    else:
-        args.mgf_file = os.path.splitext(args.identification_file)[0] + '.mgf'
+        logger.debug(
+            "Using %i of %i available CPUs.",
+            self.config["general"]["num_cpu"],
+            cpu_count(),
+        )
 
-    if args.output_filename:
-        output_path = os.path.abspath(args.output_filename)
-        if not os.path.isdir(output_path):
-            os.makedirs(output_path, exist_ok=True)
-    else:
-        args.output_filename = os.path.splitext(args.identification_file)[0]
+        if not self.config["general"]["tmp_path"]:
+            self.tmp_path = tempfile.mkdtemp()
+            self.config["general"]["tmp_path"] = self.tmp_path
+        else:
+            self.tmp_path = self.config["general"]["tmp_path"]
+            os.makedirs(self.tmp_path, exist_ok=True)
 
-    # Read config
-    try:
-        with open(args.config_file) as f:
-            config = json.load(f)
-    except json.decoder.JSONDecodeError:
-        logging.critical("Could not read JSON config file. Please use correct \
-            JSON formatting.")
-        exit(1)
+        self.tmpfile_basepath = os.path.join(
+            self.tmp_path,
+            os.path.basename(
+                os.path.splitext(self.config["general"]["identification_file"])[0]
+            ),
+        )
 
-    # Add CLI arguments to config
-    config['general']['identification_file'] = args.identification_file
-    if args.mgf_file:
-        config['general']['mgf_file'] = args.mgf_file
-    if args.log_level:
-        config['general']['log_level'] = args.log_level
-    if args.output_filename:
-        config['general']['output_filename'] = args.output_filename
+        selected_pipeline = self._select_pipeline()
+        self.pipeline = selected_pipeline(self.config, self.tmpfile_basepath)
+        logger.info("Using %s.", selected_pipeline.__name__)
 
-    return config
-
-
-def main():
-    config = parse_config()
-
-    # Check if Percolator is installed and callable
-    if config['general']['run_percolator']:
-        if subprocess.getstatusoutput('percolator -h')[0] != 0:
-            logging.critical("Could not call Percolator. Install Percolator or\
-                Set `run_percolator` to false")
+    @staticmethod
+    def _validate_cli_dependency(command):
+        """Validate that command returns zero exit status."""
+        if subprocess.getstatusoutput(command)[0] != 0:
+            logger.critical(
+                "`%s` returned non-zero exit status. Please verify installation.",
+                command,
+            )
             exit(1)
 
-    # Check if MS2PIP is callable
-    if subprocess.getstatusoutput('ms2pip -h')[0] != 0:
-        logging.critical(
-            "Could not call MS2PIP. Check that MS2PIP is set-up correctly.")
-        exit(0)
+    @staticmethod
+    def _infer_pipeline(identification_file: str):
+        """Infer pipeline from identification file."""
+        logger.debug("Inferring pipeline from identification filename...")
+        if identification_file.lower().endswith(".pin"):
+            pipeline = id_file_parser.PinPipeline
+        elif identification_file.lower().endswith(".t.xml"):
+            pipeline = id_file_parser.TandemPipeline
+        elif identification_file.endswith("msms.txt"):
+            pipeline = id_file_parser.MaxQuantPipeline
+        elif identification_file.lower().endswith(".mzid"):
+            pipeline = id_file_parser.MSGFPipeline
+        else:
+            raise MS2ReScoreError(
+                "Could not infer pipeline from identification filename. Please specify "
+                "`general` > `pipeline` in your configuration file."
+            )
+        return pipeline
 
-    # Prepare with specific pipeline
-    if config['general']['pipeline'].lower() == 'maxquant':
-        logging.info("Using %s pipeline", config['general']['pipeline'])
-        peprec_filename, mgf_filename = maxquant_to_rescore.maxquant_pipeline(config)
-    elif config['general']['pipeline'].lower() in ['msgfplus', 'msgf+', 'ms-gf+']:
-        peprec_filename, mgf_filename = msgf_to_rescore.msgf_pipeline(config)
-    elif config['general']['pipeline'].lower() in ['tandem', 'xtandem', 'x!tandem']:
-        peprec_filename, mgf_filename = tandem_to_rescore.tandem_pipeline(config)
-    else:
-        logging.critical("Could not recognize the requested pipeline.")
-        exit(1)
+    def _select_pipeline(self):
+        """Select specific rescoring pipeline."""
+        if self.config["general"]["pipeline"] == "infer":
+            pipeline = self._infer_pipeline(
+                self.config["general"]["identification_file"]
+            )
+        elif self.config["general"]["pipeline"] == "pin":
+            pipeline = id_file_parser.PinPipeline
+        elif self.config["general"]["pipeline"] == "maxquant":
+            pipeline = id_file_parser.MaxQuantPipeline
+        elif self.config["general"]["pipeline"] == "msgfplus":
+            pipeline = id_file_parser.MSGFPipeline
+        elif self.config["general"]["pipeline"] == "tandem":
+            pipeline = id_file_parser.TandemPipeline
+        elif self.config["general"]["pipeline"] == "peptideshaker":
+            pipeline = id_file_parser.PeptideShakerPipeline
+        else:
+            raise NotImplementedError(self.config["general"]["pipeline"])
+        return pipeline
 
-    outname = config['general']['output_filename']
+    @staticmethod
+    def get_ms2pip_features(
+        ms2pip_config: Dict,
+        peprec_filename: Union[str, os.PathLike],
+        mgf_filename: Union[str, os.PathLike],
+        output_filename: Union[str, os.PathLike],
+        num_cpu: int,
+    ):
+        """Get predicted MS² peak intensities from MS2PIP."""
+        logger.info("Adding MS2 peak intensity features with MS²PIP.")
+        ms2pip_config_filename = output_filename + "_ms2pip_config.txt"
+        rescore_core.make_ms2pip_config(ms2pip_config, filename=ms2pip_config_filename)
 
-    # Run general MS2ReScore stuff
-    ms2pip_config_filename = outname + '_ms2pip_config.txt'
-    rescore_core.make_ms2pip_config(config, filename=ms2pip_config_filename)
-    ms2pip_command = "ms2pip {} -c {} -s {} -m {}".format(
-        peprec_filename,
-        ms2pip_config_filename,
-        mgf_filename,
-        int(config["general"]["num_cpu"])
-    )
-    logging.info("Running MS2PIP: %s", ms2pip_command)
-    subprocess.run(ms2pip_command, shell=True, check=True)
+        # Check if input files exist
+        for f in [peprec_filename, mgf_filename]:
+            if not os.path.isfile(f):
+                raise FileNotFoundError(f)
 
-    logging.info("Calculating features from predicted spectra")
-    preds_filename = peprec_filename.replace('.peprec', '') + "_" + \
-        config["ms2pip"]["model"] + "_pred_and_emp.csv"
-    rescore_core.calculate_features(
-        preds_filename,
-        outname + "_ms2pipfeatures.csv",
-        int(config["general"]["num_cpu"]),
-        show_progress_bar=config['general']['show_progress_bar']
-    )
+        ms2pip_command = "ms2pip {} -c {} -s {} -n {}".format(
+            peprec_filename, ms2pip_config_filename, mgf_filename, num_cpu,
+        )
 
-    logging.info("Generating PIN files")
-    rescore_core.write_pin_files(
-        outname + "_ms2pipfeatures.csv",
-        peprec_filename, outname,
-        feature_sets=config['general']['feature_sets']
-    )
+        logger.debug("Running MS2PIP: %s", ms2pip_command)
+        subprocess.run(ms2pip_command, shell=True, check=True)
 
-    if not config['general']['keep_tmp_files']:
-        logging.debug("Removing temporary files")
-        to_remove = [
-            ms2pip_config_filename, preds_filename,
-            outname + "_ms2pipfeatures.csv",
-            outname + "_" + config['ms2pip']['model'] + "_correlations.csv",
-            outname + '.mgf', outname + '.peprec'
-        ]
-        for filename in to_remove:
-            try:
-                os.remove(filename)
-            except FileNotFoundError as e:
-                logging.debug(e)
+        logger.info("Calculating features from predicted spectra")
+        preds_filename = (
+            peprec_filename.replace(".peprec", "")
+            + "_"
+            + ms2pip_config["model"]
+            + "_pred_and_emp.csv"
+        )
+        rescore_core.calculate_features(
+            preds_filename, output_filename + "_ms2pipfeatures.csv", num_cpu,
+        )
 
-    # Run Percolator with different feature subsets
-    if config['general']['run_percolator']:
-        for subset in config['general']['feature_sets']:
-            subname = outname + "_" + subset + "features"
+    @staticmethod
+    def get_rt_features(
+        peprec_filename: Union[str, os.PathLike],
+        output_filename: Union[str, os.PathLike],
+        num_cpu: int,
+    ):
+        """Get retention time features with DeepLC."""
+        logger.info("Adding retention time features with DeepLC.")
+        rt_int = RetentionTimeIntegration(
+            peprec_filename, output_filename + "_rtfeatures.csv", num_cpu=num_cpu,
+        )
+        rt_int.run()
+
+    def _run_percolator(self):
+        """Run Percolator with different feature subsets."""
+        for subset in self.config["general"]["feature_sets"]:
+            subname = (
+                self.config["general"]["output_filename"] + "_" + subset + "features"
+            )
             percolator_cmd = "percolator "
-            for op in config["percolator"].keys():
+            for op in self.config["percolator"].keys():
                 percolator_cmd = percolator_cmd + "--{} {} ".format(
-                    op, config["percolator"][op]
+                    op, self.config["percolator"][op]
                 )
-            percolator_cmd = percolator_cmd + "{} -m {} -M {} -w {} -v 0 -U --post-processing-tdc\n"\
-                .format(
-                    subname + ".pin", subname + ".pout",
-                    subname + ".pout_dec", subname + ".weights"
+            percolator_cmd = (
+                percolator_cmd
+                + "{} -m {} -M {} -w {} -v 0 -U --post-processing-tdc\n".format(
+                    subname + ".pin",
+                    subname + ".pout",
+                    subname + ".pout_dec",
+                    subname + ".weights",
                 )
+            )
 
-            logging.info("Running Percolator: %s", percolator_cmd)
+            logger.info("Running Percolator: %s", percolator_cmd)
             subprocess.run(percolator_cmd, shell=True)
 
             if not os.path.isfile(subname + ".pout"):
-                logging.error("Error running Percolator")
+                logger.error("Error running Percolator")
 
-    logging.info("MS2ReScore finished!")
+    def run(self):
+        """Run MS²ReScore."""
+        peprec = self.pipeline.get_peprec()
+        peprec_filename = self.tmpfile_basepath + ".peprec"
+        peprec.to_csv(peprec_filename)
 
+        search_engine_features = self.pipeline.get_search_engine_features()
+        search_engine_features_filename = (
+            self.tmpfile_basepath + "_search_engine_features.csv"
+        )
+        search_engine_features.to_csv(search_engine_features_filename, index=False)
 
-if __name__ == "__main__":
-    main()
+        if any(
+            fset in self.config["general"]["feature_sets"]
+            for fset in ["ms2pip", "all", "ms2pip_rt"]
+        ):
+            self.get_ms2pip_features(
+                self.config["ms2pip"],
+                peprec_filename,
+                self.pipeline.path_to_mgf_file,
+                self.tmpfile_basepath,
+                self.config["general"]["num_cpu"],
+            )
+
+        if any(
+            fset in self.config["general"]["feature_sets"]
+            for fset in ["rt", "all", "ms2pip_rt"]
+        ):
+            self.get_rt_features(
+                peprec_filename,
+                self.tmpfile_basepath,
+                self.config["general"]["num_cpu"],
+            )
+
+        logger.info("Generating PIN files")
+        rescore_core.write_pin_files(
+            peprec_filename,
+            self.config["general"]["output_filename"],
+            searchengine_features_path=search_engine_features_filename,
+            ms2pip_features_path=self.tmpfile_basepath + "_ms2pipfeatures.csv",
+            rt_features_path=self.tmpfile_basepath + "_rtfeatures.csv",
+            feature_sets=self.config["general"]["feature_sets"],
+        )
+
+        if self.config["general"]["run_percolator"]:
+            self._run_percolator()
+
+        logging.info("MS²ReScore finished!")

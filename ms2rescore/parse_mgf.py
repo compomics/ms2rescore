@@ -1,10 +1,12 @@
-# Standard library
-import os.path
+"""Parse MGF files."""
+
 import logging
 import mmap
+import os.path
 
-# Third party
 from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 
 def get_num_lines(file_path):
@@ -57,21 +59,25 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
               title_parsing_method='full',
               show_progress_bar=True):
 
+    if not os.path.isdir(mgf_folder):
+        raise NotADirectoryError(mgf_folder)
+
+    if df_in[spec_title_col].duplicated().any():
+        logger.warning("Duplicate spec_id's found in PeptideRecord.")
+
     if df_in[filename_col].iloc[0][-4:] in ['.mgf', '.MGF']:
         file_suffix = ''
     else:
         file_suffix = '.mgf'
 
     runs = df_in[filename_col].unique()
-    logging.info("Parsing %i MGF files to single MGF containing all PSMs.", len(runs))
+    logger.info("Parsing %i MGF files to single MGF containing all PSMs.", len(runs))
 
     with open(outname, 'w') as out:
         count = 0
         for run in runs:
             found = False
             current_mgf_file = os.path.join(mgf_folder, run + file_suffix)
-            assert os.path.isfile(current_mgf_file), "MGF file {} could not be found.".format(current_mgf_file)
-
             spec_set = set(df_in[(df_in[filename_col] == run)][spec_title_col].values)
 
             # Temporary fix: replace charges in MGF with ID'ed charges
@@ -105,5 +111,10 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
                     if found and line[-4:] != '0.0\n':
                         out.write(line)
 
-    logging.info("%i/%i spectra found and written to new MGF file.", count, len(df_in))
-    assert count == len(df_in), "Not all PSMs could be found in the provided MGF files"
+    num_expected = len(df_in[spec_title_col].unique())
+    logger.debug(
+        "%i/%i spectra found and written to new MGF file.", count, num_expected
+    )
+    assert (
+        count == num_expected
+    ), "Not all PSMs could be found in the provided MGF files"

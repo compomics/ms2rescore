@@ -1,0 +1,2 @@
+include ms2rescore/package_data/**/*
+include ms2rescore/package_data/*

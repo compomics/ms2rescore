@@ -1,0 +1,50 @@
+{
+    "$schema": "./config_schema.json",
+    "general":{
+        "pipeline":"infer",
+        "feature_sets":["all"],
+        "run_percolator":true,
+        "id_decoy_pattern": null,
+        "num_cpu":-1,
+        "config_file":null,
+        "tmp_path":null,
+        "mgf_path":null,
+        "output_filename":null,
+        "log_level": "info"
+    },
+    "ms2pip": {
+        "model": "HCD",
+        "frag_error": 0.02,
+        "modifications": [
+            {"name":"Acetyl", "unimod_accession":1, "mass_shift":42.010565, "amino_acid":null, "n_term":true, "c_term": false},
+            {"name":"Carbamidomethyl", "unimod_accession":4, "mass_shift":57.021464, "amino_acid":"C", "n_term":false, "c_term": false},
+            {"name":"Deamidated", "unimod_accession":7, "mass_shift":0.984016, "amino_acid":"N", "n_term":false, "c_term": false},
+            {"name":"PhosphoS", "unimod_accession":21, "mass_shift":79.966331, "amino_acid":"S", "n_term":false, "c_term": false},
+            {"name":"PhosphoT", "unimod_accession":21, "mass_shift":79.966331, "amino_acid":"T", "n_term":false, "c_term": false},
+            {"name":"PhosphoY", "unimod_accession":21, "mass_shift":79.966331, "amino_acid":"Y", "n_term":false, "c_term": false},
+            {"name":"Pyro-carbamidomethyl", "unimod_accession":26, "mass_shift":39.994915, "amino_acid":"C", "n_term":false, "c_term": false},
+            {"name":"Glu->pyro-Glu", "unimod_accession":27, "mass_shift":-18.010565, "amino_acid":"E", "n_term":true, "c_term": false},
+            {"name":"Gln->pyro-Glu", "unimod_accession":28, "mass_shift":-17.026549, "amino_acid":"Q", "n_term":true, "c_term": false},
+            {"name":"Oxidation", "unimod_accession":35, "mass_shift":15.994915, "amino_acid":"M", "n_term":false, "c_term": false},
+            {"name":"iTRAQ", "unimod_accession":214, "mass_shift":144.102063, "amino_acid":null, "n_term":true, "c_term": false},
+            {"name":"Ammonia-loss", "unimod_accession":385, "mass_shift":-17.026549, "amino_acid":"C", "n_term":true, "c_term": false},
+            {"name":"TMT6plexN", "unimod_accession":737, "mass_shift":229.162932, "amino_acid":"N", "n_term":false, "c_term": false},
+            {"name":"TMT6plex", "unimod_accession":737, "mass_shift":229.162932, "amino_acid":null, "n_term":true, "c_term": false},
+            {"name":"Amidated", "unimod_accession": 2, "mass_shift": -0.984016, "amino_acid":null, "n_term": false, "c_term": true}
+        ]
+    },
+    "maxquant_to_rescore": {
+        "mgf_dir": "",
+        "modification_mapping":{
+            "ox":"Oxidation",
+            "ac":"Acetyl",
+            "cm":"Carbamidomethyl",
+            "de":"Deamidated",
+            "gl":"Gln->pyro-Glu"
+        },
+        "fixed_modifications":{
+            "C":"Carbamidomethyl"
+        }
+    },
+    "percolator": {}
+}

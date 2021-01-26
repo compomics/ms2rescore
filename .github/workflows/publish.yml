@@ -13,23 +13,32 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.7'
+        python-version: 3.8
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install setuptools wheel twine
+        pip install setuptools wheel pytest twine
 
-#    - name: Build and publish to PyPI
-#      env:
-#        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-#        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-#      run: |
-#        python setup.py sdist bdist_wheel
-#        twine upload dist/*
+    - name: Build and publish to PyPI
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        python setup.py sdist bdist_wheel
+        
+    - name: Test built package
+      run: |
+        pip install dist/ms2rescore-*.whl
+        pytest
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v2
       with:
         name: python-package
         path: dist/*
+
+    - uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: ${{ secrets.PYPI_USERNAME }}
+        password: ${{ secrets.PYPI_PASSWORD }}
