@@ -3,6 +3,7 @@ name: Publish
 on:
   release:
     types: [created]
+  push:
 
 jobs:
   publish:
@@ -13,7 +14,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.7'
+        python-version: 3.8
 
     - name: Install dependencies
       run: |
@@ -26,7 +27,12 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
         python setup.py sdist bdist_wheel
-#       twine upload dist/*
+        twine upload dist/*
+        
+    - Name: Test built package
+      run: |
+        pip install dist/ms2rescore-*.whl
+        pytest
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v2
