@@ -35,6 +35,7 @@ setup(
         "importlib-resources;python_version<'3.7'",
         "numpy>=1.16.0,<2",
         "pandas>=0.24.0,<2",
+        "scikit-learn>=0.20.0,<1",
         "scipy>=1.2.0,<2",
         "tqdm>=4.31.0,<5",
         "pyteomics>=4.1.0,<5",
