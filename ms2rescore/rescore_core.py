@@ -467,7 +467,7 @@ def write_pin_files(
     # Prepare Proteins column for PIN
     # If no Proteins column in PEPREC, fill with peptide
     if "Proteins" not in pep.columns:
-        if "protein_list" not in pep.columns:
+        if "protein_list" in pep.columns:
             pep["Proteins"] = pep["protein_list"]
         elif "ModPeptide" in pep.columns:
             pep["Proteins"] = pep["ModPeptide"]

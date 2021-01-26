@@ -205,8 +205,10 @@ class MS2ReScore:
         peprec.to_csv(peprec_filename)
 
         search_engine_features = self.pipeline.get_search_engine_features()
-        search_engine_features_filename = self.tmpfile_basepath + "_search_engine_features.csv"
-        search_engine_features.to_csv(search_engine_features_filename)
+        search_engine_features_filename = (
+            self.tmpfile_basepath + "_search_engine_features.csv"
+        )
+        search_engine_features.to_csv(search_engine_features_filename, index=False)
 
         if any(
             fset in self.config["general"]["feature_sets"]
