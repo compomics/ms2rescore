@@ -40,7 +40,7 @@ setup(
         "pyteomics>=4.1.0,<5",
         "ms2pip>=3.6.3,<4",
         "click>=7,<8",
-        "cascade-config<2",
+        "cascade-config",
     ],
     extras_require={
         'deeplc': ["deeplc>=0.1.17"]
