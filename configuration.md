@@ -35,3 +35,4 @@
   - **`mass_shift`** *(number)*: Mono-isotopic mass shift.
   - **`amino_acid`**: Amino acid one-letter code, or null if amino acid-agnostic (e.g. N-term acetylation).
   - **`n_term`** *(boolean)*: Modification is N-terminal.
+  - **`c_term`** *(boolean)*: Modification is C-terminal (only implemented for MSGF+ mzid and Percolator PIN input formats).

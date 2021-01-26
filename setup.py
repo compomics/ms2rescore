@@ -12,16 +12,28 @@ def get_version(path):
                 return line.strip().split(" = ")[1].strip("\"'")
 
 
+def get_readme():
+    with open("README.md", "r") as fh:
+        readme = fh.read()
+    return readme
+
+
 setup(
     name="ms2rescore",
     version=get_version("ms2rescore/_version.py"),
+    license="apache-2.0",
     description="MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and retention times.",
+    long_description=get_readme(),
+    long_description_content_type="text/markdown",
     author="Ana Sílvia C. Silva, Ralf Gabriels, Tim Van Den Bossche",
     author_email="compomics.list@gmail.com",
     url="https://compomics.github.io/projects/ms2rescore/",
-    packages=["ms2rescore"],
-    include_package_data=True,
-    entry_points={"console_scripts": ["ms2rescore=ms2rescore.__main__:main"]},
+    project_urls={
+        "Documentation": "http://compomics.github.io/projects/ms2rescore",
+        "Source": "https://github.com/compomics/ms2rescore",
+        "Tracker": "https://github.com/compomics/ms2rescore/issues",
+        "Publication": "https://doi.org/10.1093/bioinformatics/btz383",
+    },
     classifiers=[
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
@@ -30,6 +42,20 @@ setup(
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Development Status :: 4 - Beta",
     ],
+    keywords=[
+        "MS2ReScore",
+        "MS2PIP",
+        "DeepLC",
+        "Percolator",
+        "Proteomics",
+        "peptide",
+        "peak intensity prediction",
+        "spectrum",
+        "machine learning",
+    ],
+    packages=["ms2rescore"],
+    include_package_data=True,
+    entry_points={"console_scripts": ["ms2rescore=ms2rescore.__main__:main"]},
     python_requires=">=3.6",
     install_requires=[
         "importlib-resources;python_version<'3.7'",
