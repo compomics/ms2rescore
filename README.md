@@ -1,11 +1,14 @@
 <img src="https://github.com/compomics/ms2rescore/raw/dev/img/ms2rescore_logo.png" width="150" height="150" />
 <br/><br/>
 
-![Python](https://img.shields.io/badge/python-%3E3.6-blue?style=flat-square)
 [![GitHub release](https://img.shields.io/github/release-pre/compomics/ms2rescore.svg?style=flat-square)](https://github.com/compomics/ms2rescore/releases)
-[![Build Status](https://img.shields.io/travis/compomics/ms2rescore?style=flat-square)](https://travis-ci.org/compomics/ms2rescore)
+[![PyPI](https://flat.badgen.net/pypi/v/ms2rescore)](https://pypi.org/project/ms2rescore/)
+[![GitHub Workflow Status](https://flat.badgen.net/github/checks/compomics/ms2rescore/master)](https://github.com/compomics/ms2rescore/actions/)
 [![GitHub issues](https://img.shields.io/github/issues/compomics/ms2rescore?style=flat-square)](https://github.com/compomics/ms2rescore/issues)
 [![GitHub](https://img.shields.io/github/license/compomics/ms2rescore.svg?style=flat-square)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Last commit](https://flat.badgen.net/github/last-commit/compomics/ms2rescore)](https://github.com/compomics/ms2rescore/commits/)
+[![Twitter](https://flat.badgen.net/twitter/follow/compomics?icon=twitter)](https://twitter.com/compomics)
+
 
 Sensitive peptide identification rescoring with predicted spectra using
 [MS²PIP](https://github.com/compomics/ms2pip_c),
@@ -64,20 +67,31 @@ To replicate the experiments described in this article, check out the
 
 ## Installation
 
+[![install pip](https://flat.badgen.net/badge/install%20with/pip/green)](https://pypi.org/project/ms2rescore/)
+
 MS²ReScore requires:
-- Python >3.6 on Linux (or on [WSL](https://docs.microsoft.com/en-us/windows/wsl)
-on Windows 10)
+- Python 3.6 or higher on Linux, macOS, or
+[Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl)
 - If the option `run_percolator` is set to `True`,
 [Percolator](https://github.com/percolator/percolator/) needs to be callable with the
 `percolator` command (tested with
 [version 3.02.1](https://github.com/percolator/percolator/releases/tag/rel-3-02-01))
-- For some pipelines, the Percolator converters, such as tandem2pin need to be
-callable as well. These are usually installed alongside Percolator.
+- Some pipelines require the Percolator converters, such as `tandem2pin`, as well. These
+are usually installed alongside Percolator.
 
-Clone or download this repository and install:
+Minimal installation:
+```sh
+pip install ms2rescore
 ```
-pip install .
+
+Recommended installation, including DeepLC for retention time prediction:
+```sh
+pip install ms2rescore[deeplc]
 ```
+
+We recommend using a [venv](https://docs.python.org/3/library/venv.html) or
+[conda](https://docs.conda.io/en/latest/) virtual environment.
+
 
 ---
 
