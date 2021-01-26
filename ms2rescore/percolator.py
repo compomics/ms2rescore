@@ -173,7 +173,7 @@ class PercolatorIn:
         match = re.search(self.modification_pattern, mod_seq)
         if match:
             mod_location = match.start()
-            mod_aa = mod_seq[mod_location - 1]
+            mod_aa = mod_seq[mod_location - 1] if mod_location > 0 else mod_seq[match.end()]
             if self.modification_mapping:
                 if self._modification_label_type == "float":
                     mod_label = self._round(float(match.group(1)))
@@ -196,6 +196,9 @@ class PercolatorIn:
                         f"`{mod_aa}` found in modification_mapping "
                         f"`{self.modification_mapping}`."
                     )
+                # Set C-terminal modifications location to "-1"
+                if match.end() == len(mod_seq):
+                    mod_location = -1
             else:
                 mod_name = match.group(1)
             mod_list.extend([str(mod_location), mod_name])
