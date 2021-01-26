@@ -21,7 +21,7 @@ setup(
     url="https://compomics.github.io/projects/ms2rescore/",
     packages=["ms2rescore"],
     include_package_data=True,
-    entry_points={"console_scripts": ["ms2rescore=ms2rescore.__main__:main"],},
+    entry_points={"console_scripts": ["ms2rescore=ms2rescore.__main__:main"]},
     classifiers=[
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
@@ -36,16 +36,15 @@ setup(
         "numpy>=1.16.0,<2",
         "pandas>=0.24.0,<2",
         "scipy>=1.2.0,<2",
-        "scikit-learn>=0.20.0,<1",
         "tqdm>=4.31.0,<5",
         "pyteomics>=4.1.0,<5",
-        "xmltodict>=0.12.0,<1",
-        "lxml>=4.5,<5",
         "ms2pip>=3.6.3,<4",
         "click>=7,<8",
-        "deeplc>=0.1.17",
-        "cascade-config",
+        "cascade-config<2",
     ],
-    test_suite="ms2rescore.tests.test_ms2rescore.Tests",
-    tests_require=["ms2rescore", "pytest>=4.3.0,<5",],
+    extras_require={
+        'deeplc': ["deeplc>=0.1.17"]
+    },
+    test_suite="tests",
+    tests_require=["ms2rescore", "pytest>=4.3.0,<5"],
 )
