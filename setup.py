@@ -30,6 +30,7 @@ setup(
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Development Status :: 4 - Beta",
     ],
+    python_requires=">=3.6",
     install_requires=[
         "importlib-resources;python_version<'3.7'",
         "numpy>=1.16.0,<2",
@@ -40,7 +41,7 @@ setup(
         "pyteomics>=4.1.0,<5",
         "xmltodict>=0.12.0,<1",
         "lxml>=4.5,<5",
-        "ms2pip>=3.6,<4",
+        "ms2pip>=3.6.3,<4",
         "click>=7,<8",
         "deeplc>=0.1.17",
         "cascade-config",
