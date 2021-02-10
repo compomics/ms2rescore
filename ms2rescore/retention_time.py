@@ -63,6 +63,10 @@ class RetentionTimeIntegration:
         self.calibration_set_size = calibration_set_size
         self.num_cpu = num_cpu
 
+        # Until fixed upstream: https://github.com/compomics/DeepLC/issues/19
+        if "NUMEXPR_MAX_THREADS" not in os.environ:
+            os.environ['NUMEXPR_MAX_THREADS'] = str(self.num_cpu)
+
         from deeplc import DeepLC
 
         self.deeplc_predictor = DeepLC(

@@ -391,7 +391,8 @@ class PercolatorIn:
             "charge",
             "observed_retention_time"
         ]
-        non_feature_cols = pin_cols + peprec_cols
+        misc_cols = ["tandem_id", "ModPeptide"]
+        non_feature_cols = pin_cols + peprec_cols + misc_cols
         feature_cols = [col for col in self.df.columns if col not in non_feature_cols]
         return self.df[feature_cols]
 

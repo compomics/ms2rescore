@@ -245,4 +245,4 @@ class MS2ReScore:
         if self.config["general"]["run_percolator"]:
             self._run_percolator()
 
-        logging.info("MS²ReScore finished!")
+        logger.info("MS²ReScore finished!")
