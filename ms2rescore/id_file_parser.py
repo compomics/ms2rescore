@@ -291,8 +291,9 @@ class TandemPipeline(_Pipeline):
         pin = self.original_pin
         pin.add_peprec_modifications_column()
         pin.add_spectrum_index_column(label="tandem_id")
+        pin.df["ModPeptide"] = pin.df["Peptide"]
         peprec_df = peprec_df.merge(
-            pin.df[["modifications", "tandem_id", "hyperscore", "Label"]],
+            pin.df[["modifications", "tandem_id", "hyperscore", "Label", "ModPeptide", "Proteins"]],
             on="tandem_id"
         )
         # Validate merge by comparing the hyperscore columns
