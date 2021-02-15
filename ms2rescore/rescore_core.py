@@ -559,6 +559,7 @@ def write_pin_files(
                     ], axis=1
                 )
     complete_df = complete_df.fillna(value=0).reset_index(drop=True)
+    complete_df = complete_df.loc[:, ~complete_df.columns.duplicated()]
 
     # Add missing columns if necessary
     if "ScanNr" not in complete_df.columns:
