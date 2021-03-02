@@ -53,7 +53,7 @@ class ExtendedPsmReportAccessor:
     def from_tsv(path: Union[str, os.PathLike]) -> pd.DataFrame:
         """Read Extended PSM Report from TSV file."""
         ext_psm_report = pd.read_csv(path, sep="\t", index_col=0)
-        pd.ext_psm_report._validate(ext_psm_report)
+        ext_psm_report.ext_psm_report._validate()
         return ext_psm_report
 
     @staticmethod
