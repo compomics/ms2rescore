@@ -51,6 +51,23 @@ class MSMSAccessor:
         self.invalid_amino_acids = r"[BJOUXZ]"
 
     @classmethod
+    def _evaluate_columns(cls, column: str) -> bool:
+        """Case insensitive column evaluation for Pandas.read_csv usecols argument."""
+        return column.lower() in [col.lower() for col in cls.default_columns]
+
+    @classmethod
+    def _fix_column_case(cls, columns: List[str]) -> Dict[str, str]:
+        """
+        Create mapping for column names with the correct case.
+
+        Using `_evaluate_columns`, we can load required columns in a case-insensitive
+        manner. As a result, the column name case must be fixed for downstream usage.
+        """
+        case_mapping = {col.lower(): col for col in cls.default_columns}
+        rename_mapping = {col: case_mapping[col.lower()] for col in columns}
+        return rename_mapping
+
+    @classmethod
     def from_file(
         cls,
         path_to_msms: Union[str, os.PathLike],
@@ -76,7 +93,8 @@ class MSMSAccessor:
             MSMS object (pandas.DataFrame with additional methods)
         """
 
-        msms_df = pd.read_csv(path_to_msms, sep="\t", usecols=cls.default_columns)
+        msms_df = pd.read_csv(path_to_msms, sep="\t", usecols=cls._evaluate_columns)
+        msms_df.rename(columns=cls._fix_column_case(msms_df.columns), inplace=True)
         if filter_rank1_psms:
             msms_df = msms_df.msms.filter_rank1_psms()
         if validate_amino_acids:
