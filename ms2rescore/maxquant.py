@@ -48,6 +48,7 @@ class MSMSAccessor:
         """Pandas extension for MaxQuant msms.txt files."""
         self._obj = pandas_obj
         self._set_mass_error_unit()
+        self.invalid_amino_acids = r"[BJOUXZ]"
 
     @classmethod
     def from_file(
@@ -66,8 +67,8 @@ class MSMSAccessor:
         filter_rank1_psms : bool, optional
             filter for rank 1 PSMs
         validate_amino_acids : bool, optional
-            remove PSMs where the sequence includes an invalid amino acid
-            (B, J, O, U, X, Z); required for MS2PIP compatibility
+            remove PSMs where the sequence includes an invalid amino acid; required for
+            MS2PIP compatibility
 
         Returns
         -------
@@ -114,7 +115,7 @@ class MSMSAccessor:
     def remove_invalid_amino_acids(self) -> pd.DataFrame:
         """Remove invalid amino acids from MSMS."""
         invalid_indices = self._obj[self._obj["Sequence"].str.contains(
-            r"[BJOUXZ]", regex=True
+            self.invalid_amino_acids, regex=True
         )].index
         self._obj = self._obj.drop(index=invalid_indices).reset_index(drop=True)
 

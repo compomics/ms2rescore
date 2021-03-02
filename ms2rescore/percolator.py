@@ -38,6 +38,7 @@ class PercolatorIn:
         modification_mapping: Optional[
             Dict[Tuple[Union[str, None], Union[float, str]], str]
         ] = None,
+        invalid_amino_acids: Optional[str] = r"[BJOUXZ]"
     ):
         """
         Percolator In (PIN).
@@ -54,10 +55,14 @@ class PercolatorIn:
             (e.g. `{("Q", -17.02655): "Gln->pyro-Glu"}). If the keys are floats, they
             are rounded up to three decimals to avoid rounding issues while matching.
             If None, the original modification labels from the PIN file will be used.
+        invalid_amino_acids: str, optional
+            regex pattern of invalid amino acids. PSMs containing these amino acids will
+            be dropped. (default: `r"[BJOUXZ]"`)
 
         """
         # Attributes
         self.modification_pattern = r"\[([^\[^\]]*)\]"
+        self.invalid_amino_acids = invalid_amino_acids
 
         # Parameters
         self.path = path
@@ -301,6 +306,23 @@ class PercolatorIn:
         else:
             raise ValueError("Multiple spectrum filenames found in single PIN file.")
 
+    def drop_invalid_amino_acids(self):
+        """Drop all PSMs (rows) with peptides containing invalid amino acids."""
+        if "sequence" in self.df.columns:
+            sequences = self.df['sequence']
+        else:
+            sequences = self._get_sequence_column()
+        to_drop = sequences[
+            sequences.str.contains(self.invalid_amino_acids, regex=True)
+        ].index
+        if len(to_drop) > 0:
+            logger.warning(
+                "Dropping %i PSMs from PIN due to invalid amino acids (%s)",
+                len(to_drop),
+                self.invalid_amino_acids
+            )
+            self.df = self.df.drop(index=to_drop)
+
     @staticmethod
     def fix_tabs(
         path: str, id_column: str = "SpecId", prot_sep: Optional[str] = "|||"
@@ -376,6 +398,8 @@ class PercolatorIn:
         if not self.path:
             raise ValueError("No path for PIN file defined.")
         self.df = pd.read_csv(self.fix_tabs(self.path), sep="\t")
+        if self.invalid_amino_acids:
+            self.drop_invalid_amino_acids()
 
     def write(self, path: Optional[str] = None):
         """Write PIN to file."""
