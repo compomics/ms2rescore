@@ -6,7 +6,15 @@ import os.path
 
 from tqdm import tqdm
 
+from ms2rescore._exceptions import MS2ReScoreError
+
 logger = logging.getLogger(__name__)
+
+
+class ParseMGFError(MS2ReScoreError):
+    """Error parsing MGF file."""
+
+    pass
 
 
 def get_num_lines(file_path):
@@ -115,6 +123,5 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
     logger.debug(
         "%i/%i spectra found and written to new MGF file.", count, num_expected
     )
-    assert (
-        count == num_expected
-    ), "Not all PSMs could be found in the provided MGF files"
+    if not count == num_expected:
+        raise ParseMGFError("Not all PSMs could be found in the provided MGF files.")

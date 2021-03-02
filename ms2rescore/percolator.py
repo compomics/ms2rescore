@@ -11,19 +11,24 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
+from ms2rescore._exceptions import MS2ReScoreError
 from ms2rescore.peptide_record import PeptideRecord
 
 
 logger = logging.getLogger(__name__)
 
 
-class UnknownModificationLabelStyleError(Exception):
+class PercolatorInError(MS2ReScoreError):
+    """Error while processing Percolator In file."""
+
+
+class UnknownModificationLabelStyleError(PercolatorInError):
     """Could not infer modification label style."""
 
     pass
 
 
-class UnknownModificationError(Exception):
+class UnknownModificationError(PercolatorInError):
     """Modification not found in `modification_mapping`."""
 
     pass
@@ -246,9 +251,8 @@ class PercolatorIn:
     def _get_charge_column(self) -> pd.Series:
         """Get charge column from one-hot encoded `ChargeX` columns."""
         charge_cols = [col for col in self.df.columns if col.startswith("Charge")]
-        assert (self.df[charge_cols] == 1).any(axis=1).all(), (
-            "Not all PSMs have" " an assigned charge state."
-        )
+        if not (self.df[charge_cols] == 1).any(axis=1).all():
+            raise PercolatorInError("Not all PSMs have an assigned charge state.")
         return (
             self.df[charge_cols]
             .rename(
@@ -262,10 +266,10 @@ class PercolatorIn:
         if not pattern:
             pattern = r".+_([0-9]+)_[0-9]+_[0-9]+"
         id_col = self.df["SpecId"].str.extract(pattern, expand=False).astype(int)
-        assert (
-            ~id_col.duplicated().any()
-        ), "Issue in matching spectrum IDs, duplicates found."
-        assert ~id_col.isna().any(), "Issue in matching spectrum IDs, NaN found."
+        if id_col.duplicated().any():
+            raise PercolatorInError("Issue in matching spectrum IDs, duplicates found.")
+        if id_col.isna().any():
+            raise PercolatorInError("Issue in matching spectrum IDs, NaN found.")
         return id_col
 
     def add_peprec_modifications_column(self):
