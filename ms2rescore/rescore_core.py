@@ -15,6 +15,7 @@ from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm
 
+from ms2rescore._exceptions import MS2ReScoreError
 
 logger = logging.getLogger(__name__)
 
@@ -549,9 +550,8 @@ def write_pin_files(
                 )
             # Else, just use concat
             else:
-                assert len(complete_df) == len(feature_set), (
-                    "Feature sets do not match."
-                )
+                if not len(complete_df) == len(feature_set):
+                    raise MS2ReScoreError("Feature sets do not match.")
                 complete_df = pd.concat(
                     [
                         complete_df.reset_index(drop=True),

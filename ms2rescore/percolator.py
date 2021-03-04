@@ -11,19 +11,24 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
+from ms2rescore._exceptions import MS2ReScoreError
 from ms2rescore.peptide_record import PeptideRecord
 
 
 logger = logging.getLogger(__name__)
 
 
-class UnknownModificationLabelStyleError(Exception):
+class PercolatorInError(MS2ReScoreError):
+    """Error while processing Percolator In file."""
+
+
+class UnknownModificationLabelStyleError(PercolatorInError):
     """Could not infer modification label style."""
 
     pass
 
 
-class UnknownModificationError(Exception):
+class UnknownModificationError(PercolatorInError):
     """Modification not found in `modification_mapping`."""
 
     pass
@@ -38,6 +43,7 @@ class PercolatorIn:
         modification_mapping: Optional[
             Dict[Tuple[Union[str, None], Union[float, str]], str]
         ] = None,
+        invalid_amino_acids: Optional[str] = r"[BJOUXZ]"
     ):
         """
         Percolator In (PIN).
@@ -54,10 +60,14 @@ class PercolatorIn:
             (e.g. `{("Q", -17.02655): "Gln->pyro-Glu"}). If the keys are floats, they
             are rounded up to three decimals to avoid rounding issues while matching.
             If None, the original modification labels from the PIN file will be used.
+        invalid_amino_acids: str, optional
+            regex pattern of invalid amino acids. PSMs containing these amino acids will
+            be dropped. (default: `r"[BJOUXZ]"`)
 
         """
         # Attributes
         self.modification_pattern = r"\[([^\[^\]]*)\]"
+        self.invalid_amino_acids = invalid_amino_acids
 
         # Parameters
         self.path = path
@@ -241,9 +251,8 @@ class PercolatorIn:
     def _get_charge_column(self) -> pd.Series:
         """Get charge column from one-hot encoded `ChargeX` columns."""
         charge_cols = [col for col in self.df.columns if col.startswith("Charge")]
-        assert (self.df[charge_cols] == 1).any(axis=1).all(), (
-            "Not all PSMs have" " an assigned charge state."
-        )
+        if not (self.df[charge_cols] == 1).any(axis=1).all():
+            raise PercolatorInError("Not all PSMs have an assigned charge state.")
         return (
             self.df[charge_cols]
             .rename(
@@ -257,10 +266,10 @@ class PercolatorIn:
         if not pattern:
             pattern = r".+_([0-9]+)_[0-9]+_[0-9]+"
         id_col = self.df["SpecId"].str.extract(pattern, expand=False).astype(int)
-        assert (
-            ~id_col.duplicated().any()
-        ), "Issue in matching spectrum IDs, duplicates found."
-        assert ~id_col.isna().any(), "Issue in matching spectrum IDs, NaN found."
+        if id_col.duplicated().any():
+            raise PercolatorInError("Issue in matching spectrum IDs, duplicates found.")
+        if id_col.isna().any():
+            raise PercolatorInError("Issue in matching spectrum IDs, NaN found.")
         return id_col
 
     def add_peprec_modifications_column(self):
@@ -300,6 +309,23 @@ class PercolatorIn:
             return spectrum_filenames[0]
         else:
             raise ValueError("Multiple spectrum filenames found in single PIN file.")
+
+    def drop_invalid_amino_acids(self):
+        """Drop all PSMs (rows) with peptides containing invalid amino acids."""
+        if "sequence" in self.df.columns:
+            sequences = self.df['sequence']
+        else:
+            sequences = self._get_sequence_column()
+        to_drop = sequences[
+            sequences.str.contains(self.invalid_amino_acids, regex=True)
+        ].index
+        if len(to_drop) > 0:
+            logger.warning(
+                "Dropping %i PSMs from PIN due to invalid amino acids (%s)",
+                len(to_drop),
+                self.invalid_amino_acids
+            )
+            self.df = self.df.drop(index=to_drop)
 
     @staticmethod
     def fix_tabs(
@@ -376,6 +402,8 @@ class PercolatorIn:
         if not self.path:
             raise ValueError("No path for PIN file defined.")
         self.df = pd.read_csv(self.fix_tabs(self.path), sep="\t")
+        if self.invalid_amino_acids:
+            self.drop_invalid_amino_acids()
 
     def write(self, path: Optional[str] = None):
         """Write PIN to file."""

@@ -56,7 +56,7 @@ setup(
     packages=["ms2rescore"],
     include_package_data=True,
     entry_points={"console_scripts": ["ms2rescore=ms2rescore.__main__:main"]},
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=[
         "importlib-resources;python_version<'3.7'",
         "numpy>=1.16.0,<2",

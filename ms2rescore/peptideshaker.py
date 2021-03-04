@@ -34,18 +34,33 @@ class ExtendedPsmReportAccessor:
     def _validate(self):
         """Validate Pandas DataFrame as Extended PSM Report."""
         # TODO: Implement validation of PSM report DataFrame
-        pass
+        self.drop_invalid_amino_acids()
+
+    def drop_invalid_amino_acids(self, invalid_amino_acids=r"[BJOUXZ]"):
+        """Drop all PSMs (rows) with peptides containing invalid amino acids."""
+        to_drop = self._obj[
+            self._obj['Sequence'].str.contains(invalid_amino_acids, regex=True)
+        ].index
+        if len(to_drop) > 0:
+            logger.warning(
+                "Dropping %i PSMs from report due to invalid amino acids (%s)",
+                len(to_drop),
+                invalid_amino_acids
+            )
+            self._obj = self._obj.drop(index=to_drop)
 
     @staticmethod
     def from_tsv(path: Union[str, os.PathLike]) -> pd.DataFrame:
         """Read Extended PSM Report from TSV file."""
         ext_psm_report = pd.read_csv(path, sep="\t", index_col=0)
+        ext_psm_report.ext_psm_report._validate()
         return ext_psm_report
 
     @staticmethod
     def from_xls(path: Union[str, os.PathLike]) -> pd.DataFrame:
         """Read Extended PSM Report from XLS file."""
         ext_psm_report = pd.read_excel(path, sheet_name=0, index_col=0)
+        pd.ext_psm_report._validate(ext_psm_report)
         return ext_psm_report
 
     @staticmethod

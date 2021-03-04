@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from pyteomics import tandem
 
+from ms2rescore._exceptions import MS2ReScoreError
 from ms2rescore.maxquant import MSMSAccessor
 from ms2rescore.parse_mgf import parse_mgf
 from ms2rescore.peptide_record import PeptideRecord
@@ -18,6 +19,12 @@ from ms2rescore.percolator import PercolatorIn, run_percolator_converter
 
 
 logger = logging.getLogger(__name__)
+
+
+class IDFileParserError(MS2ReScoreError):
+    """Error parsing ID file."""
+
+    pass
 
 
 def parse_mgf_title_rt(
@@ -123,7 +130,7 @@ class _Pipeline(ABC):
             path_to_mgf_file = passed_path
 
         else:
-            raise ValueError(
+            raise IDFileParserError(
                 "Configured `mgf_path` must be None or a path to an existing file or "
                 "directory."
             )
@@ -176,12 +183,12 @@ class _Pipeline(ABC):
         titles, retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
         peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(retention_times)
         peprec.df["spec_id"] = peprec.df["spec_id"].map(titles)
-        assert (
-            ~peprec.df["observed_retention_time"].isna().any()
-        ), "Could not map all MGF retention times to spectrum indices."
-        assert (
-            ~peprec.df["spec_id"].isna().any()
-        ), "Could not map all MGF titles to spectrum indices."
+        if not ~peprec.df["observed_retention_time"].isna().any():
+            raise IDFileParserError(
+                "Could not map all MGF retention times to spectrum indices."
+            )
+        if not ~peprec.df["spec_id"].isna().any():
+            raise IDFileParserError("Could not map all MGF titles to spectrum indices.")
 
         return peprec
 
@@ -297,10 +304,12 @@ class TandemPipeline(_Pipeline):
             on="tandem_id"
         )
         # Validate merge by comparing the hyperscore columns
-        assert (peprec_df["hyperscore_tandem"] == peprec_df["hyperscore"]).all()
+        if not (peprec_df["hyperscore_tandem"] == peprec_df["hyperscore"]).all():
+            raise IDFileParserError(
+                "Could not merge tandem xml and generated pin files."
+            )
         peprec_df.drop(
             columns=["tandem_id", "hyperscore_tandem"],
-            axis="columns",
             inplace=True
         )
 
@@ -365,8 +374,9 @@ class MaxQuantPipeline(_Pipeline):
             peprec.df,
             self.passed_mgf_path,
             outname=path_to_new_mgf,
-            filename_col='Raw file', spec_title_col='spec_id',
-            title_parsing_method='TRFP_MQ',
+            filename_col='Raw file',
+            spec_title_col='spec_id',
+            title_parsing_method='run.scan.scan',
         )
         self._path_to_new_mgf = path_to_new_mgf
 

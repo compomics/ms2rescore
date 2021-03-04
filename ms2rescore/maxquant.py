@@ -48,6 +48,24 @@ class MSMSAccessor:
         """Pandas extension for MaxQuant msms.txt files."""
         self._obj = pandas_obj
         self._set_mass_error_unit()
+        self.invalid_amino_acids = r"[BJOUXZ]"
+
+    @classmethod
+    def _evaluate_columns(cls, column: str) -> bool:
+        """Case insensitive column evaluation for Pandas.read_csv usecols argument."""
+        return column.lower() in [col.lower() for col in cls.default_columns]
+
+    @classmethod
+    def _fix_column_case(cls, columns: List[str]) -> Dict[str, str]:
+        """
+        Create mapping for column names with the correct case.
+
+        Using `_evaluate_columns`, we can load required columns in a case-insensitive
+        manner. As a result, the column name case must be fixed for downstream usage.
+        """
+        case_mapping = {col.lower(): col for col in cls.default_columns}
+        rename_mapping = {col: case_mapping[col.lower()] for col in columns}
+        return rename_mapping
 
     @classmethod
     def from_file(
@@ -66,8 +84,8 @@ class MSMSAccessor:
         filter_rank1_psms : bool, optional
             filter for rank 1 PSMs
         validate_amino_acids : bool, optional
-            remove PSMs where the sequence includes an invalid amino acid
-            (B, J, O, U, X, Z); required for MS2PIP compatibility
+            remove PSMs where the sequence includes an invalid amino acid; required for
+            MS2PIP compatibility
 
         Returns
         -------
@@ -75,7 +93,8 @@ class MSMSAccessor:
             MSMS object (pandas.DataFrame with additional methods)
         """
 
-        msms_df = pd.read_csv(path_to_msms, sep="\t", usecols=cls.default_columns)
+        msms_df = pd.read_csv(path_to_msms, sep="\t", usecols=cls._evaluate_columns)
+        msms_df.rename(columns=cls._fix_column_case(msms_df.columns), inplace=True)
         if filter_rank1_psms:
             msms_df = msms_df.msms.filter_rank1_psms()
         if validate_amino_acids:
@@ -114,7 +133,7 @@ class MSMSAccessor:
     def remove_invalid_amino_acids(self) -> pd.DataFrame:
         """Remove invalid amino acids from MSMS."""
         invalid_indices = self._obj[self._obj["Sequence"].str.contains(
-            r"[BJOUXZ]", regex=True
+            self.invalid_amino_acids, regex=True
         )].index
         self._obj = self._obj.drop(index=invalid_indices).reset_index(drop=True)
 

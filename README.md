@@ -70,7 +70,7 @@ To replicate the experiments described in this article, check out the
 [![install pip](https://flat.badgen.net/badge/install%20with/pip/green)](https://pypi.org/project/ms2rescore/)
 
 MS²ReScore requires:
-- Python 3.6 or higher on Linux, macOS, or
+- Python 3.7 or higher on Linux, macOS, or
 [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl)
 - If the option `run_percolator` is set to `True`,
 [Percolator](https://github.com/percolator/percolator/) needs to be callable with the
