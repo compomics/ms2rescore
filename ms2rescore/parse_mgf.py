@@ -3,6 +3,7 @@
 import logging
 import mmap
 import os.path
+import re
 
 from tqdm import tqdm
 
@@ -26,7 +27,7 @@ def get_num_lines(file_path):
     return lines
 
 
-def title_parser(line, method='full'):
+def title_parser(line, method='full', run=None):
     """
     Take an MGF TITLE line and return the spectrum title.
 
@@ -40,8 +41,7 @@ def title_parser(line, method='full'):
     - 'first_space': take everything between 'TITLE=' and first space.
     - 'first_space_no_charge': take everything between 'TITLE=' and first space,
       but leave out everything after last dot. (required for MaxQuant pipeline).
-    - 'TRFP_MQ': For MGF parsed with ThermoRawFileParser and spec_ids from
-      MaxQuant msms.txt.
+    - 'run.scan.scan': Extract scan number and merge with run name (for MaxQuant IDs).
     """
 
     if method == 'full':
@@ -50,11 +50,17 @@ def title_parser(line, method='full'):
         title = line[6:].split(' ')[0].strip()
     elif method == 'first_space_no_charge':
         title = '.'.join(line[6:].split(' ')[0].split('.')[:-1]).strip()
-    elif method == 'TRFP_MQ':
-        line = line.strip().split('mzspec=')[1].split(' ')
-        filename = line[0].replace('.raw:', '')
-        scan = line[3].replace('scan=', '')
-        title = '.'.join([filename, scan, scan])
+    elif method == 'run.scan.scan':
+        if not run:
+            raise TypeError("If `method` is `run.scan.scan`, `run` cannot be None.")
+        scan_m = re.match(r"TITLE=.*scan=([0-9]+).*$", line)
+        if scan_m:
+            scan = scan_m.group(1)
+        else:
+            raise ParseMGFError(
+                f"Could not extract scan number from TITLE field: `{line.strip()}`"
+            )
+        title = '.'.join([run, scan, scan])
     else:
         raise ValueError("method '{}' is not a valid title parsing method".format(
             method
@@ -73,7 +79,7 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
     if df_in[spec_title_col].duplicated().any():
         logger.warning("Duplicate spec_id's found in PeptideRecord.")
 
-    if df_in[filename_col].iloc[0][-4:] in ['.mgf', '.MGF']:
+    if df_in[filename_col].iloc[0][-4:].lower() == '.mgf':
         file_suffix = ''
     else:
         file_suffix = '.mgf'
@@ -84,7 +90,6 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
     with open(outname, 'w') as out:
         count = 0
         for run in runs:
-            found = False
             current_mgf_file = os.path.join(mgf_folder, run + file_suffix)
             spec_set = set(df_in[(df_in[filename_col] == run)][spec_title_col].values)
 
@@ -92,11 +97,12 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
             # Until MS2PIP uses ID'ed charge instead of MGF charge
             id_charges = df_in[(df_in[filename_col] == run)].set_index('spec_id')['charge'].to_dict()
 
+            found = False
             with open(current_mgf_file, 'r') as f:
                 iterator = tqdm(f, total=get_num_lines(current_mgf_file)) if show_progress_bar else f
                 for line in iterator:
                     if 'TITLE=' in line:
-                        title = title_parser(line, method=title_parsing_method)
+                        title = title_parser(line, method=title_parsing_method, run=run)
                         if title in spec_set:
                             found = True
                             line = "TITLE=" + title + "\n"

@@ -374,8 +374,9 @@ class MaxQuantPipeline(_Pipeline):
             peprec.df,
             self.passed_mgf_path,
             outname=path_to_new_mgf,
-            filename_col='Raw file', spec_title_col='spec_id',
-            title_parsing_method='TRFP_MQ',
+            filename_col='Raw file',
+            spec_title_col='spec_id',
+            title_parsing_method='run.scan.scan',
         )
         self._path_to_new_mgf = path_to_new_mgf
 
