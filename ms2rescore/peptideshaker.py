@@ -43,7 +43,7 @@ class ExtendedPsmReportAccessor:
         ].index
         if len(to_drop) > 0:
             logger.warning(
-                "Dropping %i PSMs from report due to invalid amino acids (%s)",
+                "Dropping %i PSMs from report due to invalid amino acids (%s)...",
                 len(to_drop),
                 invalid_amino_acids
             )

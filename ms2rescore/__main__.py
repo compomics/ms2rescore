@@ -14,7 +14,7 @@ def main():
         rescore = MS2ReScore(parse_cli_args=True, configuration=None, set_logger=True)
         rescore.run()
     except Exception:
-        logger.exception("Critical error occured in MS2ReScore")
+        logger.exception("Critical error occured in MS2ReScore.")
 
 
 if __name__ == "__main__":

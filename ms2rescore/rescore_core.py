@@ -330,13 +330,13 @@ def calculate_features(
     parallelize calculation of features and write them into a csv file
     """
 
-    logger.debug("Reading MS2PIP predictions file")
+    logger.debug("Reading MS2PIP predictions file...")
     df = pd.read_csv(path_to_pred_and_emp)
     df[["prediction", "target"]] = df[["prediction", "target"]].clip(
         lower=np.log2(0.001)
     )
 
-    logger.debug("Computing features")
+    logger.debug("Computing features...")
     if len(df["spec_id"].unique()) < 10000:
         all_results = compute_features(df)
     else:
@@ -368,7 +368,7 @@ def calculate_features(
                 all_results = list(p.imap(compute_features, split_df))
         all_results = pd.concat(all_results)
 
-    logger.debug("Writing to file")
+    logger.debug("Writing to file...")
     all_results.to_csv(path_to_out, index=False)
 
 
@@ -444,8 +444,7 @@ def write_pin_files(
     with open(peprec_path, "rt") as f:
         line = f.readline()
         if line[:7] != "spec_id":
-            logger.critical("PEPREC file should start with header column")
-            exit(1)
+            raise MS2ReScoreError("PEPREC file should start with header column.")
         sep = line[7]
 
     # Convert Protein literal list to pseudo-PIN notation:

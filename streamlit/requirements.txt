@@ -1,0 +1,2 @@
+ms2rescore[deeplc]>= 2.0.0b5
+streamlit

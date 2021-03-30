@@ -77,11 +77,10 @@ class MS2ReScore:
     def _validate_cli_dependency(command):
         """Validate that command returns zero exit status."""
         if subprocess.getstatusoutput(command)[0] != 0:
-            logger.critical(
-                "`%s` returned non-zero exit status. Please verify installation.",
-                command,
+            raise MS2ReScoreError(
+                f"`{command}` returned non-zero exit status. Please verify "
+                "installation.",
             )
-            exit(1)
 
     @staticmethod
     def _infer_pipeline(identification_file: str):
@@ -131,7 +130,7 @@ class MS2ReScore:
         num_cpu: int,
     ):
         """Get predicted MS² peak intensities from MS2PIP."""
-        logger.info("Adding MS2 peak intensity features with MS²PIP.")
+        logger.info("Adding MS2 peak intensity features with MS²PIP...")
         ms2pip_config_filename = output_filename + "_ms2pip_config.txt"
         rescore_core.make_ms2pip_config(ms2pip_config, filename=ms2pip_config_filename)
 
@@ -147,7 +146,7 @@ class MS2ReScore:
         logger.debug("Running MS2PIP: %s", ms2pip_command)
         subprocess.run(ms2pip_command, shell=True, check=True)
 
-        logger.info("Calculating features from predicted spectra")
+        logger.info("Calculating features from predicted spectra...")
         preds_filename = (
             peprec_filename.replace(".peprec", "")
             + "_"
@@ -165,7 +164,7 @@ class MS2ReScore:
         num_cpu: int,
     ):
         """Get retention time features with DeepLC."""
-        logger.info("Adding retention time features with DeepLC.")
+        logger.info("Adding retention time features with DeepLC...")
         rt_int = RetentionTimeIntegration(
             peprec_filename, output_filename + "_rtfeatures.csv", num_cpu=num_cpu,
         )
@@ -196,7 +195,7 @@ class MS2ReScore:
             subprocess.run(percolator_cmd, shell=True)
 
             if not os.path.isfile(subname + ".pout"):
-                logger.error("Error running Percolator")
+                logger.error("Error running Percolator for %s feature set.", subset)
 
     def run(self):
         """Run MS²ReScore."""
@@ -232,7 +231,7 @@ class MS2ReScore:
                 self.config["general"]["num_cpu"],
             )
 
-        logger.info("Generating PIN files")
+        logger.info("Generating PIN files...")
         rescore_core.write_pin_files(
             peprec_filename,
             self.config["general"]["output_filename"],

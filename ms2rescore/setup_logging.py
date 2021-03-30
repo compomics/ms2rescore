@@ -1,5 +1,6 @@
 import logging
 
+from ms2rescore._exceptions import MS2ReScoreError
 
 def setup_logging(passed_level):
     log_mapping = {
@@ -11,11 +12,10 @@ def setup_logging(passed_level):
     }
 
     if passed_level not in log_mapping:
-        print(
-            "Invalid log level. Should be one of the following: ",
+        raise MS2ReScoreError(
+            "Invalid log level. Should be one of the following: %s",
             ', '.join(log_mapping.keys())
         )
-        exit(1)
 
     logging.basicConfig(
         format='%(asctime)s // %(levelname)s // %(name)s // %(message)s',

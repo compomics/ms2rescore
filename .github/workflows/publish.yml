@@ -2,7 +2,7 @@ name: Publish
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   publish:
@@ -26,7 +26,7 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
         python setup.py sdist bdist_wheel
-        
+
     - name: Test built package
       run: |
         pip install dist/ms2rescore-*.whl
@@ -42,3 +42,15 @@ jobs:
       with:
         user: ${{ secrets.PYPI_USERNAME }}
         password: ${{ secrets.PYPI_PASSWORD }}
+
+  build-streamlit-image:
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build and push to ghcr.io
+      uses: docker/build-push-action@v2
+      with:
+        context: streamlit
+        push: true
+        tags: ghcr.io/compomics/ms2rescore-streamlit:${{ github.event.release.tag_name }}
