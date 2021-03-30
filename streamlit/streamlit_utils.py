@@ -8,13 +8,7 @@ import tempfile
 import zipfile
 from typing import BinaryIO
 
-
-def bytesio_to_tempfile(bytesio: BinaryIO) -> str:
-    """Write BytesIO object to temporary file."""
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        tmp.write(bytesio.getbuffer())
-        filepath = tmp.name
-    return filepath
+import streamlit as st
 
 
 class StreamlitLogger:
@@ -78,6 +72,23 @@ class _StreamlitLoggingStream:
         else:
             self.message_list = [message]
         self.placeholder.info("\n".join(self.message_list))
+
+
+def hide_streamlit_menu():
+    hide_menu_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    </style>
+    """
+    st.markdown(hide_menu_style, unsafe_allow_html=True)
+
+
+def bytesio_to_tempfile(bytesio: BinaryIO) -> str:
+    """Write BytesIO object to temporary file."""
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp.write(bytesio.getbuffer())
+        filepath = tmp.name
+    return filepath
 
 
 def zip_files(file_list):

@@ -11,7 +11,12 @@ from typing import Dict
 import streamlit as st
 from ms2rescore import MS2ReScore
 
-from streamlit_utils import StreamlitLogger, bytesio_to_tempfile, get_zipfile_href
+from streamlit_utils import (
+    StreamlitLogger,
+    hide_streamlit_menu,
+    bytesio_to_tempfile,
+    get_zipfile_href
+)
 
 
 class StreamlitUI:
@@ -27,6 +32,8 @@ class StreamlitUI:
             layout="centered",
             initial_sidebar_state="expanded",
         )
+
+        hide_streamlit_menu()
 
         self._sidebar()
         self._main_page()
