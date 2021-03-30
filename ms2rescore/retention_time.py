@@ -109,7 +109,7 @@ class RetentionTimeIntegration:
                 "Expected float or int for `calibration_set_size`. Got "
                 f"{type(self.calibration_set_size)} instead"
             )
-        logger.debug("Using %i PSMs for calibration", num_calibration_psms)
+        logger.debug("Using %i PSMs for calibration.", num_calibration_psms)
         return num_calibration_psms
 
     @property

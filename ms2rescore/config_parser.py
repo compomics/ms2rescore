@@ -137,7 +137,7 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
             )
     elif config_class:
         args = None
-        config_user = config_class["config_file"]
+        config_user = None
     else:
         raise MS2ReScoreConfigurationError(
             "If `parse_cli_args` is False, `config_class` arguments are required."
@@ -150,7 +150,7 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
     if parse_cli_args:
         cascade_conf.add_namespace(args, subkey="general")
     elif config_class:
-        cascade_conf.add_dict(config_class, subkey="general")
+        cascade_conf.add_dict(config_class)
     config = cascade_conf.parse()
 
     config = _validate_filenames(config)

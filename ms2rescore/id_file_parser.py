@@ -341,7 +341,7 @@ class MaxQuantPipeline(_Pipeline):
         if not self._path_to_new_mgf:
             logger.warning(
                 "`_path_to_new_mgf` is not set yet; first run the `parse_mgf_files` "
-                "method"
+                "method."
             )
         else:
             return self._path_to_new_mgf
@@ -368,7 +368,7 @@ class MaxQuantPipeline(_Pipeline):
 
     def parse_mgf_files(self, peprec):
         """Parse multiple MGF files into one for MS²PIP."""
-        logger.debug("Parsing MGF files into one for MS²PIP")
+        logger.debug("Parsing MGF files into one for MS²PIP...")
         path_to_new_mgf = self.output_basename + "_unified.mgf"
         parse_mgf(
             peprec.df,

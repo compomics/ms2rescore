@@ -321,7 +321,7 @@ class PercolatorIn:
         ].index
         if len(to_drop) > 0:
             logger.warning(
-                "Dropping %i PSMs from PIN due to invalid amino acids (%s)",
+                "Dropping %i PSMs from PIN due to invalid amino acids (%s)...",
                 len(to_drop),
                 self.invalid_amino_acids
             )
@@ -457,7 +457,7 @@ class PercolatorIn:
                 if col in self.df.columns:
                     score_column_label = col
                     logger.debug(
-                        "Found score column in PIN with label %s", score_column_label
+                        "Found score column in PIN with label %s.", score_column_label
                     )
                     break
             if not score_column_label:
@@ -524,7 +524,7 @@ def run_percolator_converter(
         os.path.abspath(path_to_id_file),
     ]
 
-    logger.info("Running Percolator PIN converter")
+    logger.info("Running Percolator PIN converter...")
     logger.debug(' '.join(command))
 
     subprocess.run(command, capture_output=log_level == "debug", check=True)
