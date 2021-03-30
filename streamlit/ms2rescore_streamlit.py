@@ -86,12 +86,12 @@ class StreamlitUI:
         self.user_input["pipeline"] = st.sidebar.selectbox(
             "Identification file type",
             ["pin", "tandem", "maxquant", "msgfplus", "peptideshaker"],
-            index=1,
+            index=0,
         )
         self.user_input["feature_sets"] = st.sidebar.multiselect(
             "Feature set combinations to use",
             ["all", "ms2pip_rt", "searchengine", "rt", "ms2pip"],
-            default=["searchengine"],
+            default=["all", "searchengine"],
             help="Feature sets for which to generate PIN files and optionally run "
             "Percolator.",
         )
@@ -116,12 +116,12 @@ class StreamlitUI:
     def _parse_user_config(user_input: Dict, tmp_dir) -> Dict:
         if not user_input["id_bytesio"]:
             st.error("Please upload an identification file.")
+            return None
         elif not user_input["mgf_bytesio"]:
             st.error("Please upload an MGF file.")
-        else:
-            id_path = bytesio_to_tempfile(user_input["id_bytesio"])
-            mgf_path = bytesio_to_tempfile(user_input["mgf_bytesio"])
-
+            return None
+        id_path = bytesio_to_tempfile(user_input["id_bytesio"])
+        mgf_path = bytesio_to_tempfile(user_input["mgf_bytesio"])
         config_dict = _update_dict_recursively(
             json.loads(user_input["config_json"]),
             {
@@ -140,21 +140,23 @@ class StreamlitUI:
         return config_dict
 
     def _run_ms2rescore(self):
+        # Get config
         tmp_dir = tempfile.TemporaryDirectory()
         config_dict = self._parse_user_config(self.user_input, tmp_dir)
+        if not config_dict:
+            return None
 
-        try:
-            logger_placeholder = st.empty()
-            logger_name = "ms2rescore"
-            with StreamlitLogger(logger_placeholder, logger_name):
-                logging.info("Starting MS²ReScore...")
-                rescore = MS2ReScore(
-                    parse_cli_args=False, configuration=config_dict, set_logger=False
-                )
-                rescore.run()
-        except Exception as e:
-            st.exception(e)
+        # Run ms2rescore and send logs to front end
+        logger_placeholder = st.empty()
+        logger_name = "ms2rescore"
+        with StreamlitLogger(logger_placeholder, logger_name):
+            logging.info("Starting MS²ReScore...")
+            rescore = MS2ReScore(
+                parse_cli_args=False, configuration=config_dict, set_logger=False
+            )
+            rescore.run()
 
+        # Return results and cleanup files
         st.markdown(
             get_zipfile_href(
                 glob(config_dict["general"]["output_filename"] + "_*"),
@@ -162,9 +164,7 @@ class StreamlitUI:
             ),
             unsafe_allow_html=True,
         )
-
         shutil.rmtree(tmp_dir.name)
-
 
 def _update_dict_recursively(original, updater):
     """Update dictionary recursively."""
