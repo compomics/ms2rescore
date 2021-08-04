@@ -1,5 +1,6 @@
 """Plot MS²ReScore results."""
 
+from collections import defaultdict
 from typing import List, Optional
 
 import matplotlib.axes
@@ -212,15 +213,96 @@ class _REREC():
 
         return ax
 
+    def _separate_unique_peptides(self, FDR_threshold=[0.01]):
+        unique_samples = []
+        for rerec in self.rerecs:
+            for threshold in FDR_threshold:
+                tmp = []
+                tmp.append(rerec.name)
+                tmp.append(rerec.rescore_features)
+                tmp.append(rerec.df["peptide"][~(rerec.df["is decoy"]) & (rerec.df["q"] < threshold)].unique())
+                tmp.append(threshold)
+                unique_samples.append(tmp)
+        self.unique_df = pd.DataFrame(unique_samples, columns=["sample", "upeps", "rescoring", "FDR"])
+
+    def unique_count_plot(self):
+        if not self.unique_df:
+            self._separate_unique_peptides()
+        self.unique_df["count"] = self.unique_df["upeps"].apply(len)
+
+        g = sns.catplot(x="sample", y="count", data=self.unique_df, hue="resoring", kind="bar", col="FDR")
+        g.set_ylabels("number of unique peptides identified")
+        g.set_xlabels("")
+        g.add_legend()
+
+        return g
+
+    def calculate_loss_gain_df(self, reference="Before rescoring", FDR_threshold=[0.01]):
+        if not self.unique_df:
+            self._separate_unique_peptides()
+
+        loss_gain = defaultdict(list)
+        for sample in self.unique_df["sample"].unique():
+            for threshold in FDR_threshold:
+                ft_dict = {}
+                for feature in self.unique_df["rescoring"][self.unique_df["sample"] == sample].unique():
+                    ft_dict[feature] = set(list(self.unique_df["upeps"][
+                        (self.unique_df["sample"] == sample) &
+                        (self.unique_df["rescoring"] == feature) &
+                        (self.unique_df["FDR"] == threshold)]
+                    ))
+                total = len(ft_dict[reference])
+
+                for feature in self.unique_df["rescoring"][self.unique_df["sample"] == sample].unique():
+                    loss_gain["sample"].append(sample)
+                    loss_gain["feature"].append(feature)
+                    loss_gain["FDR"].append(threshold)
+                    loss_gain["shared"].append((len(ft_dict[reference] & ft_dict[feature])/total)*100)
+                    loss_gain["gain"].append((len(ft_dict[feature] - ft_dict[reference])/total)*100+100)
+                    loss_gain["loss"].append((len(ft_dict[reference] - ft_dict[feature])/total)*-100)
+
+        self.loss_gain_df = pd.DataFrame(loss_gain)
+
+    def loss_gain_plot(self, FDR):
+        if not self.loss_gain_df:
+            self.calculate_loss_gain_df(FDR_threshold=[FDR])
+        if FDR not in self.loss_gain_df["FDR"].unique():
+            self.calculate_loss_gain_df(FDR_threshold=[FDR])
+
+        fig = plt.figure()
+        tmp = self.loss_gain_df[self.loss_gain_df["FDR"] == FDR]
+
+        for sample in zip(tmp["sample"].unique(), list(range(1,len(tmp["sample"].unique())))):
+            if sample[1] == len(tmp["sample"].unique()):
+                ax = fig.add_subplot(int(f"{tmp['sample'].unique()}1{sample[1]}"), frameon=False)
+                ax.title.set_text(sample[0])
+                sns.barplot(y="feature", x="gain", data=tmp[tmp["sample"]==sample[0]], color='#2FA92D', order=tmp[tmp["sample"]==sample[0]].sort_values('gain').feature)
+                sns.barplot(y="feature", x="shared", data=tmp[tmp["sample"]==sample[0]], color='#1AA3FF',order=tmp[tmp["sample"]==sample[0]].sort_values('gain').feature)
+                sns.barplot(y="feature", x="loss", data=tmp[tmp["sample"]==sample[0]], color='#FF0000',order=tmp[tmp["sample"]==sample[0]].sort_values('gain').feature)
+                ax.axes.set_xlabel("unique identified peptides (%)")
+                ax.axes.set_ylabel("")
+            else:
+                ax = fig.add_subplot(int(f"{tmp['sample'].unique()}1{sample[1]}"), frameon=False)
+                ax.title.set_text(sample[0])
+                sns.barplot(y="feature", x="gain", data=tmp[tmp["sample"]==sample[0]], color='#2FA92D', order=tmp[tmp["sample"]==sample[0]].sort_values('gain').feature)
+                sns.barplot(y="feature", x="shared", data=tmp[tmp["sample"]==sample[0]], color='#1AA3FF',order=tmp[tmp["sample"]==sample[0]].sort_values('gain').feature)
+                sns.barplot(y="feature", x="loss", data=tmp[tmp["sample"]==sample[0]], color='#FF0000',order=tmp[tmp["sample"]==sample[0]].sort_values('gain').feature)
+                ax.axes.set_xlabel("")
+                ax.axes.set_ylabel("")
+        fig.set_size_inches(15, 12)
+
+        return fig
+
 
 class PIN(_REREC):
 
-    def __init__(self, path_to_pin, score_metric) -> None:
+    def __init__(self, path_to_pin, score_metric, sample_name) -> None:
         super().__init__()
         self.df = self._read_pin_file(path_to_pin)
         self.score_metric = score_metric
         self.type = "pout"
         self.rescore_features = "Before rescoring"
+        self.name = sample_name
 
     def _read_pin_file(self, path_to_pin):
         pin = PercolatorIn(path_to_pin)
@@ -237,13 +319,14 @@ class PIN(_REREC):
 
 class POUT(_REREC):
 
-    def __init__(self, path_to_target_pout, path_to_decoy_pout_, rescoring_features) -> None:
+    def __init__(self, path_to_target_pout, path_to_decoy_pout_, rescoring_features, sample_name) -> None:
         super().__init__()
         self.target_pout = path_to_target_pout
         self.decoy_pout = path_to_decoy_pout_
         self.df = self._read_pout_file
         self.type = "pout"
         self.rescore_features = "After rescoring: " + " ".join(rescoring_features)
+        self.name = sample_name
 
     @staticmethod
     def _read_pout(path):
