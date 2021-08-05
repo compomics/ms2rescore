@@ -16,10 +16,10 @@ from ms2rescore.percolator import PercolatorIn
 
 class _REREC:
     rerecs = []
-
+    loss_gain_df = pd.DataFrame()
+    unique_df = pd.DataFrame()
     def __init__(self) -> None:
-        self.loss_gain_df = None
-        self.unique_df = None
+        pass
 
     @classmethod
     def empty_rerecs(cls):
@@ -258,7 +258,7 @@ class _REREC:
 
     @classmethod
     def unique_count_plot(cls):
-        if not any(cls.unique_df):
+        if cls.unique_df.empty:
             cls._separate_unique_peptides()
         cls.unique_df["count"] = cls.unique_df["upeps"].apply(len)
 
@@ -279,9 +279,8 @@ class _REREC:
     def calculate_loss_gain_df(
         cls, reference="Before rescoring", FDR_threshold=[0.01]
     ):
-        if not any(cls.unique_df):
+        if cls.unique_df.empty:
             cls._separate_unique_peptides()
-
         loss_gain = defaultdict(list)
         for sample in cls.unique_df["sample"].unique():
             for threshold in FDR_threshold:
@@ -321,20 +320,20 @@ class _REREC:
 
     @classmethod
     def loss_gain_plot(cls, FDR):
-        if not any(cls.loss_gain_df):
+        if cls.loss_gain_df.empty:
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])
         if FDR not in cls.loss_gain_df["FDR"].unique():
+            cls._separate_unique_peptides(FDR_threshold=[FDR])
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])
 
         fig = plt.figure()
         tmp = cls.loss_gain_df[cls.loss_gain_df["FDR"] == FDR]
-
         for sample in zip(
-            tmp["sample"].unique(), list(range(1, len(tmp["sample"].unique())))
+            tmp["sample"].unique(), list(range(1, len(tmp["sample"].unique())+1))
         ):
             if sample[1] == len(tmp["sample"].unique()):
                 ax = fig.add_subplot(
-                    int(f"{tmp['sample'].unique()}1{sample[1]}"), frameon=False
+                    int(f"{len(tmp['sample'].unique())}1{sample[1]}"), frameon=False
                 )
                 ax.title.set_text(sample[0])
                 sns.barplot(
@@ -343,6 +342,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#2FA92D",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    ax=ax
                 )
                 sns.barplot(
                     y="feature",
@@ -350,6 +350,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#1AA3FF",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    ax=ax
                 )
                 sns.barplot(
                     y="feature",
@@ -357,6 +358,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#FF0000",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    ax=ax
                 )
                 ax.axes.set_xlabel("unique identified peptides (%)")
                 ax.axes.set_ylabel("")
@@ -371,6 +373,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#2FA92D",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    ax=ax
                 )
                 sns.barplot(
                     y="feature",
@@ -378,6 +381,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#1AA3FF",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    ax=ax
                 )
                 sns.barplot(
                     y="feature",
@@ -385,12 +389,14 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#FF0000",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    ax=ax
                 )
                 ax.axes.set_xlabel("")
                 ax.axes.set_ylabel("")
-        fig.set_size_inches(15, 12)
-
-        return fig
+        plt.grid(axis="x")
+        ax.set_axisbelow(True)
+        fig.set_size_inches(10, 6)
+        return ax
 
 
 class PIN(_REREC):
