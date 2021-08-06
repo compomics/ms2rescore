@@ -13,6 +13,7 @@ from ms2rescore._exceptions import MS2ReScoreError
 from ms2rescore._version import __version__
 from ms2rescore.config_parser import parse_config
 from ms2rescore.retention_time import RetentionTimeIntegration
+from ms2rescore import plotting
 
 
 logger = logging.getLogger(__name__)
@@ -238,4 +239,17 @@ class MS2ReScore:
         if self.config["general"]["run_percolator"]:
             self._run_percolator()
 
+        if self.config["general"]["plotting"]:
+            plotting.PIN(self.config["general"]["output_filename"] + "_" + "_".join(self.config["general"]["feature_sets"][1]) + "_features.pin",
+                         "LnEvalue",
+                         self.config["general"]["output_filename"])
+
+            for fset in self.config["general"]["feature_sets"]:
+                plotting.POUT(self.config["general"]["output_filename"] + "_" + "_".join(fset) + "_features.pout",
+                              self.config["general"]["output_filename"] + "_" + "_".join(fset) + "_features.pout_dec",
+                              " ".join(fset),
+                              self.config["general"]["output_filename"])
+
+            plotting._REREC.save_plots_to_pfd(self.config["general"]["output_filename"]+"_plots.pdf",FDR_thresholds=[0.01, 0.001])
+            
         logger.info("MS²ReScore finished!")

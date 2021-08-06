@@ -5,19 +5,22 @@ from typing import List, Optional
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
+import matplotlib.backends.backend_pdf
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from pyteomics.auxiliary import qvalues
 from statsmodels.distributions.empirical_distribution import ECDF
 
-from ms2rescore.percolator import PercolatorIn
 
+from ms2rescore.percolator import PercolatorIn
+from ms2rescore._exceptions import MS2ReScoreError
 
 class _REREC:
     rerecs = []
     loss_gain_df = pd.DataFrame()
     unique_df = pd.DataFrame()
+
     def __init__(self) -> None:
         pass
 
@@ -233,7 +236,7 @@ class _REREC:
             ax.set_xlabel("FDR threshold")
 
         ax.legend()
-        fig.set_size_inches(15, 12)
+        fig.set_size_inches(12, 10)
 
         return ax
 
@@ -269,9 +272,12 @@ class _REREC:
             hue="rescoring",
             kind="bar",
             col="FDR",
+            legend=False
         )
         g.set_ylabels("number of unique peptides identified")
         g.set_xlabels("")
+        g.add_legend(loc=7)
+        g.fig.set_size_inches(12, 10)
 
         return g
 
@@ -395,8 +401,29 @@ class _REREC:
                 ax.axes.set_ylabel("")
         plt.grid(axis="x")
         ax.set_axisbelow(True)
-        fig.set_size_inches(10, 6)
+        fig.set_size_inches(12, 6)
         return ax
+
+    @classmethod
+    def save_plots_to_pfd(cls, filename, FDR_thresholds=[0.01]):
+        if not cls.rerecs:
+            raise MS2ReScoreError("no pin/pout files listed")
+
+        pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
+        cls._separate_unique_peptides(FDR_thresholds)
+
+        cls.unique_count_plot()
+        pdf.savefig()
+
+        cls.qvalue_comparison()
+        plt.tight_layout()
+        pdf.savefig()
+
+        for fdr in FDR_thresholds:
+            cls.loss_gain_plot(FDR=fdr)
+            plt.tight_layout()
+            pdf.savefig()
+        pdf.close()
 
 
 class PIN(_REREC):

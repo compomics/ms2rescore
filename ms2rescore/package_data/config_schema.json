@@ -72,7 +72,11 @@
                     "description": "Logging level",
                     "type": "string",
                     "enum": ["debug", "info", "warning", "error", "critical"]
-                }
+                },
+                "plotting": {
+                    "description": "Output PDF with additional Rescore plots",
+                    "type": "boolean",
+                    "default": false
             }
         },
         "ms2pip": {

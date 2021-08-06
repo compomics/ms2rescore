@@ -584,7 +584,6 @@ def write_pin_files(
     for fset in feature_sets:
 
         feature_config = dict.fromkeys(feature_config, False)
-        outname = "_"
         col_names = []
 
         for feature in fset:
@@ -608,3 +607,4 @@ def write_pin_files(
             f"{savepath}_{outname}_features.pin", sep="\t", header=True, index=False
         )
         redo_pin_tabs(f"{savepath}_{outname}_features.pin")
+        

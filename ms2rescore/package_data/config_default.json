@@ -10,7 +10,8 @@
         "tmp_path":null,
         "mgf_path":null,
         "output_filename":null,
-        "log_level": "info"
+        "log_level": "info",
+        "plotting": false
     },
     "ms2pip": {
         "model": "HCD",
