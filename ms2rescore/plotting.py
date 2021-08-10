@@ -16,6 +16,7 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from ms2rescore.percolator import PercolatorIn
 from ms2rescore._exceptions import MS2ReScoreError
 
+
 class _REREC:
     rerecs = []
     loss_gain_df = pd.DataFrame()
@@ -272,7 +273,7 @@ class _REREC:
             hue="rescoring",
             kind="bar",
             col="FDR",
-            legend=False
+            legend=False,
         )
         g.set_ylabels("number of unique peptides identified")
         g.set_xlabels("")
@@ -282,9 +283,7 @@ class _REREC:
         return g
 
     @classmethod
-    def calculate_loss_gain_df(
-        cls, reference="Before rescoring", FDR_threshold=[0.01]
-    ):
+    def calculate_loss_gain_df(cls, reference="Before rescoring", FDR_threshold=[0.01]):
         if cls.unique_df.empty:
             cls._separate_unique_peptides()
         loss_gain = defaultdict(list)
@@ -335,20 +334,20 @@ class _REREC:
         fig = plt.figure()
         tmp = cls.loss_gain_df[cls.loss_gain_df["FDR"] == FDR]
         for sample in zip(
-            tmp["sample"].unique(), list(range(1, len(tmp["sample"].unique())+1))
+            tmp["sample"].unique(), list(range(1, len(tmp["sample"].unique()) + 1))
         ):
             if sample[1] == len(tmp["sample"].unique()):
                 ax = fig.add_subplot(
                     int(f"{len(tmp['sample'].unique())}1{sample[1]}"), frameon=False
                 )
-                ax.title.set_text(sample[0])
+                ax.title.set_text(f"{sample[0]}\nFDR={FDR}")
                 sns.barplot(
                     y="feature",
                     x="gain",
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#2FA92D",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
-                    ax=ax
+                    ax=ax,
                 )
                 sns.barplot(
                     y="feature",
@@ -356,7 +355,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#1AA3FF",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
-                    ax=ax
+                    ax=ax,
                 )
                 sns.barplot(
                     y="feature",
@@ -364,7 +363,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#FF0000",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
-                    ax=ax
+                    ax=ax,
                 )
                 ax.axes.set_xlabel("unique identified peptides (%)")
                 ax.axes.set_ylabel("")
@@ -379,7 +378,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#2FA92D",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
-                    ax=ax
+                    ax=ax,
                 )
                 sns.barplot(
                     y="feature",
@@ -387,7 +386,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#1AA3FF",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
-                    ax=ax
+                    ax=ax,
                 )
                 sns.barplot(
                     y="feature",
@@ -395,7 +394,7 @@ class _REREC:
                     data=tmp[tmp["sample"] == sample[0]],
                     color="#FF0000",
                     order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
-                    ax=ax
+                    ax=ax,
                 )
                 ax.axes.set_xlabel("")
                 ax.axes.set_ylabel("")
@@ -449,10 +448,12 @@ class PIN(_REREC):
                 reverse=True,
                 remove_decoy=False,
                 formula=1,
-                full_output=True
+                full_output=True,
             )
         )
-        return pin_qvalues[["SpecId", "is decoy", "score", "q", "Peptide"]].rename(columns={"SpecId" : "PSMId", "Peptide": "peptide"})
+        return pin_qvalues[["SpecId", "is decoy", "score", "q", "Peptide"]].rename(
+            columns={"SpecId": "PSMId", "Peptide": "peptide"}
+        )
 
 
 class POUT(_REREC):
@@ -486,7 +487,7 @@ class POUT(_REREC):
         decoy_pout["Label"] = -1
         pout = pd.concat([target_pout, decoy_pout])
 
-        pout_qvalues = pout[["PSMId","score", "q-value", "Label", "peptide"]].rename(
+        pout_qvalues = pout[["PSMId", "score", "q-value", "Label", "peptide"]].rename(
             columns={"q-value": "q", "Label": "is decoy"}
         )
         pout_qvalues["is decoy"] = pout["Label"] == -1

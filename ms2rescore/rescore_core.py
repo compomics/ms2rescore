@@ -22,8 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def make_ms2pip_config(
-    options: Dict,
-    filename: Optional[Union[str, os.PathLike]] = "ms2pip_config.txt"
+    options: Dict, filename: Optional[Union[str, os.PathLike]] = "ms2pip_config.txt"
 ):
     """Write ms2pip configuration file based on ms2pip config dict."""
     with open(filename, "wt") as ms2pip_config:
@@ -350,7 +349,7 @@ def calculate_features(
                     spec_ids[
                         i
                         * len(spec_ids)
-                        // chunk_size: (i + 1)
+                        // chunk_size : (i + 1)
                         * len(spec_ids)
                         // chunk_size
                     ]
@@ -416,11 +415,7 @@ def write_pin_files(
         `ms2pip`, and `rt`.
 
     """
-    feature_config = {
-            "searchengine": False,
-            "ms2pip": False,
-            "rt": False
-        }
+    feature_config = {"searchengine": False, "ms2pip": False, "rt": False}
 
     # TODO: Fix duality in `observed_retention_time`: peprec column, also rt feature
     peprec_cols = [
@@ -455,9 +450,7 @@ def write_pin_files(
     # Read search engine features & Get list with feature names split by type of feature
     if feature_config["searchengine"]:
         searchengine_features = pd.read_csv(
-            searchengine_features_path,
-            sep=",",
-            index_col=None
+            searchengine_features_path, sep=",", index_col=None
         )
         search_engine_feature_names = [
             col
@@ -561,8 +554,9 @@ def write_pin_files(
                 complete_df = pd.concat(
                     [
                         complete_df.reset_index(drop=True),
-                        feature_set.reset_index(drop=True)
-                    ], axis=1
+                        feature_set.reset_index(drop=True),
+                    ],
+                    axis=1,
                 )
     complete_df = complete_df.fillna(value=0).reset_index(drop=True)
     complete_df = complete_df.loc[:, ~complete_df.columns.duplicated()]
@@ -600,11 +594,8 @@ def write_pin_files(
 
         outname = "_".join(fset)
         complete_df[
-            ["SpecId", "Label", "ScanNr"]
-            + col_names
-            + ["Peptide", "Proteins"]
+            ["SpecId", "Label", "ScanNr"] + col_names + ["Peptide", "Proteins"]
         ].to_csv(
             f"{savepath}_{outname}_features.pin", sep="\t", header=True, index=False
         )
         redo_pin_tabs(f"{savepath}_{outname}_features.pin")
-        

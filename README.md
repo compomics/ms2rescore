@@ -126,10 +126,10 @@ The config file contains three top level categories (`general`, `ms2pip` and
 (e.g. `maxquant`). The most important options in `general` are:
 - **`pipeline`** *(string)*: Pipeline to use, depending on input format. Must be one of:
 `['infer', 'pin', 'tandem', 'maxquant', 'msgfplus', 'peptideshaker']`. Default: `infer`.
-- **`feature_sets`** *(array)*: Feature sets for which to generate PIN files and
-optionally run Percolator. Default: `['all']`.
-  - **Items** *(string)*: Must be one of:
-  `['all', 'ms2pip_rt', 'searchengine', 'rt', 'ms2pip']`.
+- **`feature_sets`** *(array)*: Feature set list for which to generate PIN files and
+optionally run Percolator. Default: `['searchengine', 'ms2pip', 'rt']`.
+  - **Items** *(string)*: Must be one or a combination of:
+  `['searchengine', 'ms2pip', 'rt']`.
 
 An overview of all options can be found in [configuration.md](https://github.com/compomics/ms2rescore/blob/master/configuration.md)
 

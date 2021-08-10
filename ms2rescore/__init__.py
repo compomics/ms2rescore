@@ -142,7 +142,10 @@ class MS2ReScore:
                 raise FileNotFoundError(f)
 
         ms2pip_command = "ms2pip {} -c {} -s {} -n {}".format(
-            peprec_filename, ms2pip_config_filename, mgf_filename, num_cpu,
+            peprec_filename,
+            ms2pip_config_filename,
+            mgf_filename,
+            num_cpu,
         )
 
         logger.debug("Running MS2PIP: %s", ms2pip_command)
@@ -156,7 +159,9 @@ class MS2ReScore:
             + "_pred_and_emp.csv"
         )
         rescore_core.calculate_features(
-            preds_filename, output_filename + "_ms2pipfeatures.csv", num_cpu,
+            preds_filename,
+            output_filename + "_ms2pipfeatures.csv",
+            num_cpu,
         )
 
     @staticmethod
@@ -168,7 +173,9 @@ class MS2ReScore:
         """Get retention time features with DeepLC."""
         logger.info("Adding retention time features with DeepLC.")
         rt_int = RetentionTimeIntegration(
-            peprec_filename, output_filename + "_rtfeatures.csv", num_cpu=num_cpu,
+            peprec_filename,
+            output_filename + "_rtfeatures.csv",
+            num_cpu=num_cpu,
         )
         rt_int.run()
 
@@ -176,7 +183,10 @@ class MS2ReScore:
         """Run Percolator with different feature subsets."""
         for subset in self.config["general"]["feature_sets"]:
             subname = (
-                self.config["general"]["output_filename"] + "_" + "_".join(subset) + "_features"
+                self.config["general"]["output_filename"]
+                + "_"
+                + "_".join(subset)
+                + "_features"
             )
             percolator_cmd = "percolator "
             for op in self.config["percolator"].keys():
@@ -239,17 +249,34 @@ class MS2ReScore:
         if self.config["general"]["run_percolator"]:
             self._run_percolator()
 
+        logger.info("Generating Rescore plots")
         if self.config["general"]["plotting"]:
-            plotting.PIN(self.config["general"]["output_filename"] + "_" + "_".join(self.config["general"]["feature_sets"][1]) + "_features.pin",
-                         "LnEvalue",
-                         self.config["general"]["output_filename"])
+            plotting.PIN(
+                self.config["general"]["output_filename"]
+                + "_"
+                + "_".join(self.config["general"]["feature_sets"][0])
+                + "_features.pin",
+                "RawScore",
+                self.config["general"]["output_filename"],
+            )
 
             for fset in self.config["general"]["feature_sets"]:
-                plotting.POUT(self.config["general"]["output_filename"] + "_" + "_".join(fset) + "_features.pout",
-                              self.config["general"]["output_filename"] + "_" + "_".join(fset) + "_features.pout_dec",
-                              " ".join(fset),
-                              self.config["general"]["output_filename"])
+                plotting.POUT(
+                    self.config["general"]["output_filename"]
+                    + "_"
+                    + "_".join(fset)
+                    + "_features.pout",
+                    self.config["general"]["output_filename"]
+                    + "_"
+                    + "_".join(fset)
+                    + "_features.pout_dec",
+                    " ".join(fset),
+                    self.config["general"]["output_filename"],
+                )
 
-            plotting._REREC.save_plots_to_pfd(self.config["general"]["output_filename"]+"_plots.pdf",FDR_thresholds=[0.01, 0.001])
-            
+            plotting._REREC.save_plots_to_pfd(
+                self.config["general"]["output_filename"] + "_plots.pdf",
+                FDR_thresholds=[0.01, 0.001],
+            )
+
         logger.info("MS²ReScore finished!")
