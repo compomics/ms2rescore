@@ -17,10 +17,11 @@ from ms2rescore.percolator import PercolatorIn
 from ms2rescore._exceptions import MS2ReScoreError
 
 
-class _REREC:
+class RescoreRecord:
     rerecs = []
     loss_gain_df = pd.DataFrame()
     unique_df = pd.DataFrame()
+    count_df = pd.DataFrame()
 
     def __init__(self) -> None:
         pass
@@ -242,7 +243,42 @@ class _REREC:
         return ax
 
     @classmethod
+    def _count_identifications(cls, FDR_threshold=[0.01]):
+        """
+        Count the number of identifications for each PIN, POUT that is listed
+        in the rescore record for certain FDR thresholds.
+
+        Parameters
+        ----------
+        FDR_threshold : List[floats]
+            list of FDR threshold for which to count number of identifications
+
+        """
+        identification_counts = []
+        for rerec in cls.rerecs:
+            for threshold in FDR_threshold:
+                tmp = []
+                tmp.append(rerec.name)
+                tmp.append(rerec.rescore_features)
+                tmp.append(sum(rerec.df.q[~rerec.df["is decoy"]] < threshold))
+                tmp.append(threshold)
+                identification_counts.append(tmp)
+        cls.count_df = pd.DataFrame(
+            identification_counts, columns=["sample", "rescoring", "count", "FDR"]
+        )
+
+    @classmethod
     def _separate_unique_peptides(cls, FDR_threshold=[0.01]):
+        """
+        Count the number of unique identifications for each PIN, POUT that is listed in
+        the rescore record for certain FDR thresholds.
+
+        Parameters
+        ----------
+        FDR_threshold : List[floats]
+            list of FDR threshold for which to count number of unique identifications
+
+        """
         unique_samples = []
         for rerec in cls.rerecs:
             for threshold in FDR_threshold:
@@ -259,23 +295,42 @@ class _REREC:
         cls.unique_df = pd.DataFrame(
             unique_samples, columns=["sample", "rescoring", "upeps", "FDR"]
         )
+        cls.unique_df["count"] = cls.unique_df["upeps"].apply(len)
 
     @classmethod
-    def unique_count_plot(cls):
-        if cls.unique_df.empty:
-            cls._separate_unique_peptides()
-        cls.unique_df["count"] = cls.unique_df["upeps"].apply(len)
+    def count_plot(cls, unique=False):
+        """
+        Barplot of the number of (unique) identifications for each FDR threshold.
+
+        Parameters
+        ----------
+        unique : Boolean
+            If true only plot unique identifications
+            If false plot total amount of identifications
+
+        """
+        if unique:
+            if cls.unique_df.empty:
+                cls._separate_unique_peptides()
+            y_label = "number of unique identified peptides"
+            count_df = cls.unique_df
+        else:
+            if cls.count_df.empty:
+                cls._count_identifications()
+            y_label = "number of identified peptides"
+            count_df = cls.unique_df
 
         g = sns.catplot(
             x="sample",
             y="count",
-            data=cls.unique_df,
+            data=count_df,
             hue="rescoring",
             kind="bar",
             col="FDR",
             legend=False,
         )
-        g.set_ylabels("number of unique peptides identified")
+
+        g.set_ylabels(y_label)
         g.set_xlabels("")
         g.add_legend(loc=7)
         g.fig.set_size_inches(12, 10)
@@ -284,6 +339,19 @@ class _REREC:
 
     @classmethod
     def calculate_loss_gain_df(cls, reference="Before rescoring", FDR_threshold=[0.01]):
+        """
+        Calculate relative amount of gained, lossed and shared unique peptides for each
+        rescoring method relative to the reference.
+
+        Parameters
+        ----------
+        reference : string
+            The rescoring method be used as a reference
+
+        FDR_threshold : List[floats]
+            list of FDR threshold for which to count relative gain, loss
+
+        """
         if cls.unique_df.empty:
             cls._separate_unique_peptides()
         loss_gain = defaultdict(list)
@@ -302,6 +370,8 @@ class _REREC:
                             ].item()
                         )
                     )
+                if "After rescoring: searchengine" in ft_dict.keys():
+                    reference = "After rescoring: searchengine"
                 total = len(ft_dict[reference])
 
                 for feature in cls.unique_df["rescoring"][
@@ -325,6 +395,16 @@ class _REREC:
 
     @classmethod
     def loss_gain_plot(cls, FDR):
+        """
+        Barplot of the relative count of unique peptides for a fixed FDR
+        for each rescoring feature set.
+
+        Parameters
+        ----------
+        FDR : float
+            single FDR threshold used for the plot
+
+        """
         if cls.loss_gain_df.empty:
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])
         if FDR not in cls.loss_gain_df["FDR"].unique():
@@ -404,14 +484,27 @@ class _REREC:
         return ax
 
     @classmethod
-    def save_plots_to_pfd(cls, filename, FDR_thresholds=[0.01]):
+    def save_plots_to_pdf(cls, filename, FDR_thresholds=[0.01]):
+        """
+        Create pdf file with rescore plots.
+
+        Parameters
+        ----------
+        filename : string
+            filename for the pdf file
+
+        FDR_thresholds : list[float]
+            list of FDR thresholds for wich to create plots
+
+        """
         if not cls.rerecs:
             raise MS2ReScoreError("no pin/pout files listed")
 
         pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
         cls._separate_unique_peptides(FDR_thresholds)
+        cls._count_identifications(FDR_thresholds)
 
-        cls.unique_count_plot()
+        cls.count_plot(unique=False)
         pdf.savefig()
 
         cls.qvalue_comparison()
@@ -425,7 +518,9 @@ class _REREC:
         pdf.close()
 
 
-class PIN(_REREC):
+class PIN(RescoreRecord):
+    """PIN file record."""
+
     def __init__(self, path_to_pin, score_metric, sample_name) -> None:
         super().__init__()
         self.score_metric = score_metric
@@ -433,12 +528,14 @@ class PIN(_REREC):
         self.rescore_features = "Before rescoring"
         self.name = sample_name
         self.df = self._read_pin_file(path_to_pin)
-        self.rerecs.append(self)
+        self.rerecs.append(self)  # add PIN record to RescoreRecord
 
     def __str__(self) -> str:
-        return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+        return f"Sample name: {self.name}\nType: {self.type}\
+                \nRescore status: {self.rescore_features}"
 
     def _read_pin_file(self, path_to_pin):
+        """Read pin file, calculate qvalues and write into single pandas DataFrame."""
         pin = PercolatorIn(path_to_pin)
         pin_qvalues = pd.DataFrame(
             qvalues(
@@ -456,7 +553,9 @@ class PIN(_REREC):
         )
 
 
-class POUT(_REREC):
+class POUT(RescoreRecord):
+    """POUT file record."""
+
     def __init__(
         self, path_to_target_pout, path_to_decoy_pout_, rescoring_features, sample_name
     ) -> None:
@@ -468,10 +567,11 @@ class POUT(_REREC):
         self.rescore_features = "After rescoring: " + rescoring_features
         self.name = sample_name
         self.df = self._read_pout_file()
-        self.rerecs.append(self)
+        self.rerecs.append(self)  # add POUT record to RescoreRecord
 
     def __str__(self) -> str:
-        return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+        return f"Sample name: {self.name}\nType: {self.type}\
+                \nRescore status: {self.rescore_features}"
 
     @staticmethod
     def _read_pout(path):

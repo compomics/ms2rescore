@@ -251,30 +251,37 @@ class MS2ReScore:
 
         logger.info("Generating Rescore plots")
         if self.config["general"]["plotting"]:
-            plotting.PIN(
+            pin_file = (
                 self.config["general"]["output_filename"]
                 + "_"
                 + "_".join(self.config["general"]["feature_sets"][0])
-                + "_features.pin",
-                "RawScore",
-                self.config["general"]["output_filename"],
+                + "_features.pin"
+            )
+            plotting.PIN(
+                pin_file, "RawScore", self.config["general"]["output_filename"]
             )
 
             for fset in self.config["general"]["feature_sets"]:
+                pout_file = (
+                    self.config["general"]["output_filename"]
+                    + "_"
+                    + "_".join(fset)
+                    + "_features.pout"
+                )
+                pout_decoy_file = (
+                    self.config["general"]["output_filename"]
+                    + "_"
+                    + "_".join(fset)
+                    + "_features.pout_dec"
+                )
                 plotting.POUT(
-                    self.config["general"]["output_filename"]
-                    + "_"
-                    + "_".join(fset)
-                    + "_features.pout",
-                    self.config["general"]["output_filename"]
-                    + "_"
-                    + "_".join(fset)
-                    + "_features.pout_dec",
+                    pout_file,
+                    pout_decoy_file,
                     " ".join(fset),
                     self.config["general"]["output_filename"],
                 )
 
-            plotting._REREC.save_plots_to_pfd(
+            plotting.RescoreRecord.save_plots_to_pdf(
                 self.config["general"]["output_filename"] + "_plots.pdf",
                 FDR_thresholds=[0.01, 0.001],
             )
