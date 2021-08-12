@@ -1,5 +1,6 @@
 """Plot MS²ReScore results."""
 
+from abc import ABC
 from collections import defaultdict
 from typing import List, Optional
 
@@ -17,7 +18,7 @@ from ms2rescore.percolator import PercolatorIn
 from ms2rescore._exceptions import MS2ReScoreError
 
 
-class RescoreRecord:
+class RescoreRecord(ABC):
     rerecs = []
     loss_gain_df = pd.DataFrame()
     unique_df = pd.DataFrame()
@@ -521,18 +522,37 @@ class RescoreRecord:
 class PIN(RescoreRecord):
     """PIN file record."""
 
-    def __init__(self, path_to_pin, score_metric, sample_name) -> None:
+    def __init__(self, path_to_file, sample_name, score_metric=None) -> None:
         super().__init__()
-        self.score_metric = score_metric
         self.type = "pin"
         self.rescore_features = "Before rescoring"
         self.name = sample_name
-        self.df = self._read_pin_file(path_to_pin)
+        if self._infer_filetype(path_to_file) == "pin":
+            self.score_metric = score_metric
+            self.df = self._read_pin_file(path_to_file)
+        elif self._infer_filetype(path_to_file) == "peprec":
+            self.score_metric = "psm_score"
+            self.df = self._read_pin_from_peprec(path_to_file)
+        else:
+            raise MS2ReScoreError("Not a peprec or pin file")
+
         self.rerecs.append(self)  # add PIN record to RescoreRecord
 
+        """
+        Parameters
+        ----------
+        path_to_file : string
+            path to input file, either peprec or pin file
+
+        sample_name : string
+            name of the sample
+
+        score_metric: string
+            score column label (only required when providing pin file)
+        """
+
     def __str__(self) -> str:
-        return f"Sample name: {self.name}\nType: {self.type}\
-                \nRescore status: {self.rescore_features}"
+        return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
 
     def _read_pin_file(self, path_to_pin):
         """Read pin file, calculate qvalues and write into single pandas DataFrame."""
@@ -552,16 +572,46 @@ class PIN(RescoreRecord):
             columns={"SpecId": "PSMId", "Peptide": "peptide"}
         )
 
+    def _read_pin_from_peprec(self, path_to_peprec):
+        peprec = pd.read_table(path_to_peprec, sep=" ")
+        pin_qvalues = pd.DataFrame(
+            qvalues(
+                peprec,
+                key=peprec['psm_score'],
+                is_decoy=peprec["Label"] == -1,
+                reverse=True,
+                remove_decoy=False,
+                formula=1,
+                full_output=True,
+            )
+        )
+        return pin_qvalues[["spec_id", "is decoy", "score", "q", "peptide"]].rename(
+            columns={"spec_id": "PSMId"}
+        )
+
+    def _infer_filetype(self, filepath):
+        """
+        Extract filetype from file
+
+        Parameters
+        ----------
+        filepath : string
+            filepath from file
+
+        """
+        filetype = filepath.rsplit(".", 1)[1]
+        return filetype
+
 
 class POUT(RescoreRecord):
     """POUT file record."""
 
     def __init__(
-        self, path_to_target_pout, path_to_decoy_pout_, rescoring_features, sample_name
+        self, path_to_target_pout, path_to_decoy_pout, sample_name, rescoring_features
     ) -> None:
         super().__init__()
         self.target_pout = path_to_target_pout
-        self.decoy_pout = path_to_decoy_pout_
+        self.decoy_pout = path_to_decoy_pout
         self.df = self._read_pout_file
         self.type = "pout"
         self.rescore_features = "After rescoring: " + rescoring_features
@@ -569,9 +619,24 @@ class POUT(RescoreRecord):
         self.df = self._read_pout_file()
         self.rerecs.append(self)  # add POUT record to RescoreRecord
 
+        """
+        Parameters
+        ----------
+        path_to_target_pout : string
+            path to target pout file
+
+        path_to_decoy_pout : string
+            path to decoy pout file
+
+        sample_name : string
+            name of the sample
+
+        rescoring_features: list[strings]
+            list of the used rescoring features
+        """
+
     def __str__(self) -> str:
-        return f"Sample name: {self.name}\nType: {self.type}\
-                \nRescore status: {self.rescore_features}"
+        return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
 
     @staticmethod
     def _read_pout(path):
