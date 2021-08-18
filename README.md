@@ -126,10 +126,9 @@ The config file contains three top level categories (`general`, `ms2pip` and
 (e.g. `maxquant`). The most important options in `general` are:
 - **`pipeline`** *(string)*: Pipeline to use, depending on input format. Must be one of:
 `['infer', 'pin', 'tandem', 'maxquant', 'msgfplus', 'peptideshaker']`. Default: `infer`.
-- **`feature_sets`** *(array)*: Feature sets for which to generate PIN files and
-optionally run Percolator. Default: `['all']`.
-  - **Items** *(string)*: Must be one of:
-  `['all', 'ms2pip_rt', 'searchengine', 'rt', 'ms2pip']`.
+- **`feature_sets`** *(array)*: Feature sets for which to generate PIN files and optionally run Percolator. Default: `['searchengine', 'rt', 'ms2pip']`.
+    - **Items** *(array)*
+      - **Items** *(string)*: Must be one of: `['searchengine', 'rt', 'ms2pip']`.
 
 An overview of all options can be found in [configuration.md](https://github.com/compomics/ms2rescore/blob/master/configuration.md)
 
@@ -153,7 +152,7 @@ Several intermediate files are created when the entire pipeline is run. These ca
 accessed by specifying the `tmp_dir` option. Depending on whether or not Percolator is
 run, the following output files can be expected:
 
-For each feature set (e.g. `all`, `ms2pip`, `searchengine`...):
+For each feature set combination (e.g. [`rt`, `ms2pip`, `searchengine`]):
 - `<file>.pin` Percolator IN file
 - `<file>.pout` Percolator OUT file with target PSMs
 - `<file>.pout_dec` Percolator OUT file with decoy PSMs

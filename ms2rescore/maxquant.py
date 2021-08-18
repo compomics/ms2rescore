@@ -105,7 +105,7 @@ class MSMSAccessor:
         """Get mass error unit from DataFrame columns."""
         if "Mass error [Da]" in self._obj.columns:
             self._mass_error_unit = "Da"
-        elif "Mass Error [ppm]" in self._obj.columns:
+        elif "Mass error [ppm]" in self._obj.columns:
             self._mass_error_unit = "ppm"
         else:
             raise NotImplementedError(f"MSMS.txt mass error unit not supported.")

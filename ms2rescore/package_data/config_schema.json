@@ -20,12 +20,16 @@
                     "description": "Feature sets for which to generate PIN files and optionally run Percolator.",
                     "type": "array",
                     "items": {
-                        "type": "string",
-                        "enum": ["all", "ms2pip_rt", "searchengine", "rt", "ms2pip"]
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum":["searchengine", "rt", "ms2pip"]
+                        },
+                        "minitems": 1
                     },
                     "minItems": 1,
                     "uniqueItems": true,
-                    "default": ["all"]
+                    "default": ["searchengine", "rt", "ms2pip"]
                 },
                 "id_decoy_pattern": {
                     "description": "Pattern used to identify the decoy PSMs in identification file. Passed to `--pattern` option of Percolator converters.",
@@ -68,7 +72,11 @@
                     "description": "Logging level",
                     "type": "string",
                     "enum": ["debug", "info", "warning", "error", "critical"]
-                }
+                },
+                "plotting": {
+                    "description": "Output PDF with additional Rescore plots",
+                    "type": "boolean",
+                    "default": false
             }
         },
         "ms2pip": {
@@ -161,4 +169,5 @@
             }
         }
     }
+}
 }

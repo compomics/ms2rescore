@@ -69,6 +69,9 @@ setup(
         "ms2pip>=3.6.3,<4",
         "click>=7,<8",
         "cascade-config",
+        "matplotlib>=3, <4",
+        "seaborn>=0.11",
+        "statsmodels>=0.12"
     ],
     extras_require={
         'deeplc': ["deeplc>=0.1.17"]

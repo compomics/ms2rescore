@@ -13,6 +13,7 @@ from ms2rescore._exceptions import MS2ReScoreError
 from ms2rescore._version import __version__
 from ms2rescore.config_parser import parse_config
 from ms2rescore.retention_time import RetentionTimeIntegration
+from ms2rescore import plotting
 
 
 logger = logging.getLogger(__name__)
@@ -141,7 +142,10 @@ class MS2ReScore:
                 raise FileNotFoundError(f)
 
         ms2pip_command = "ms2pip {} -c {} -s {} -n {}".format(
-            peprec_filename, ms2pip_config_filename, mgf_filename, num_cpu,
+            peprec_filename,
+            ms2pip_config_filename,
+            mgf_filename,
+            num_cpu,
         )
 
         logger.debug("Running MS2PIP: %s", ms2pip_command)
@@ -155,7 +159,9 @@ class MS2ReScore:
             + "_pred_and_emp.csv"
         )
         rescore_core.calculate_features(
-            preds_filename, output_filename + "_ms2pipfeatures.csv", num_cpu,
+            preds_filename,
+            output_filename + "_ms2pipfeatures.csv",
+            num_cpu,
         )
 
     @staticmethod
@@ -167,7 +173,9 @@ class MS2ReScore:
         """Get retention time features with DeepLC."""
         logger.info("Adding retention time features with DeepLC.")
         rt_int = RetentionTimeIntegration(
-            peprec_filename, output_filename + "_rtfeatures.csv", num_cpu=num_cpu,
+            peprec_filename,
+            output_filename + "_rtfeatures.csv",
+            num_cpu=num_cpu,
         )
         rt_int.run()
 
@@ -175,7 +183,10 @@ class MS2ReScore:
         """Run Percolator with different feature subsets."""
         for subset in self.config["general"]["feature_sets"]:
             subname = (
-                self.config["general"]["output_filename"] + "_" + subset + "features"
+                self.config["general"]["output_filename"]
+                + "_"
+                + "_".join(subset)
+                + "_features"
             )
             percolator_cmd = "percolator "
             for op in self.config["percolator"].keys():
@@ -194,7 +205,6 @@ class MS2ReScore:
 
             logger.info("Running Percolator: %s", percolator_cmd)
             subprocess.run(percolator_cmd, shell=True)
-
             if not os.path.isfile(subname + ".pout"):
                 logger.error("Error running Percolator")
 
@@ -210,10 +220,7 @@ class MS2ReScore:
         )
         search_engine_features.to_csv(search_engine_features_filename, index=False)
 
-        if any(
-            fset in self.config["general"]["feature_sets"]
-            for fset in ["ms2pip", "all", "ms2pip_rt"]
-        ):
+        if any("ms2pip" in fst for fst in self.config["general"]["feature_sets"]):
             self.get_ms2pip_features(
                 self.config["ms2pip"],
                 peprec_filename,
@@ -222,10 +229,7 @@ class MS2ReScore:
                 self.config["general"]["num_cpu"],
             )
 
-        if any(
-            fset in self.config["general"]["feature_sets"]
-            for fset in ["rt", "all", "ms2pip_rt"]
-        ):
+        if any("rt" in fst for fst in self.config["general"]["feature_sets"]):
             self.get_rt_features(
                 peprec_filename,
                 self.tmpfile_basepath,
@@ -244,5 +248,36 @@ class MS2ReScore:
 
         if self.config["general"]["run_percolator"]:
             self._run_percolator()
+
+        logger.info("Generating Rescore plots")
+        if self.config["general"]["plotting"]:
+
+            plotting.PIN(
+                peprec_filename, self.config["general"]["output_filename"]
+            )
+
+            for fset in self.config["general"]["feature_sets"]:
+                pout_file = (
+                    self.config["general"]["output_filename"]
+                    + "_"
+                    + "_".join(fset)
+                    + "_features.pout"
+                )
+                pout_decoy_file = (
+                    self.config["general"]["output_filename"]
+                    + "_"
+                    + "_".join(fset)
+                    + "_features.pout_dec"
+                )
+                plotting.POUT(
+                    pout_file,
+                    pout_decoy_file,
+                    self.config["general"]["output_filename"],
+                    " ".join(fset)
+                )
+            plotting.RescoreRecord.save_plots_to_pdf(
+                self.config["general"]["output_filename"] + "_plots.pdf",
+                FDR_thresholds=[0.01, 0.001],
+            )
 
         logger.info("MS²ReScore finished!")

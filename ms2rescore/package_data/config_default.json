@@ -2,7 +2,7 @@
     "$schema": "./config_schema.json",
     "general":{
         "pipeline":"infer",
-        "feature_sets":["all"],
+        "feature_sets":[["searchengine", "ms2pip", "rt"]],
         "run_percolator":true,
         "id_decoy_pattern": null,
         "num_cpu":-1,
@@ -10,7 +10,8 @@
         "tmp_path":null,
         "mgf_path":null,
         "output_filename":null,
-        "log_level": "info"
+        "log_level": "info",
+        "plotting": false
     },
     "ms2pip": {
         "model": "HCD",

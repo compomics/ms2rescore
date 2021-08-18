@@ -14,6 +14,7 @@ import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm
+import itertools
 
 from ms2rescore._exceptions import MS2ReScoreError
 
@@ -21,8 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def make_ms2pip_config(
-    options: Dict,
-    filename: Optional[Union[str, os.PathLike]] = "ms2pip_config.txt"
+    options: Dict, filename: Optional[Union[str, os.PathLike]] = "ms2pip_config.txt"
 ):
     """Write ms2pip configuration file based on ms2pip config dict."""
     with open(filename, "wt") as ms2pip_config:
@@ -349,7 +349,7 @@ def calculate_features(
                     spec_ids[
                         i
                         * len(spec_ids)
-                        // chunk_size: (i + 1)
+                        // chunk_size : (i + 1)
                         * len(spec_ids)
                         // chunk_size
                     ]
@@ -411,34 +411,79 @@ def write_pin_files(
     rt_features_path: {str, None}
         Path to CSV with rt features.
     feature_sets: {list, None}
-        Feature sets for which to write PIN files. Can contain `all`, `search_engine`,
+        Feature sets for which to write PIN files. Can contain `search_engine`,
         `ms2pip`, and `rt`.
 
     """
-    if not feature_sets:
-        feature_sets = ["all", "searchengine", "ms2pip", "rt"]
+    feature_config = {"searchengine": False, "ms2pip": False, "rt": False}
 
-    # Read search engine features
-    if ("searchengine" in feature_sets) or ("all" in feature_sets):
+    # TODO: Fix duality in `observed_retention_time`: peprec column, also rt feature
+    peprec_cols = [
+        "spec_id",
+        "peptide",
+        "peptide_peprec",
+        "modifications",
+        "charge",
+        "label",
+        "psm_score",
+        "observed_retention_time",
+    ]
+    pin_columns = [
+        "SpecId",
+        "ScanNr",
+        "Label",
+        "Peptide",
+        "ModPeptide",
+        "Proteins",
+        "TITLE",
+    ]
+    # Define which features need to be calculated
+    if not feature_sets:
+        feature_config = dict.fromkeys(feature_config, True)
+    else:
+        for feature in set(list(itertools.chain.from_iterable(feature_sets))):
+            try:
+                feature_config[feature] = True
+            except KeyError:
+                raise MS2ReScoreError(f'Feature "{feature}" not available')
+
+    # Read search engine features & Get list with feature names split by type of feature
+    if feature_config["searchengine"]:
         searchengine_features = pd.read_csv(
-            searchengine_features_path,
-            sep=",",
-            index_col=None
+            searchengine_features_path, sep=",", index_col=None
         )
+        search_engine_feature_names = [
+            col
+            for col in searchengine_features.columns
+            if (col not in peprec_cols) and (col not in pin_columns)
+        ]
     else:
         searchengine_features = None
+        search_engine_feature_names = []
 
     # Read MS²PIP features
-    if ("ms2pip" in feature_sets) or ("all" in feature_sets):
+    if feature_config["ms2pip"]:
         ms2pip_features = pd.read_csv(ms2pip_features_path, sep=",", index_col=None)
+        ms2pip_feature_names = [
+            col
+            for col in ms2pip_features.columns
+            if (col not in peprec_cols) and (col not in pin_columns)
+        ]
     else:
         ms2pip_features = None
+        ms2pip_feature_names = []
 
     # Read RT features
-    if ("rt" in feature_sets) or ("all" in feature_sets):
+    if feature_config["rt"]:
         rt_features = pd.read_csv(rt_features_path, sep=",", index_col=None)
+        rt_feature_names = ["observed_retention_time"] + [
+            col
+            for col in rt_features.columns
+            if (col not in peprec_cols) and (col not in pin_columns)
+        ]
     else:
         rt_features = None
+        rt_feature_names = []
 
     # Read PEPREC
     with open(peprec_path, "rt") as f:
@@ -487,52 +532,6 @@ def write_pin_files(
         inplace=True,
     )
 
-    # TODO: Fix duality in `observed_retention_time`: peprec column, also rt feature
-    peprec_cols = [
-        "spec_id",
-        "peptide",
-        "peptide_peprec",
-        "modifications",
-        "charge",
-        "label",
-        "psm_score",
-        "observed_retention_time",
-    ]
-    pin_columns = [
-        "SpecId",
-        "ScanNr",
-        "Label",
-        "Peptide",
-        "ModPeptide",
-        "Proteins",
-        "TITLE",
-    ]
-
-    # Get list with feature names split by type of feature
-    search_engine_feature_names = [
-        col
-        for col in searchengine_features.columns
-        if (col not in peprec_cols) and (col not in pin_columns)
-    ]
-
-    if ("ms2pip" in feature_sets) or ("all" in feature_sets):
-        ms2pip_feature_names = [
-            col
-            for col in ms2pip_features.columns
-            if (col not in peprec_cols) and (col not in pin_columns)
-        ]
-    else:
-        ms2pip_feature_names = []
-
-    if ("rt" in feature_sets) or ("all" in feature_sets):
-        rt_feature_names = ["observed_retention_time"] + [
-            col
-            for col in rt_features.columns
-            if (col not in peprec_cols) and (col not in pin_columns)
-        ]
-    else:
-        rt_feature_names = []
-
     # Merge features and peprec DataFrames
     complete_df = pep
     for feature_set in [searchengine_features, ms2pip_features, rt_features]:
@@ -555,8 +554,9 @@ def write_pin_files(
                 complete_df = pd.concat(
                     [
                         complete_df.reset_index(drop=True),
-                        feature_set.reset_index(drop=True)
-                    ], axis=1
+                        feature_set.reset_index(drop=True),
+                    ],
+                    axis=1,
                 )
     complete_df = complete_df.fillna(value=0).reset_index(drop=True)
     complete_df = complete_df.loc[:, ~complete_df.columns.duplicated()]
@@ -571,55 +571,31 @@ def write_pin_files(
 
     # Write PIN files with ordered columns
     # From Percolator documentation:
-    # SpecId <tab> Label <tab> ScanNr <tab> feature1name <tab> ... <tab> featureNname <tab> Peptide <tab> Proteins
+    # SpecId <tab> Label <tab> ScanNr <tab> feature1name <tab> ... <tab> featureNname
+    # <tab> Peptide <tab> Proteins
 
-    if "all" in feature_sets:
-        complete_df[
-            ["SpecId", "Label", "ScanNr"]
-            + ms2pip_feature_names
-            + rt_feature_names
-            + search_engine_feature_names
-            + ["Peptide", "Proteins"]
-        ].to_csv(
-            "{}_allfeatures.pin".format(savepath), sep="\t", header=True, index=False
-        )
-    if "ms2pip_rt" in feature_sets:
-        complete_df[
-            ["SpecId", "Label", "ScanNr"]
-            + ms2pip_feature_names
-            + rt_feature_names
-            + ["Peptide", "Proteins"]
-        ].to_csv(
-            "{}_ms2pip_rtfeatures.pin".format(savepath),
-            sep="\t",
-            header=True,
-            index=False,
-        )
-    if "ms2pip" in feature_sets:
-        complete_df[
-            ["SpecId", "Label", "ScanNr"]
-            + ms2pip_feature_names
-            + ["Peptide", "Proteins"]
-        ].to_csv(
-            "{}_ms2pipfeatures.pin".format(savepath), sep="\t", header=True, index=False
-        )
-    if "rt" in feature_sets:
-        complete_df[
-            ["SpecId", "Label", "ScanNr"] + rt_feature_names + ["Peptide", "Proteins"]
-        ].to_csv(
-            "{}_rtfeatures.pin".format(savepath), sep="\t", header=True, index=False
-        )
-    if "searchengine" in feature_sets:
-        complete_df[
-            ["SpecId", "Label", "ScanNr"]
-            + search_engine_feature_names
-            + ["Peptide", "Proteins"]
-        ].to_csv(
-            "{}_searchenginefeatures.pin".format(savepath),
-            sep="\t",
-            header=True,
-            index=False,
-        )
+    # Write pin file for each feature set
+    for fset in feature_sets:
 
-    for features_version in feature_sets:
-        redo_pin_tabs("{}_{}features.pin".format(savepath, features_version))
+        feature_config = dict.fromkeys(feature_config, False)
+        col_names = []
+
+        for feature in fset:
+            feature_config[feature] = True
+
+        if feature_config["ms2pip"]:
+            col_names = col_names + ms2pip_feature_names
+
+        if feature_config["rt"]:
+            col_names = col_names + rt_feature_names
+
+        if feature_config["searchengine"]:
+            col_names = col_names + search_engine_feature_names
+
+        outname = "_".join(fset)
+        complete_df[
+            ["SpecId", "Label", "ScanNr"] + col_names + ["Peptide", "Proteins"]
+        ].to_csv(
+            f"{savepath}_{outname}_features.pin", sep="\t", header=True, index=False
+        )
+        redo_pin_tabs(f"{savepath}_{outname}_features.pin")

@@ -6,8 +6,9 @@
 
 - **`general`** *(object)*: General MS²ReScore settings. Cannot contain additional properties.
   - **`pipeline`** *(string)*: Pipeline to use, depending on input format. Must be one of: `['infer', 'pin', 'tandem', 'maxquant', 'msgfplus', 'peptideshaker']`. Default: `infer`.
-  - **`feature_sets`** *(array)*: Feature sets for which to generate PIN files and optionally run Percolator. Default: `['all']`.
-    - **Items** *(string)*: Must be one of: `['all', 'ms2pip_rt', 'searchengine', 'rt', 'ms2pip']`.
+  - **`feature_sets`** *(array)*: Feature sets for which to generate PIN files and optionally run Percolator. Default: `['searchengine', 'rt', 'ms2pip']`.
+    - **Items** *(array)*
+      - **Items** *(string)*: Must be one of: `['searchengine', 'rt', 'ms2pip']`.
   - **`id_decoy_pattern`**: Pattern used to identify the decoy PSMs in identification file. Passed to `--pattern` option of Percolator converters. Default: `None`.
   - **`run_percolator`** *(boolean)*: Run Percolator within MS²ReScore. Default: `False`.
   - **`num_cpu`** *(number)*: Number of parallel processes to use; -1 for all available. Minimum: `-1`. Default: `-1`.
