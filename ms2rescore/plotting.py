@@ -88,12 +88,9 @@ class RescoreRecord(ABC):
             score_cutoff = None
 
         # Score distribution plot
-        plot_list = [
-            list(x)
-            for x in [
-                self.df[self.df[decoy_label]][score_label],
-                self.df[~self.df[decoy_label]][score_label],
-            ]
+        plot_list =[
+            list(self.df[self.df[decoy_label]][score_label]),
+            list(self.df[~self.df[decoy_label]][score_label]),
         ]
         axes[0].hist(
             plot_list,
