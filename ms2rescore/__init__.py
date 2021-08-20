@@ -119,6 +119,8 @@ class MS2ReScore:
             pipeline = id_file_parser.TandemPipeline
         elif self.config["general"]["pipeline"] == "peptideshaker":
             pipeline = id_file_parser.PeptideShakerPipeline
+        elif self.config["general"]["pipeline"] == "Peaks":
+            pipeline = id_file_parser.PeaksPipeline
         else:
             raise NotImplementedError(self.config["general"]["pipeline"])
         return pipeline
