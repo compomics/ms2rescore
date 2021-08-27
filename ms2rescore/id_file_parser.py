@@ -515,7 +515,7 @@ class PeaksPipeline(_Pipeline):
                 "PEAKS:peptideScore",
                 "Label",
                 "Raw file",
-                "rank",
+                "Rank",
                 "protein_description",
             ]
         )
@@ -531,7 +531,7 @@ class PeaksPipeline(_Pipeline):
                         "PEAKS:peptideScore",
                         "Label",
                         "Raw file",
-                        "rank",
+                        "Rank",
                         "protein_description",
                     ]
                 )
@@ -544,9 +544,9 @@ class PeaksPipeline(_Pipeline):
                     .split(".", 1)[0]
                     .replace(",", "_", 1)
                     + "."
-                    + re.findall(r"\d+", flat_dict["spectrumID"]).group(0)
+                    + re.search(r"\d+", flat_dict["spectrumID"]).group(0)
                     + "."
-                    + re.findall(r"\d+", flat_dict["spectrumID"]).group(0)
+                    + re.search(r"\d+", flat_dict["spectrumID"]).group(0)
                 )
                 retrieved_data["spec_id"] = spec_id
                 retrieved_data["peptide"] = flat_dict[
@@ -564,7 +564,7 @@ class PeaksPipeline(_Pipeline):
                 retrieved_data["protein_list"] = flat_dict[
                     "SpectrumIdentificationItem_PeptideEvidenceRef_accession"
                 ]
-                retrieved_data["psm_score"] = flat_dict[
+                retrieved_data["PEAKS:peptideScore"] = flat_dict[
                     "SpectrumIdentificationItem_PEAKS:peptideScore"
                 ]
                 retrieved_data["Label"] = flat_dict[
@@ -577,13 +577,11 @@ class PeaksPipeline(_Pipeline):
                     .replace(",", "_", 1)
                 )
                 retrieved_data["Rank"] = flat_dict["SpectrumIdentificationItem_rank"]
-                df = df.append(retrieved_data, ignore_index=True)
                 retrieved_data["protein_description"] = flat_dict[
                     "SpectrumIdentificationItem_PeptideEvidenceRef_protein description"
                 ]
-
+                df = df.append(retrieved_data, ignore_index=True)
             df["Label"] = df["Label"].apply(lambda x: 1 if x else -1)
-
             return df
 
     def parse_mgf_files(self, peprec):
@@ -598,12 +596,12 @@ class PeaksPipeline(_Pipeline):
             spec_title_col="spec_id",
             title_parsing_method="run.scan.scan",
         )
-        self._path_to_new_mgf = path_to_new_mgf
+        self.passed_mgf_path = path_to_new_mgf
 
     def get_peprec(self) -> PeptideRecord:
         """Get PeptideRecord."""
 
-        peprec = self.df[
+        peprec_df = self.df[
             [
                 "spec_id",
                 "peptide",
@@ -614,16 +612,16 @@ class PeaksPipeline(_Pipeline):
                 "Label",
                 "Raw file",
             ]
-        ].rename({"PEAKS:peptideScore": "psm_score"})
-        peprec.drop("Raw file", axis=1, inplace=True)
-        self.parse_mgf_files(peprec)
-
-        titles, rt = parse_mgf_title_rt(self._path_to_new_mgf)
+        ].rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
+        self.parse_mgf_files(peprec_df)
+        peprec_df.drop("Raw file", axis=1, inplace=True)
+        titles, rt = parse_mgf_title_rt(self.passed_mgf_path)
         id_rt_dict = {
             "spec_id": list(titles.values()),
             "observed_retention_time": list(rt.values()),
         }
-        peprec.merge(pd.DataFrame.from_dict(id_rt_dict), on="spec_id", how="inner")
+        peprec_df = pd.merge(peprec_df, pd.DataFrame.from_dict(id_rt_dict), on="spec_id", how='inner')
+        peprec = PeptideRecord.from_dataframe(peprec_df)
 
         return peprec
 
@@ -631,15 +629,13 @@ class PeaksPipeline(_Pipeline):
         """Get pandas.DataFrame with search engine features."""
 
         peprec_cols = [
-            "spec_id",
             "peptide",
             "modifications",
-            "charge",
             "observed_retention_time",
             "Raw file",
             "protein_list",
             "Label",
         ]
-        non_feature_cols = peprec_cols
-        feature_cols = [col for col in self.df.columns if col not in non_feature_cols]
+
+        feature_cols = [col for col in self.df.columns if col not in peprec_cols]
         return self.df[feature_cols]

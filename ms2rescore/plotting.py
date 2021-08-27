@@ -371,7 +371,8 @@ class RescoreRecord(ABC):
                 if "After rescoring: searchengine" in ft_dict.keys():
                     reference = "After rescoring: searchengine"
                 total = len(ft_dict[reference])
-
+                if len(total) == 0:
+                    continue
                 for feature in cls.unique_df["rescoring"][
                     cls.unique_df["sample"] == sample
                 ].unique():
@@ -403,14 +404,15 @@ class RescoreRecord(ABC):
             single FDR threshold used for the plot
 
         """
-        if cls.loss_gain_df.empty:
-            cls.calculate_loss_gain_df(FDR_threshold=[FDR])
-        if FDR not in cls.loss_gain_df["FDR"].unique():
+        if FDR not in cls.unique_df["FDR"].unique():
             cls._separate_unique_peptides(FDR_threshold=[FDR])
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])
 
         fig = plt.figure()
-        tmp = cls.loss_gain_df[cls.loss_gain_df["FDR"] == FDR]
+        try:
+            tmp = cls.loss_gain_df[cls.loss_gain_df["FDR"] == FDR]
+        except KeyError:
+            return
         for sample in zip(
             tmp["sample"].unique(), list(range(1, len(tmp["sample"].unique()) + 1))
         ):

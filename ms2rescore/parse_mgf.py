@@ -129,5 +129,6 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
     logger.debug(
         "%i/%i spectra found and written to new MGF file.", count, num_expected
     )
-    if not count == num_expected:
-        raise ParseMGFError("Not all PSMs could be found in the provided MGF files.")
+
+    # if not count == num_expected:
+    # raise ParseMGFError("Not all PSMs could be found in the provided MGF files.")
