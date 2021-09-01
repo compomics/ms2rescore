@@ -88,7 +88,7 @@ class RescoreRecord(ABC):
             score_cutoff = None
 
         # Score distribution plot
-        plot_list =[
+        plot_list = [
             list(self.df[self.df[decoy_label]][score_label]),
             list(self.df[~self.df[decoy_label]][score_label]),
         ]
@@ -305,18 +305,18 @@ class RescoreRecord(ABC):
         unique : Boolean
             If true only plot unique identifications
             If false plot total amount of identifications
-
         """
         if unique:
             if cls.unique_df.empty:
                 cls._separate_unique_peptides()
             y_label = "number of unique identified peptides"
-            count_df = cls.unique_df
+            counts_ = cls.unique_df
         else:
+            print("niet unique")
             if cls.count_df.empty:
                 cls._count_identifications()
             y_label = "number of identified peptides"
-            count_df = cls.unique_df
+            count_df = cls.count_df
 
         g = sns.catplot(
             x="sample",
@@ -371,7 +371,7 @@ class RescoreRecord(ABC):
                 if "After rescoring: searchengine" in ft_dict.keys():
                     reference = "After rescoring: searchengine"
                 total = len(ft_dict[reference])
-                if len(total) == 0:
+                if total == 0:
                     continue
                 for feature in cls.unique_df["rescoring"][
                     cls.unique_df["sample"] == sample
@@ -402,8 +402,8 @@ class RescoreRecord(ABC):
         ----------
         FDR : float
             single FDR threshold used for the plot
-
         """
+
         if FDR not in cls.unique_df["FDR"].unique():
             cls._separate_unique_peptides(FDR_threshold=[FDR])
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])

@@ -8,6 +8,8 @@ import tempfile
 from multiprocessing import cpu_count
 from typing import Dict, Optional, Union
 
+import pandas as pd
+
 from ms2rescore import id_file_parser, rescore_core, setup_logging
 from ms2rescore._exceptions import MS2ReScoreError
 from ms2rescore._version import __version__
@@ -271,12 +273,16 @@ class MS2ReScore:
                     + "_".join(fset)
                     + "_features.pout_dec"
                 )
-                plotting.POUT(
-                    pout_file,
-                    pout_decoy_file,
-                    self.config["general"]["output_filename"],
-                    " ".join(fset)
-                )
+                try:
+                    plotting.POUT(
+                        pout_file,
+                        pout_decoy_file,
+                        self.config["general"]["output_filename"],
+                        " ".join(fset)
+                    )
+                except pd.errors.EmptyDataError:
+                    continue
+
             plotting.RescoreRecord.save_plots_to_pdf(
                 self.config["general"]["output_filename"] + "_plots.pdf",
                 FDR_thresholds=[0.01, 0.001],

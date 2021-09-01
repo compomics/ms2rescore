@@ -178,11 +178,11 @@ class _Pipeline(ABC):
         peprec = self.original_pin.to_peptide_record(
             spectrum_index_pattern=self._pin_spec_id_patterns[self._pin_spec_id_style]
         )
-
-        # Map MGF titles and observed retention times
-        titles, retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
-        peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(retention_times)
-        peprec.df["spec_id"] = peprec.df["spec_id"].map(titles)
+        if "observed_retention_time" not in peprec.df.columns:
+            # Map MGF titles and observed retention times
+            titles, retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
+            peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(retention_times)
+            peprec.df["spec_id"] = peprec.df["spec_id"].map(titles)
         if not ~peprec.df["observed_retention_time"].isna().any():
             raise IDFileParserError(
                 "Could not map all MGF retention times to spectrum indices."
@@ -516,7 +516,7 @@ class PeaksPipeline(_Pipeline):
                 "Label",
                 "Raw file",
                 "Rank",
-                "protein_description",
+                #"protein_description",
             ]
         )
         with mzid.read(self.path_to_id_file) as reader:
@@ -532,7 +532,7 @@ class PeaksPipeline(_Pipeline):
                         "Label",
                         "Raw file",
                         "Rank",
-                        "protein_description",
+                        # "protein_description",
                     ]
                 )
                 flat_dict = dict(
@@ -543,10 +543,8 @@ class PeaksPipeline(_Pipeline):
                     .rsplit("/", 1)[1]
                     .split(".", 1)[0]
                     .replace(",", "_", 1)
-                    + "."
-                    + re.search(r"\d+", flat_dict["spectrumID"]).group(0)
-                    + "."
-                    + re.search(r"\d+", flat_dict["spectrumID"]).group(0)
+                    + ":"
+                    + flat_dict["spectrumID"]
                 )
                 retrieved_data["spec_id"] = spec_id
                 retrieved_data["peptide"] = flat_dict[
@@ -577,11 +575,9 @@ class PeaksPipeline(_Pipeline):
                     .replace(",", "_", 1)
                 )
                 retrieved_data["Rank"] = flat_dict["SpectrumIdentificationItem_rank"]
-                retrieved_data["protein_description"] = flat_dict[
-                    "SpectrumIdentificationItem_PeptideEvidenceRef_protein description"
-                ]
+                # retrieved_data["protein_description"] = flat_dict["SpectrumIdentificationItem_PeptideEvidenceRef_protein description"]
                 df = df.append(retrieved_data, ignore_index=True)
-            df["Label"] = df["Label"].apply(lambda x: 1 if x else -1)
+            df["Label"] = df["Label"].apply(lambda x: -1 if x else 1)
             return df
 
     def parse_mgf_files(self, peprec):
@@ -594,7 +590,7 @@ class PeaksPipeline(_Pipeline):
             outname=path_to_new_mgf,
             filename_col="Raw file",
             spec_title_col="spec_id",
-            title_parsing_method="run.scan.scan",
+            title_parsing_method="full_run",
         )
         self.passed_mgf_path = path_to_new_mgf
 
@@ -620,10 +616,11 @@ class PeaksPipeline(_Pipeline):
             "spec_id": list(titles.values()),
             "observed_retention_time": list(rt.values()),
         }
-        peprec_df = pd.merge(peprec_df, pd.DataFrame.from_dict(id_rt_dict), on="spec_id", how='inner')
-        peprec = PeptideRecord.from_dataframe(peprec_df)
+        # TODO try: except ValueError if lists are unequal?
+        id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
+        peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how='inner')
 
-        return peprec
+        return PeptideRecord.from_dataframe(peprec_df)
 
     def get_search_engine_features(self) -> pd.DataFrame:
         """Get pandas.DataFrame with search engine features."""
