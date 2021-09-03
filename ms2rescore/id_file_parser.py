@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 class IDFileParserError(MS2ReScoreError):
     """Error parsing ID file."""
-
     pass
 
 
@@ -181,7 +180,9 @@ class _Pipeline(ABC):
         if "observed_retention_time" not in peprec.df.columns:
             # Map MGF titles and observed retention times
             titles, retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
-            peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(retention_times)
+            peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(
+                retention_times
+            )
             peprec.df["spec_id"] = peprec.df["spec_id"].map(titles)
         if not ~peprec.df["observed_retention_time"].isna().any():
             raise IDFileParserError(
@@ -446,6 +447,7 @@ class PeptideShakerPipeline(_Pipeline):
 
 
 class PeaksPipeline(_Pipeline):
+    # TODO: move code to separate file and create mzid class
     """Peaks mzid report to PeptideRecord and search engine features."""
 
     def __init__(self, config: Dict, output_basename: Union[str, os.PathLike]) -> None:
@@ -516,7 +518,7 @@ class PeaksPipeline(_Pipeline):
                 "Label",
                 "Raw file",
                 "Rank",
-                #"protein_description",
+                # "protein_description",
             ]
         )
         with mzid.read(self.path_to_id_file) as reader:
@@ -559,8 +561,14 @@ class PeaksPipeline(_Pipeline):
                 retrieved_data["charge"] = flat_dict[
                     "SpectrumIdentificationItem_chargeState"
                 ]
-                retrieved_data["protein_list"] = flat_dict[
-                    "SpectrumIdentificationItem_PeptideEvidenceRef_accession"
+                # TODO: create class for SpectrumIdentificationItem
+                # print(spectrum_identification_result)
+                retrieved_data["protein_list"] = [
+                    d["accession"]
+                    for d in spectrum_identification_result[
+                        "SpectrumIdentificationItem"
+                    ][0]["PeptideEvidenceRef"]
+                    if "accession" in d.keys()
                 ]
                 retrieved_data["PEAKS:peptideScore"] = flat_dict[
                     "SpectrumIdentificationItem_PEAKS:peptideScore"
@@ -575,7 +583,6 @@ class PeaksPipeline(_Pipeline):
                     .replace(",", "_", 1)
                 )
                 retrieved_data["Rank"] = flat_dict["SpectrumIdentificationItem_rank"]
-                # retrieved_data["protein_description"] = flat_dict["SpectrumIdentificationItem_PeptideEvidenceRef_protein description"]
                 df = df.append(retrieved_data, ignore_index=True)
             df["Label"] = df["Label"].apply(lambda x: -1 if x else 1)
             return df
@@ -618,7 +625,7 @@ class PeaksPipeline(_Pipeline):
         }
         # TODO try: except ValueError if lists are unequal?
         id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
-        peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how='inner')
+        peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
 
         return PeptideRecord.from_dataframe(peprec_df)
 

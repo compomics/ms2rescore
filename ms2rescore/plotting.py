@@ -312,7 +312,6 @@ class RescoreRecord(ABC):
             y_label = "number of unique identified peptides"
             counts_ = cls.unique_df
         else:
-            print("niet unique")
             if cls.count_df.empty:
                 cls._count_identifications()
             y_label = "number of identified peptides"
@@ -403,16 +402,16 @@ class RescoreRecord(ABC):
         FDR : float
             single FDR threshold used for the plot
         """
+        fig = plt.figure()
 
-        if FDR not in cls.unique_df["FDR"].unique():
+        if cls.loss_gain_df.empty:
+            cls.calculate_loss_gain_df(FDR_threshold=[FDR])
+        if FDR not in cls.loss_gain_df["FDR"].unique():
             cls._separate_unique_peptides(FDR_threshold=[FDR])
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])
 
-        fig = plt.figure()
-        try:
-            tmp = cls.loss_gain_df[cls.loss_gain_df["FDR"] == FDR]
-        except KeyError:
-            return
+        tmp = cls.loss_gain_df[cls.loss_gain_df["FDR"] == FDR]
+
         for sample in zip(
             tmp["sample"].unique(), list(range(1, len(tmp["sample"].unique()) + 1))
         ):
@@ -511,10 +510,9 @@ class RescoreRecord(ABC):
         plt.tight_layout()
         pdf.savefig()
 
-        for fdr in FDR_thresholds:
-            cls.loss_gain_plot(FDR=fdr)
-            plt.tight_layout()
-            pdf.savefig()
+        cls.loss_gain_plot(FDR=0.01)
+        plt.tight_layout()
+        pdf.savefig()
         pdf.close()
 
 

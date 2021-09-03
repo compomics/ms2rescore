@@ -476,7 +476,7 @@ class PercolatorIn:
         peprec_df["charge"] = self._get_charge_column()
         if score_column_label:
             peprec_df["psm_score"] = self.df[score_column_label]
-        peprec_df["label"] = self.df["Label"]
+        peprec_df["Label"] = self.df["Label"]
         peprec_df["Proteins"] = self.df["Proteins"]
         if "RT" in self.df.columns:
             peprec_df["observed_retention_time"] = self.df["RT"]
