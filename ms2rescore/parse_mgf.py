@@ -119,12 +119,15 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
                             out.write(line + '\n')
                             found = False
                             continue
-                    # Temporary fix (see above)
-                    if 'CHARGE=' in line:
+                    # Temporary fix (see above, write charge if pepmass is written)
+                    if 'PEPMASS=' in line:
                         if found:
                             charge = id_charges[title]
+                            out.write(line)
                             out.write("CHARGE=" + str(charge) + "+\n")
                             continue
+                    if 'CHARGE=' in line:
+                        continue
                     # Only print lines when spectrum is found and intensity != 0
                     if found and line[-4:] != ' 0.0\n':
                         out.write(line)

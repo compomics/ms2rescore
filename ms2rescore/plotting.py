@@ -310,7 +310,7 @@ class RescoreRecord(ABC):
             if cls.unique_df.empty:
                 cls._separate_unique_peptides()
             y_label = "number of unique identified peptides"
-            counts_ = cls.unique_df
+            count_df = cls.unique_df
         else:
             if cls.count_df.empty:
                 cls._count_identifications()
