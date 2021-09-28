@@ -396,7 +396,7 @@ class MaxQuantPipeline(_Pipeline):
         )
         if parse_mgf:
             self.parse_mgf_files(peprec)
-        peprec.df.drop("Raw file", axis=1, inplace=True)
+        # peprec.df.drop("Raw file", axis=1, inplace=True)
         return peprec
 
     def get_search_engine_features(self) -> pd.DataFrame:
@@ -617,7 +617,7 @@ class PeaksPipeline(_Pipeline):
             ]
         ].rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
         self.parse_mgf_files(peprec_df)
-        peprec_df.drop("Raw file", axis=1, inplace=True)
+        # peprec_df.drop("Raw file", axis=1, inplace=True)
         titles, rt = parse_mgf_title_rt(self.passed_mgf_path)
         id_rt_dict = {
             "spec_id": list(titles.values()),

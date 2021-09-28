@@ -7,9 +7,11 @@ from typing import Optional, Union
 import click
 import pandas as pd
 
+from deeplc import DeepLC
+
 from ms2rescore.peptide_record import PeptideRecord
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 
 logger = logging.getLogger(__name__)
@@ -65,14 +67,8 @@ class RetentionTimeIntegration:
 
         # Until fixed upstream: https://github.com/compomics/DeepLC/issues/19
         if "NUMEXPR_MAX_THREADS" not in os.environ:
-            os.environ['NUMEXPR_MAX_THREADS'] = str(self.num_cpu)
+            os.environ["NUMEXPR_MAX_THREADS"] = str(self.num_cpu)
 
-        from deeplc import DeepLC
-
-        self.deeplc_predictor = DeepLC(
-            split_cal=10,
-            n_jobs=self.num_cpu, cnn_model=True, verbose=False
-        )
         self.peprec = None
         self.feature_df = None
 
@@ -99,7 +95,7 @@ class RetentionTimeIntegration:
                     "Requested number of calibration PSMs (%s) is larger than total number "
                     "of PSMs in PEPREC (%s). Using all PSMs for calibration.",
                     self.calibration_set_size,
-                    self.peprec.df
+                    self.peprec.df,
                 )
                 num_calibration_psms = len(self.peprec.df)
             else:
@@ -112,41 +108,35 @@ class RetentionTimeIntegration:
         logger.debug("Using %i PSMs for calibration", num_calibration_psms)
         return num_calibration_psms
 
-    @property
-    def calibration_data(self):
+    def get_calibration_data(self, peprec):
         """Get calibration peptides (N best PSMs in PEPREC)."""
         ascending = not self.higher_psm_score_better
-        if "label" in self.peprec.df.columns:
+        if "label" in peprec.columns:
             label_col = "label"
-        elif "Label" in self.peprec.df.columns:
+        elif "Label" in peprec.columns:
             label_col = "Label"
         else:
             raise ValueError("No label column found in peptide record.")
         calibration_data = (
-            self.peprec.df[self.peprec.df[label_col] == 1]
+            peprec[peprec[label_col] == 1]
             .sort_values(["psm_score"], ascending=ascending)
             .head(self.num_calibration_psms)
-            .rename(columns={"observed_retention_time": "tr", "peptide": "seq",})
-            [["tr", "seq", "modifications"]]
+            .rename(
+                columns={
+                    "observed_retention_time": "tr",
+                    "peptide": "seq",
+                }
+            )[["tr", "seq", "modifications"]]
             .copy()
         )
         return calibration_data
 
-    @property
-    def prediction_data(self):
+    def get_prediction_data(self, peprec):
         """Get prediction peptides."""
-        return self.peprec.df[["peptide", "modifications"]].rename(
-            columns={"peptide": "seq",}
-        )
-
-    def _calibrate_predictor(self):
-        """Calibrate retention time predictor."""
-        self.deeplc_predictor.calibrate_preds(seq_df=self.calibration_data)
-
-    def _get_predictions(self):
-        """Get retention time predictions."""
-        self.predicted_rts = pd.Series(
-            self.deeplc_predictor.make_preds(seq_df=self.prediction_data)
+        return peprec[["peptide", "modifications"]].rename(
+            columns={
+                "peptide": "seq",
+            }
         )
 
     def _calculate_features(self):
@@ -200,9 +190,49 @@ class RetentionTimeIntegration:
 
     def run(self):
         """Get retention time predictions for PEPREC and calculate features."""
-        self._calibrate_predictor()
-        self._get_predictions()
-        self.peprec.df["predicted_retention_time"] = self.predicted_rts
+        if "Raw file" in self.peprec.df.columns:
+            raw_specific_predicted_dfs = []
+            for raw_file, df in self.peprec.df.groupby("Raw file"):
+                peprec_raw_df = df.copy().reset_index()
+                self.deeplc_predictor = DeepLC(
+                    split_cal=10, n_jobs=self.num_cpu, cnn_model=True, verbose=False
+                )
+                retention_time_df = pd.DataFrame(
+                    columns=["spec_id", "predicted_retention_time"]
+                )
+                logger.info(f"Calibrating for {raw_file}")
+                self.deeplc_predictor.calibrate_preds(
+                    seq_df=self.get_calibration_data(peprec_raw_df)
+                )
+                predicted_rts = pd.Series(
+                    self.deeplc_predictor.make_preds(
+                        seq_df=self.get_prediction_data(peprec_raw_df)
+                    )
+                )
+                retention_time_df["spec_id"] = peprec_raw_df["spec_id"].copy()
+                retention_time_df["predicted_retention_time"] = predicted_rts
+
+                raw_specific_predicted_dfs.append(retention_time_df)
+            self.peprec.df = pd.merge(
+                self.peprec.df,
+                pd.concat(raw_specific_predicted_dfs, ignore_index=True),
+                on="spec_id",
+                how="inner",
+            )
+        else:
+            self.deeplc_predictor = DeepLC(
+                split_cal=10, n_jobs=self.num_cpu, cnn_model=True, verbose=False
+            )
+            self.deeplc_predictor.calibrate_preds(
+                seq_df=self.get_calibration_data(self.peprec.df)
+            )
+            predicted_rts = pd.Series(
+                self.deeplc_predictor.make_preds(
+                    seq_df=self.get_prediction_data(self.peprec.df)
+                )
+            )
+            self.peprec.df["predicted_retention_time"] = predicted_rts
+
         self._calculate_features()
         self.feature_df.to_csv(self.feature_path, index=False)
 
