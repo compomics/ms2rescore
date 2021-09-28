@@ -46,7 +46,7 @@ class MS2ReScore:
         self.config = parse_config(
             parse_cli_args=parse_cli_args, config_class=configuration
         )
-        exit()
+
         if set_logger:
             setup_logging.setup_logging(self.config["general"]["log_level"])
 

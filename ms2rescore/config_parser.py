@@ -142,14 +142,7 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
         raise MS2ReScoreConfigurationError(
             "If `parse_cli_args` is False, `config_class` arguments are required."
         )
-    # print(json.load(config_default)["general"]["output_filename"])
-    # with open(config_user, "rt") as f:
-    #     print(json.load(f)["general"]["output_filename"])
-    # print(args.output_filename)
-    # if config_class:
-    #     print(config_class["output_filename"])
-    # else:
-    #     print(None)
+
     cascade_conf = CascadeConfig(validation_schema=json.load(config_schema))
     cascade_conf.add_dict(json.load(config_default))
     if config_user:
@@ -159,8 +152,7 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
     elif config_class:
         cascade_conf.add_dict(config_class, subkey="general")
     config = cascade_conf.parse()
-    print(config)
-    exit()
+
     config = _validate_filenames(config)
     config = _validate_num_cpu(config)
 
