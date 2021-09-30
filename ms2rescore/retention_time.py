@@ -75,8 +75,7 @@ class RetentionTimeIntegration:
         if self.peprec_path:
             self.peprec = PeptideRecord(path=self.peprec_path)
 
-    @property
-    def num_calibration_psms(self):
+    def num_calibration_psms(self, peprec):
         """Get number of calibration PSMs given `calibration_set_size` and total number of PSMs."""
         if isinstance(self.calibration_set_size, float):
             if self.calibration_set_size > 1:
@@ -87,17 +86,17 @@ class RetentionTimeIntegration:
                 )
             else:
                 num_calibration_psms = round(
-                    len(self.peprec.df) * self.calibration_set_size
+                    len(peprec) * self.calibration_set_size
                 )
         elif isinstance(self.calibration_set_size, int):
-            if self.calibration_set_size > len(self.peprec.df):
+            if self.calibration_set_size > len(peprec):
                 logger.warning(
                     "Requested number of calibration PSMs (%s) is larger than total number "
                     "of PSMs in PEPREC (%s). Using all PSMs for calibration.",
                     self.calibration_set_size,
-                    self.peprec.df,
+                    peprec,
                 )
-                num_calibration_psms = len(self.peprec.df)
+                num_calibration_psms = len(peprec)
             else:
                 num_calibration_psms = self.calibration_set_size
         else:
@@ -120,7 +119,7 @@ class RetentionTimeIntegration:
         calibration_data = (
             peprec[peprec[label_col] == 1]
             .sort_values(["psm_score"], ascending=ascending)
-            .head(self.num_calibration_psms)
+            .head(self.num_calibration_psms(peprec=peprec))
             .rename(
                 columns={
                     "observed_retention_time": "tr",

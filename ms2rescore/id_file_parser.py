@@ -396,7 +396,7 @@ class MaxQuantPipeline(_Pipeline):
         )
         if parse_mgf:
             self.parse_mgf_files(peprec)
-        # peprec.df.drop("Raw file", axis=1, inplace=True)
+        peprec.df.drop("Raw file", axis=1, inplace=True)
         return peprec
 
     def get_search_engine_features(self) -> pd.DataFrame:
