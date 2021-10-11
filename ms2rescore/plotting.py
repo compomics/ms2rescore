@@ -15,6 +15,7 @@ from statsmodels.distributions.empirical_distribution import ECDF
 
 
 from ms2rescore.percolator import PercolatorIn
+
 from ms2rescore._exceptions import MS2ReScoreError
 
 
@@ -335,7 +336,7 @@ class RescoreRecord(ABC):
         return g
 
     @classmethod
-    def calculate_loss_gain_df(cls, reference="Before rescoring", FDR_threshold=[0.01]):
+    def calculate_loss_gain_df(cls, reference=None, FDR_threshold=[0.01]):
         """
         Calculate relative amount of gained, lossed and shared unique peptides for each
         rescoring method relative to the reference.
@@ -367,8 +368,13 @@ class RescoreRecord(ABC):
                             ].item()
                         )
                     )
-                if "After rescoring: searchengine" in ft_dict.keys():
-                    reference = "After rescoring: searchengine"
+                if reference:
+                    pass
+                elif "After rescoring: Searchengine" in ft_dict.keys():
+                    reference = "After rescoring: Searchengine"
+                else:
+                    reference = "Before rescoring"
+
                 total = len(ft_dict[reference])
                 if total == 0:
                     continue
@@ -574,7 +580,7 @@ class PIN(RescoreRecord):
         pin_qvalues = pd.DataFrame(
             qvalues(
                 peprec,
-                key=peprec['psm_score'],
+                key=peprec["psm_score"],
                 is_decoy=peprec["Label"] == -1,
                 reverse=True,
                 remove_decoy=False,

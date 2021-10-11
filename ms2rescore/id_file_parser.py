@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 class IDFileParserError(MS2ReScoreError):
     """Error parsing ID file."""
+
     pass
 
 
@@ -617,13 +618,11 @@ class PeaksPipeline(_Pipeline):
             ]
         ].rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
         self.parse_mgf_files(peprec_df)
-        # peprec_df.drop("Raw file", axis=1, inplace=True)
         titles, rt = parse_mgf_title_rt(self.passed_mgf_path)
         id_rt_dict = {
             "spec_id": list(titles.values()),
             "observed_retention_time": list(rt.values()),
         }
-        # TODO try: except ValueError if lists are unequal?
         id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
         peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
 
