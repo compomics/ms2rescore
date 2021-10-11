@@ -7,8 +7,6 @@ from typing import Optional, Union
 import click
 import pandas as pd
 
-from deeplc import DeepLC
-
 from ms2rescore.peptide_record import PeptideRecord
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -189,6 +187,9 @@ class RetentionTimeIntegration:
 
     def run(self):
         """Get retention time predictions for PEPREC and calculate features."""
+
+        from deeplc import DeepLC
+
         if "Raw file" in self.peprec.df.columns:
             raw_specific_predicted_dfs = []
             for raw_file, df in self.peprec.df.groupby("Raw file"):
