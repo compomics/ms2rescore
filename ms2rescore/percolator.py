@@ -98,7 +98,7 @@ class PercolatorIn:
                 self._modification_label_type = "str"
                 self._modification_mapping = value
             elif all([isinstance(label, float) for label in mod_labels]):
-                self.modification_pattern = r"\[(\+[0-9\-\.]*)\]"
+                self.modification_pattern = r"\[((\+|\-|)[0-9\-\.]*)\]"
                 self._modification_label_type = "float"
                 self._modification_mapping = {
                     (aa, self._round(shift)): name
@@ -426,7 +426,7 @@ class PercolatorIn:
 
     def to_peptide_record(
         self,
-        extract_spectrum_index: Optional[bool] = False,
+        extract_spectrum_index: Optional[bool] = True,
         spectrum_index_pattern: Optional[str] = None,
         score_column_label: Optional[str] = None,
     ) -> PeptideRecord:
