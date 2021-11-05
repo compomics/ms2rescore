@@ -13,7 +13,7 @@
                 "pipeline": {
                     "description": "Pipeline to use, depending on input format",
                     "type": "string",
-                    "enum": ["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker", "Peaks"],
+                    "enum": ["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker", "peaks"],
                     "default": "infer"
                 },
                 "feature_sets": {

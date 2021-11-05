@@ -8,8 +8,7 @@ from typing import Dict, Tuple, Union, List
 
 import numpy as np
 import pandas as pd
-from pyteomics import tandem
-from pyteomics import mzid
+from pyteomics import tandem, mzid
 from tqdm import tqdm
 
 from ms2rescore._exceptions import MS2ReScoreError
@@ -67,6 +66,7 @@ class _Pipeline(ABC):
             "generic": r".+_([0-9]+)_[0-9]+_[0-9]+",
             "tandem": r".+_([0-9]+)_[0-9]+_[0-9]+",
             "msgfplus": r".+_SII_([0-9]+)_[0-9]+_[0-9]+_[0-9]+",
+            "USI": r"mzspec:PXD[0-9]{6}:[^\s\:]*:scan:([0-9]+)"
         }
 
         # Private attributes specific to pipeline, override these in each subclass
@@ -562,8 +562,6 @@ class PeaksPipeline(_Pipeline):
                 retrieved_data["charge"] = flat_dict[
                     "SpectrumIdentificationItem_chargeState"
                 ]
-                # TODO: create class for SpectrumIdentificationItem
-                # print(spectrum_identification_result)
                 retrieved_data["protein_list"] = [
                     d["accession"]
                     for d in spectrum_identification_result[

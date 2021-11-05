@@ -250,13 +250,13 @@ class PercolatorIn:
 
     def _get_charge_column(self) -> pd.Series:
         """Get charge column from one-hot encoded `ChargeX` columns."""
-        charge_cols = [col for col in self.df.columns if col.startswith("charge")]
+        charge_cols = [col for col in self.df.columns if col.lower().startswith("charge")]
         if not (self.df[charge_cols] == 1).any(axis=1).all():
             raise PercolatorInError("Not all PSMs have an assigned charge state.")
         return (
             self.df[charge_cols]
             .rename(
-                columns={col: int(col.replace("charge", "")) for col in charge_cols}
+                columns={col: int(col.lower().replace("charge", "")) for col in charge_cols}
             )
             .idxmax(1)
         )
@@ -424,6 +424,7 @@ class PercolatorIn:
         feature_cols = [col for col in self.df.columns if col not in non_feature_cols]
         return self.df[feature_cols]
 
+    # TODO if USI is used extract_spectrum_index should be False
     def to_peptide_record(
         self,
         extract_spectrum_index: Optional[bool] = True,

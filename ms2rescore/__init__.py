@@ -8,7 +8,7 @@ import tempfile
 from multiprocessing import cpu_count
 from typing import Dict, Optional, Union
 
-import pandas as pd
+from pandas.errors import EmptyDataError
 
 from ms2rescore import id_file_parser, rescore_core, setup_logging
 from ms2rescore._exceptions import MS2ReScoreError
@@ -108,21 +108,21 @@ class MS2ReScore:
 
     def _select_pipeline(self):
         """Select specific rescoring pipeline."""
-        if self.config["general"]["pipeline"] == "infer":
+        if self.config["general"]["pipeline"].lower() == "infer":
             pipeline = self._infer_pipeline(
                 self.config["general"]["identification_file"]
             )
-        elif self.config["general"]["pipeline"] == "pin":
+        elif self.config["general"]["pipeline"].lower() == "pin":
             pipeline = id_file_parser.PinPipeline
-        elif self.config["general"]["pipeline"] == "maxquant":
+        elif self.config["general"]["pipeline"].lower() == "maxquant":
             pipeline = id_file_parser.MaxQuantPipeline
-        elif self.config["general"]["pipeline"] == "msgfplus":
+        elif self.config["general"]["pipeline"].lower() == "msgfplus":
             pipeline = id_file_parser.MSGFPipeline
-        elif self.config["general"]["pipeline"] == "tandem":
+        elif self.config["general"]["pipeline"].lower() == "tandem":
             pipeline = id_file_parser.TandemPipeline
-        elif self.config["general"]["pipeline"] == "peptideshaker":
+        elif self.config["general"]["pipeline"].lower() == "peptideshaker":
             pipeline = id_file_parser.PeptideShakerPipeline
-        elif self.config["general"]["pipeline"] == "Peaks":
+        elif self.config["general"]["pipeline"].lower() == "peaks":
             pipeline = id_file_parser.PeaksPipeline
         else:
             raise NotImplementedError(self.config["general"]["pipeline"])
@@ -254,39 +254,41 @@ class MS2ReScore:
         if self.config["general"]["run_percolator"]:
             self._run_percolator()
 
-        logger.info("Generating Rescore plots")
-        if self.config["general"]["plotting"]:
+            # Only use plotting module when run_percolator is true
+            if self.config["general"]["plotting"]:
+                logger.info("Generating Rescore plots")
 
-            plotting.PIN(
-                peprec_filename, self.config["general"]["output_filename"]
-            )
+                plotting.PIN(
+                    peprec_filename, self.config["general"]["output_filename"]
+                )
 
-            for fset in self.config["general"]["feature_sets"]:
-                pout_file = (
-                    self.config["general"]["output_filename"]
-                    + "_"
-                    + "_".join(fset)
-                    + "_features.pout"
-                )
-                pout_decoy_file = (
-                    self.config["general"]["output_filename"]
-                    + "_"
-                    + "_".join(fset)
-                    + "_features.pout_dec"
-                )
-                try:
-                    plotting.POUT(
-                        pout_file,
-                        pout_decoy_file,
-                        self.config["general"]["output_filename"],
-                        " ".join(fset)
+                for fset in self.config["general"]["feature_sets"]:
+                    pout_file = (
+                        self.config["general"]["output_filename"]
+                        + "_"
+                        + "_".join(fset)
+                        + "_features.pout"
                     )
-                except pd.errors.EmptyDataError:
-                    continue
+                    pout_decoy_file = (
+                        self.config["general"]["output_filename"]
+                        + "_"
+                        + "_".join(fset)
+                        + "_features.pout_dec"
+                    )
+                    try:
+                        plotting.POUT(
+                            pout_file,
+                            pout_decoy_file,
+                            self.config["general"]["output_filename"],
+                            " ".join(fset)
+                        )
+                    except EmptyDataError:
+                        logger.warn(f"Feature set: {'_'.join(fset)} returned empty pout file")
+                        continue
 
-            plotting.RescoreRecord.save_plots_to_pdf(
-                self.config["general"]["output_filename"] + "_plots.pdf",
-                FDR_thresholds=[0.01, 0.001],
-            )
+                plotting.RescoreRecord.save_plots_to_pdf(
+                    self.config["general"]["output_filename"] + "_plots.pdf",
+                    FDR_thresholds=[0.01, 0.001],
+                )
 
         logger.info("MS²ReScore finished!")
