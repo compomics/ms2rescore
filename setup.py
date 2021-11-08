@@ -76,8 +76,10 @@ setup(
         "seaborn>=0.11",
         "statsmodels>=0.12",
         "deeplc>=0.1.17",
-        "gooey>=1.0"
     ],
+    extras_require={
+        "gui": ["gooey>=1.0"],
+    },
     test_suite="tests",
     tests_require=["ms2rescore", "pytest>=4.3.0,<5"],
 )
