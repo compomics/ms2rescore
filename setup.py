@@ -55,7 +55,10 @@ setup(
     ],
     packages=["ms2rescore"],
     include_package_data=True,
-    entry_points={"console_scripts": ["ms2rescore=ms2rescore.__main__:main"]},
+    entry_points={"console_scripts": [
+        "ms2rescore=ms2rescore.__main__:main",
+        "ms2rescore-gui=ms2rescore.gui:main",
+    ]},
     python_requires=">=3.7",
     install_requires=[
         "importlib-resources;python_version<'3.7'",
@@ -71,11 +74,10 @@ setup(
         "cascade-config",
         "matplotlib>=3, <4",
         "seaborn>=0.11",
-        "statsmodels>=0.12"
+        "statsmodels>=0.12",
+        "deeplc>=0.1.17",
+        "gooey>=1.0"
     ],
-    extras_require={
-        'deeplc': ["deeplc>=0.1.17"]
-    },
     test_suite="tests",
     tests_require=["ms2rescore", "pytest>=4.3.0,<5"],
 )

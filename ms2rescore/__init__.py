@@ -48,7 +48,8 @@ class MS2ReScore:
             setup_logging.setup_logging(self.config["general"]["log_level"])
 
         self._validate_cli_dependency("percolator -h")
-        self._validate_cli_dependency("ms2pip -h")
+        if any("ms2pip" in f for f in self.config["general"]["feature_sets"]):
+            self._validate_cli_dependency("ms2pip -h")
 
         logger.debug(
             "Using %i of %i available CPUs.",
