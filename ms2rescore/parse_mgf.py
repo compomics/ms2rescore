@@ -94,7 +94,8 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
 
     with open(outname, 'w') as out:
         count = 0
-        for run in runs:
+        iterator = tqdm(runs) if show_progress_bar else runs
+        for run in iterator:
             current_mgf_file = os.path.join(mgf_folder, run + file_suffix)
             spec_set = set(df_in[(df_in[filename_col] == run)][spec_title_col].values)
             # Temporary fix: replace charges in MGF with ID'ed charges
@@ -103,8 +104,7 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
 
             found = False
             with open(current_mgf_file, 'r') as f:
-                iterator = tqdm(f, total=get_num_lines(current_mgf_file)) if show_progress_bar else f
-                for line in iterator:
+                for line in f:
                     if 'TITLE=' in line:
                         title = title_parser(line, method=title_parsing_method, run=run)
                         if title in spec_set:

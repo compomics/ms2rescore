@@ -108,21 +108,21 @@ class MS2ReScore:
 
     def _select_pipeline(self):
         """Select specific rescoring pipeline."""
-        if self.config["general"]["pipeline"].lower() == "infer":
+        if self.config["general"]["pipeline"] == "infer":
             pipeline = self._infer_pipeline(
                 self.config["general"]["identification_file"]
             )
-        elif self.config["general"]["pipeline"].lower() == "pin":
+        elif self.config["general"]["pipeline"] == "pin":
             pipeline = id_file_parser.PinPipeline
-        elif self.config["general"]["pipeline"].lower() == "maxquant":
+        elif self.config["general"]["pipeline"] == "maxquant":
             pipeline = id_file_parser.MaxQuantPipeline
-        elif self.config["general"]["pipeline"].lower() == "msgfplus":
+        elif self.config["general"]["pipeline"] == "msgfplus":
             pipeline = id_file_parser.MSGFPipeline
-        elif self.config["general"]["pipeline"].lower() == "tandem":
+        elif self.config["general"]["pipeline"] == "tandem":
             pipeline = id_file_parser.TandemPipeline
-        elif self.config["general"]["pipeline"].lower() == "peptideshaker":
+        elif self.config["general"]["pipeline"] == "peptideshaker":
             pipeline = id_file_parser.PeptideShakerPipeline
-        elif self.config["general"]["pipeline"].lower() == "peaks":
+        elif self.config["general"]["pipeline"] == "peaks":
             pipeline = id_file_parser.PeaksPipeline
         else:
             raise NotImplementedError(self.config["general"]["pipeline"])

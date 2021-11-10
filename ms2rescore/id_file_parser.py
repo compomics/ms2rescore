@@ -66,7 +66,7 @@ class _Pipeline(ABC):
             "generic": r".+_([0-9]+)_[0-9]+_[0-9]+",
             "tandem": r".+_([0-9]+)_[0-9]+_[0-9]+",
             "msgfplus": r".+_SII_([0-9]+)_[0-9]+_[0-9]+_[0-9]+",
-            "USI": r"mzspec:PXD[0-9]{6}:[^\s\:]*:scan:([0-9]+)"
+            # "USI": r"mzspec:PXD[0-9]{6}:[^\s\:]*:scan:([0-9]+)"
         }
 
         # Private attributes specific to pipeline, override these in each subclass
@@ -397,7 +397,6 @@ class MaxQuantPipeline(_Pipeline):
         )
         if parse_mgf:
             self.parse_mgf_files(peprec)
-        peprec.df.drop("Raw file", axis=1, inplace=True)
         return peprec
 
     def get_search_engine_features(self) -> pd.DataFrame:

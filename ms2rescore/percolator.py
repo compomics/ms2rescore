@@ -98,7 +98,7 @@ class PercolatorIn:
                 self._modification_label_type = "str"
                 self._modification_mapping = value
             elif all([isinstance(label, float) for label in mod_labels]):
-                self.modification_pattern = r"\[((\+|\-|)[0-9\-\.]*)\]"
+                self.modification_pattern = r"\[([+-]?[0-9\-.]*)\]"
                 self._modification_label_type = "float"
                 self._modification_mapping = {
                     (aa, self._round(shift)): name
