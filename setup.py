@@ -69,7 +69,7 @@ setup(
         "tqdm>=4.31.0,<5",
         "pyteomics>=4.1.0,<5",
         "lxml>=4.5,<5",
-        "ms2pip>=3.6.3,<4",
+#        "ms2pip>=3.6.3,<4",
         "click>=7,<8",
         "cascade-config",
         "matplotlib>=3, <4",
