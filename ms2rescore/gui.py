@@ -36,8 +36,6 @@ def main():
     # TODO add maxquant to rescore to cascade config
     rescore.config["maxquant_to_rescore"]["modification_mapping"].update(conf["maxquant_to_rescore"]["modification_mapping"])
     rescore.config["maxquant_to_rescore"]["fixed_modifications"].update(conf["maxquant_to_rescore"]["fixed_modifications"])
-    print(rescore.config)
-    exit()
     rescore.run()
 
 
