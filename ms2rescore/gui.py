@@ -25,7 +25,6 @@ with pkg_resources.path(package_data, "img") as img_dir:
     program_name="MS²Rescore",
     program_description="Sensitive PSM rescoring with predicted MS² peak intensities.",
     image_dir=img_dir,
-    navigation="TABBED",
     tabbed_groups=True,
 )
 def main():
