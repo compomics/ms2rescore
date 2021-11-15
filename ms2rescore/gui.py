@@ -26,16 +26,18 @@ with pkg_resources.path(package_data, "img") as img_dir:
     program_description="Sensitive PSM rescoring with predicted MS² peak intensities.",
     image_dir=img_dir,
     navigation="TABBED",
-    tabbed_groups=True
-
+    tabbed_groups=True,
 )
 def main():
     """Run MS²Rescore."""
     conf = _parse_arguments().__dict__
     conf = parse_maxquant_settings(conf)
     rescore = MS2ReScore(parse_cli_args=False, configuration=conf["general"], set_logger=True)
+    # TODO add maxquant to rescore to cascade config
     rescore.config["maxquant_to_rescore"]["modification_mapping"].update(conf["maxquant_to_rescore"]["modification_mapping"])
     rescore.config["maxquant_to_rescore"]["fixed_modifications"].update(conf["maxquant_to_rescore"]["fixed_modifications"])
+    print(rescore.config)
+    exit()
     rescore.run()
 
 
@@ -89,6 +91,16 @@ def _parse_arguments() -> argparse.Namespace:
         dest="output_filename",
         help="Name for output files (default: derive from identification file)",
         widget="FileSaver",
+    )
+    general.add_argument(
+        "--pipeline",
+        metavar="Select pipeline",
+        action="store",
+        type=str,
+        dest="pipeline",
+        widget="Dropdown",
+        default="infer",
+        choices=["infer", "pin","maxquant", "msgfplus", "tandem", "peptideschaker", "peaks"]
     )
     general.add_argument(
         "-l",
