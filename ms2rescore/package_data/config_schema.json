@@ -111,13 +111,9 @@
         "maxquant_to_rescore":{
             "description": "Settings specific to the MaxQuant pipeline",
             "type": "object",
-            "required": ["mgf_dir", "modification_mapping", "fixed_modifications"],
+            "required": ["modification_mapping", "fixed_modifications"],
             "additionalProperties": false,
             "properties": {
-                "mgf_dir": {
-                    "description": "Path to directory with MGF files",
-                    "type": "string"
-                },
                 "modification_mapping": {
                     "description": "Mapping of MaxQuant modification labels to modifications names for MS²PIP",
                     "type": "object",
