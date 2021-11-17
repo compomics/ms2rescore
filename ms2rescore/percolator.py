@@ -11,14 +11,14 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
-from ms2rescore._exceptions import MS2ReScoreError
+from ms2rescore._exceptions import MS2RescoreError
 from ms2rescore.peptide_record import PeptideRecord
 
 
 logger = logging.getLogger(__name__)
 
 
-class PercolatorInError(MS2ReScoreError):
+class PercolatorInError(MS2RescoreError):
     """Error while processing Percolator In file."""
 
 

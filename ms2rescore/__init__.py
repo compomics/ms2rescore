@@ -9,7 +9,7 @@ from multiprocessing import cpu_count
 from typing import Dict, Optional, Union
 
 from ms2rescore import id_file_parser, rescore_core, setup_logging
-from ms2rescore._exceptions import MS2ReScoreError
+from ms2rescore._exceptions import MS2RescoreError
 from ms2rescore._version import __version__
 from ms2rescore.config_parser import parse_config
 from ms2rescore.retention_time import RetentionTimeIntegration
@@ -101,7 +101,7 @@ class MS2ReScore:
         elif identification_file.lower().endswith(".mzid"):
             pipeline = id_file_parser.MSGFPipeline
         else:
-            raise MS2ReScoreError(
+            raise MS2RescoreError(
                 "Could not infer pipeline from identification filename. Please specify "
                 "`general` > `pipeline` in your configuration file."
             )
@@ -166,6 +166,7 @@ class MS2ReScore:
             preds_filename,
             output_filename + "_ms2pipfeatures.csv",
             num_cpu,
+            show_progress_bar=False,
         )
 
     @staticmethod

@@ -1,13 +1,13 @@
-"""MS²ReScore exceptions."""
+"""MS²Rescore exceptions."""
 
 
-class MS2ReScoreError(Exception):
-    """Generic MS2ReScore error."""
+class MS2RescoreError(Exception):
+    """Generic MS2Rescore error."""
 
     pass
 
 
-class MS2ReScoreConfigurationError(MS2ReScoreError):
-    """Invalid MS2ReScore configuration."""
+class MS2RescoreConfigurationError(MS2RescoreError):
+    """Invalid MS2Rescore configuration."""
 
     pass

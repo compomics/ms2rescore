@@ -16,7 +16,7 @@ from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm
 import itertools
 
-from ms2rescore._exceptions import MS2ReScoreError
+from ms2rescore._exceptions import MS2RescoreError
 
 logger = logging.getLogger(__name__)
 
@@ -445,7 +445,7 @@ def write_pin_files(
             try:
                 feature_config[feature] = True
             except KeyError:
-                raise MS2ReScoreError(f'Feature "{feature}" not available')
+                raise MS2RescoreError(f'Feature "{feature}" not available')
 
     # Read search engine features & Get list with feature names split by type of feature
     if feature_config["searchengine"]:
@@ -550,7 +550,7 @@ def write_pin_files(
             # Else, just use concat
             else:
                 if not len(complete_df) == len(feature_set):
-                    raise MS2ReScoreError("Feature sets do not match.")
+                    raise MS2RescoreError("Feature sets do not match.")
                 complete_df = pd.concat(
                     [
                         complete_df.reset_index(drop=True),

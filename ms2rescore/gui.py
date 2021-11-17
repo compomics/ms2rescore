@@ -1,13 +1,16 @@
 """Graphical user interface using Gooey."""
 
 import argparse
+import ast
+import json
 import logging
+import pprint
 
 from gooey import Gooey, GooeyParser, local_resource_path
+from ms2pip.ms2pipC import MODELS as ms2pip_models
 
 from ms2rescore import MS2ReScore, package_data
-import ms2rescore
-from ms2rescore._exceptions import MS2ReScoreConfigurationError
+from ms2rescore._exceptions import MS2RescoreError
 from ms2rescore._version import __version__
 
 try:
@@ -21,30 +24,37 @@ with pkg_resources.path(package_data, "img") as img_dir:
     img_dir = local_resource_path(img_dir)
 
 
+class MS2RescoreGUIError(MS2RescoreError):
+
+    """MS²Rescore GUI error."""
+
+
 @Gooey(
     program_name="MS²Rescore",
-    program_description="Sensitive PSM rescoring with predicted MS² peak intensities.",
+    program_description="Sensitive PSM rescoring with MS²PIP, DeepLC, and Percolator.",
     image_dir=img_dir,
     tabbed_groups=True,
+    requires_shell=False,
+    default_size=(760, 720),
 )
 def main():
     """Run MS²Rescore."""
     conf = _parse_arguments().__dict__
-    conf = parse_maxquant_settings(conf)
-    rescore = MS2ReScore(parse_cli_args=False, configuration=conf["general"], set_logger=True)
-    # TODO add maxquant to rescore to cascade config
-    rescore.config["maxquant_to_rescore"]["modification_mapping"].update(conf["maxquant_to_rescore"]["modification_mapping"])
-    rescore.config["maxquant_to_rescore"]["fixed_modifications"].update(conf["maxquant_to_rescore"]["fixed_modifications"])
+    conf = parse_settings(conf)
+    rescore = MS2ReScore(parse_cli_args=False, configuration=conf, set_logger=True)
     rescore.run()
 
 
 def _parse_arguments() -> argparse.Namespace:
     """Parse GUI arguments."""
+    default_config = json.load(pkg_resources.open_text(package_data, "config_default.json"))
+    ms2pip_mods = default_config["ms2pip"]["modifications"]
+
     parser = GooeyParser()
-    general = parser.add_argument_group("general")
+    general = parser.add_argument_group("General configuration")
     general.add_argument(
         "identification_file",
-        metavar="Identification file",
+        metavar="Identification file (required)",
         type=str,
         help="Path to identification file (pin, mzid, msms.txt, tandem xml...)",
         widget="FileChooser",
@@ -68,7 +78,7 @@ def _parse_arguments() -> argparse.Namespace:
         action="store",
         type=str,
         dest="config_file",
-        help="Path to MS²Rescore configuration file (see README.md)",
+        help="Path to MS²Rescore configuration file (see online documentation)",
         widget="FileChooser",
     )
     general.add_argument(
@@ -91,10 +101,14 @@ def _parse_arguments() -> argparse.Namespace:
     )
     general.add_argument(
         "--pipeline",
-        metavar="Select pipeline",
+        metavar="Select pipeline / search engine",
         action="store",
         type=str,
         dest="pipeline",
+        help=(
+            "Identification file pipeline to use, depends on the search engine used. "
+            "By default, this is inferred from the input file extension."
+        ),
         widget="Dropdown",
         default="infer",
         choices=["infer", "pin","maxquant", "msgfplus", "tandem", "peptideschaker", "peaks"]
@@ -106,69 +120,142 @@ def _parse_arguments() -> argparse.Namespace:
         type=str,
         dest="log_level",
         default="info",
-        # help="Logging level",
+        help="Controls the amount information that is logged.",
         widget="Dropdown",
         choices=["debug", "info", "warning", "error", "critical"],
     )
 
-    maxquant_settings = parser.add_argument_group("maxquant settings")
+    maxquant_settings = parser.add_argument_group(
+        "MaxQuant settings",
+        (
+            "MaxQuant uses two-letter labels to denote modifications in the msms.txt "
+            "output. Additionally, fixed modifications are not listed at all. To "
+            "correctly parse the msms.txt file, additional modification information "
+            "needs to be provided below. Make sure MaxQuant was run without "
+            "PSM-level FDR filtering; i.e. the FDR Threshold set at 1."
+        )
+    )
     maxquant_settings.add_argument(
         "--fixed_modifications",
         metavar="Fixed modifications",
         action="store",
         type=str,
         dest="fixed_modifications",
-        default=None,
-        help="Add fixed modifications",
-        widget="Listbox",
-        nargs='*',
-        choices=['C:Carbamidomethyl'],
+        default="C Carbamidomethyl",
+        help=(
+            "List all modifications set as fixed during the MaxQuant search. One "
+            "modification per line, in the form of <amino acid one-letter code> "
+            "<full modification name>, one per line, space-separated."
+        ),
+        widget="Textarea",
         gooey_options={
-            "full_width":True,
-            "height":40
+            "height":120
             }
     )
-
     maxquant_settings.add_argument(
         "--modification_mapping",
-        metavar="Modification mappings",
+        metavar="Modification mapping",
         action="store",
         type=str,
-        dest="modification_mappings",
-        default=None,
-        help="add, space separate, modification mappings of variable modifications (e.g ox:Oxidation)\nsee config_default.json for already included mappings",
-        nargs='*',
+        dest="modification_mapping",
+        default=(
+            "cm Carbamidomethyl\nox Oxidation\nac Acetyl\ncm Carbamidomethyl\n"
+            "de Deamidated\ngl Gln->pyro-Glu"
+        ),
+        help=(
+            "List all modification labels and their full names as listed in the "
+            "MS²PIP modification definitions (see MS²PIP settings tab). One per line, "
+            "space-separated."
+        ),
+        widget="Textarea",
+        gooey_options={
+            "height": 120
+        },
+    )
+
+    ms2pip_settings = parser.add_argument_group(
+        "MS²PIP settings"
+    )
+    ms2pip_settings.add_argument(
+        "--ms2pip_model",
+        metavar="MS²PIP model",
+        type=str,
+        dest="ms2pip_model",
+        default="HCD2021",
+        help="MS²PIP prediction model to use",
+        widget="Dropdown",
+        choices=ms2pip_models.keys(),
+    )
+    ms2pip_settings.add_argument(
+        "--ms2pip_frag_error",
+        metavar="MS2 error tolerance in Da",
+        type=float,
+        dest="ms2pip_frag_error",
+        default=0.02,
+        help="MS2 error tolerance in Da, for MS²PIP spectrum annotation",
+        widget="DecimalField",
+    )
+    ms2pip_settings.add_argument(
+        "--ms2pip_modifications",
+        metavar="Modification definitions",
+        action="store",
+        type=str,
+        dest="ms2pip_modifications",
+        default=pprint.pformat(ms2pip_mods, compact=True, width=200),
+        help=(
+            "List of modification definition dictionaries for MS²PIP. See online "
+            "documentation for more info."
+        ),
+        widget="Textarea",
         gooey_options={
             "full_width":True,
-            "height": 40
-            },
+            "height": 240
+        },
     )
+
     return parser.parse_args()
 
-def parse_maxquant_settings(config:dict) -> dict:
-    "Parse maxquant modification settings into one dict"
-    # parse mod mappings
-    mod_mappings = config.pop("modification_mappings")
-    try:
-        mod_mappings = dict([tuple(x.split(":")) for x in mod_mappings])
-    except TypeError:
-        mod_mappings = {}
-
-    # parse fixed modifications
-    fixed_mod = config.pop("fixed_modifications")
-    try:
-        fixed_mod = dict([tuple(x.split(":")) for x in fixed_mod])
-    except TypeError:
-        fixed_mod = {}
+def parse_settings(config:dict) -> dict:
+    "Parse non-general settings into one dict"
 
     parsed_config = {
         "general" : config,
-        "maxquant_to_rescore": {
-            "mgf_dir":'',
-            "modification_mapping": mod_mappings,
-            "fixed_modifications": fixed_mod
+        "maxquant_to_rescore": {},
+        "ms2pip": {},
     }
+
+    # MaxQuant configuration
+    for conf_item in ["modification_mapping", "fixed_modifications"]:
+        parsed_conf_item = parsed_config["general"].pop(conf_item)
+        try:
+            if parsed_conf_item:
+                parsed_conf_item = parsed_conf_item.split("\n")
+                parsed_conf_item = dict([tuple(x.split(" ")) for x in parsed_conf_item])
+            else:
+                parsed_conf_item = {}
+            parsed_config["maxquant_to_rescore"][conf_item] = parsed_conf_item
+        except Exception:
+            raise MS2RescoreGUIError(
+                "Invalid MaxQuant modification configuration. Make sure that the "
+                "modification configuration fields are formatted correctly."
+            )
+
+    # MS²PIP configuration
+    parsed_config["ms2pip"] = {
+        "model": parsed_config["general"].pop("ms2pip_model"),
+        "frag_error": parsed_config["general"].pop("ms2pip_frag_error"),
     }
+
+    try:
+        parsed_config["ms2pip"]["modifications"] =  ast.literal_eval(
+            parsed_config["general"].pop("ms2pip_modifications")
+        )
+    except Exception:
+        raise MS2RescoreGUIError(
+            "Invalid MS²PIP modification configuration. Make sure that the "
+            "modification configuration field is formatted correctly."
+        )
+
 
     return parsed_config
 

@@ -15,7 +15,7 @@ from statsmodels.distributions.empirical_distribution import ECDF
 
 
 from ms2rescore.percolator import PercolatorIn
-from ms2rescore._exceptions import MS2ReScoreError
+from ms2rescore._exceptions import MS2RescoreError
 
 
 class RescoreRecord(ABC):
@@ -496,7 +496,7 @@ class RescoreRecord(ABC):
 
         """
         if not cls.rerecs:
-            raise MS2ReScoreError("no pin/pout files listed")
+            raise MS2RescoreError("no pin/pout files listed")
 
         pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
         cls._separate_unique_peptides(FDR_thresholds)
@@ -531,7 +531,7 @@ class PIN(RescoreRecord):
             self.score_metric = "psm_score"
             self.df = self._read_pin_from_peprec(path_to_file)
         else:
-            raise MS2ReScoreError("Not a peprec or pin file")
+            raise MS2RescoreError("Not a peprec or pin file")
 
         self.rerecs.append(self)  # add PIN record to RescoreRecord
 
