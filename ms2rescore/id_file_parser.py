@@ -178,13 +178,14 @@ class _Pipeline(ABC):
         peprec = self.original_pin.to_peptide_record(
             spectrum_index_pattern=self._pin_spec_id_patterns[self._pin_spec_id_style]
         )
+        titles, retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
+        peprec.df["spec_id"] = peprec.df["spec_id"].map(titles)
         if "observed_retention_time" not in peprec.df.columns:
             # Map MGF titles and observed retention times
-            titles, retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
             peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(
                 retention_times
             )
-            peprec.df["spec_id"] = peprec.df["spec_id"].map(titles)
+
         if not ~peprec.df["observed_retention_time"].isna().any():
             raise IDFileParserError(
                 "Could not map all MGF retention times to spectrum indices."
@@ -460,7 +461,7 @@ class PeaksPipeline(_Pipeline):
     def original_pin(self):
         """Get PercolatorIn object from identification file."""
         raise NotImplementedError(
-            "Property `original_pin` is not implemented in class " "`PeaksPipeline`."
+            "Property `original_pin` is not implemented in class `PeaksPipeline`."
         )
 
     def peprec_from_pin(self):
@@ -471,7 +472,8 @@ class PeaksPipeline(_Pipeline):
 
     @staticmethod
     def _get_peprec_modifications(modifications: List):
-        """get peprec modifications out of the peaks id file"""
+        # TODO: Add unit tests for this function
+        """get peprec modifications out of the peaks id file."""
         suffix_list = ["Phospho"]
         if isinstance(modifications, List):
             mods = []
@@ -484,10 +486,10 @@ class PeaksPipeline(_Pipeline):
                     mods.append(f"{m['location']}|{m['name']}")
             return "|".join(mods)
         else:
-            raise TypeError
+            raise TypeError("`modifications` should be of type list.")
 
     def _convert_to_flat_dict(self, nested_dict, parent_key="", sep="_"):
-        """Convert nested dict to flat dict with concatenated keys"""
+        """Convert nested dict to flat dict with concatenated keys."""
 
         items = []
         for k, v in nested_dict.items():
@@ -518,7 +520,6 @@ class PeaksPipeline(_Pipeline):
                 "Label",
                 "Raw file",
                 "Rank",
-                # "protein_description",
             ]
         )
         with mzid.read(self.path_to_id_file) as reader:
@@ -534,7 +535,6 @@ class PeaksPipeline(_Pipeline):
                         "Label",
                         "Raw file",
                         "Rank",
-                        # "protein_description",
                     ]
                 )
                 flat_dict = dict(
