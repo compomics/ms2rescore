@@ -192,18 +192,37 @@ class RetentionTimeIntegration:
 
         if "Raw file" in self.peprec.df.columns:
             raw_specific_predicted_dfs = []
-            for raw_file, df in self.peprec.df.groupby("Raw file"):
+            for i, (raw_file, df) in enumerate(self.peprec.df.groupby("Raw file")):
+                logger.info(f"Calibrating {raw_file}")
+
                 peprec_raw_df = df.copy().reset_index()
-                self.deeplc_predictor = DeepLC(
-                    split_cal=10, n_jobs=self.num_cpu, cnn_model=True, verbose=False
-                )
                 retention_time_df = pd.DataFrame(
                     columns=["spec_id", "predicted_retention_time"]
                 )
-                logger.info(f"Calibrating for {raw_file}")
-                self.deeplc_predictor.calibrate_preds(
-                    seq_df=self.get_calibration_data(peprec_raw_df)
-                )
+
+                if i == 0:
+                    self.deeplc_predictor = DeepLC(
+                        split_cal=10,
+                        n_jobs=self.num_cpu,
+                        cnn_model=True,
+                        verbose=False
+                    )
+                    logger.info(f"{self.deeplc_predictor.model}")
+                    self.deeplc_predictor.calibrate_preds(
+                        seq_df=self.get_calibration_data(peprec_raw_df)
+                    )
+                    self.deeplc_model = list(self.deeplc_predictor.model.keys())
+                else:
+                    self.deeplc_predictor = DeepLC(
+                        split_cal=10,
+                        n_jobs=self.num_cpu,
+                        cnn_model=True,
+                        verbose=False,
+                        path_model=self.deeplc_model
+                    )
+                    self.deeplc_predictor.calibrate_preds(
+                        seq_df=self.get_calibration_data(peprec_raw_df)
+                    )
                 predicted_rts = pd.Series(
                     self.deeplc_predictor.make_preds(
                         seq_df=self.get_prediction_data(peprec_raw_df)
