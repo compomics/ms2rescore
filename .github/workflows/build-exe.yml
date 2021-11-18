@@ -16,14 +16,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install gooey
-        pip install .
+        pip install . gooey pyinstaller
 
-    - name: PyInstaller Windows
-      uses: JackMcKew/pyinstaller-action-windows@main
-      with:
-        path: .
-        spec: build.spec
+    - name: Run PyInstaller
+      run: pyinstaller .\build.spec  --additional-hooks-dir=pyinstaller/hooks
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v2
