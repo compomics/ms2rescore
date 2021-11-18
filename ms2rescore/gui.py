@@ -6,6 +6,7 @@ import json
 import logging
 import pprint
 
+import xgboost
 from gooey import Gooey, GooeyParser, local_resource_path
 from ms2pip.ms2pipC import MODELS as ms2pip_models
 

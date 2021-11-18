@@ -8,13 +8,13 @@ import tempfile
 from multiprocessing import cpu_count
 from typing import Dict, Optional, Union
 
-from ms2rescore import id_file_parser, rescore_core, setup_logging
+from ms2pip import ms2pipC  # Explicit import required for pyinstaller
+
+from ms2rescore import id_file_parser, plotting, rescore_core, setup_logging
 from ms2rescore._exceptions import MS2RescoreError
 from ms2rescore._version import __version__
 from ms2rescore.config_parser import parse_config
 from ms2rescore.retention_time import RetentionTimeIntegration
-from ms2rescore import plotting
-
 
 logger = logging.getLogger(__name__)
 
