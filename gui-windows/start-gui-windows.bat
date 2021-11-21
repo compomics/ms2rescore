@@ -1,3 +1,3 @@
 @echo off
-call Miniconda3/Scripts/activate.bat ms2rescore
-start /B python -m ms2rescore.gui
+call Miniconda3/condabin/conda.bat activate ms2rescore
+start /b python -m ms2rescore.gui
