@@ -88,8 +88,8 @@ To replicate the experiments described in this article, check out the
 MS²Rescore requires:
 - Python 3.7 or 3.8 on Linux, macOS, or Windows
 - If the option `run_percolator` is set to `True`,
-[Percolator](https://github.com/percolator/percolator/) needs to be installed and  callable with the
-`percolator` command (tested with v3.02.1)
+[Percolator](https://github.com/percolator/percolator/) needs to be installed and
+callable with the `percolator` command (tested with v3.02.1)
 - Some pipelines require the Percolator converters, such as `tandem2pin`, as well. These
 are usually installed alongside Percolator.
 
@@ -107,11 +107,13 @@ We highly recommend using a [venv](https://docs.python.org/3/library/venv.html) 
 [conda](https://docs.conda.io/en/latest/) virtual environment.
 
 
-### Windows executable
-[![get windows exe](https://flat.badgen.net/badge/install%20for/windows/blue?icon=windows)](https://github.com/compomics/ms2rescore/releases)
+### Windows installer
+[![get for windows](https://flat.badgen.net/badge/install%20for/windows/blue?icon=windows)](https://github.com/compomics/ms2rescore/releases)
 
-1. Download and install [Percolator](https://github.com/percolator/percolator/releases/latest)
-2. Download the `.exe` file from the [latest release](https://github.com/compomics/ms2rescore/releases) and run it to start the MS²Rescore graphical user interface.
+1. Download and install [Percolator](https://github.com/percolator/percolator/releases/latest).
+2. Download the zip file from the [latest release](https://github.com/compomics/ms2rescore/releases) and unzip.
+3. Run `install-gui-windows.bat` to install Python and MS²Rescore.
+4. Run `start-gui-windows.bat` to start the MS²Rescore GUI.
 
 
 ---
@@ -120,9 +122,9 @@ We highly recommend using a [venv](https://docs.python.org/3/library/venv.html) 
 
 ### GUI
 
-Run `python -m ms2rescore.gui` or run the Windows executable to start the graphical user
-interface. Most common settings can be configured through the UI. For some advanced
-settings, see [Configuration file](#configuration-file).
+Run `start-gui-windows.bat` or run `python -m ms2rescore.gui` in your terminal to start
+the graphical user interface. Most common settings can be configured through the UI.
+For some advanced settings, see [Configuration file](#configuration-file).
 
 <img src="img/gui-screenshot.png" height=480 />
 
@@ -145,7 +147,8 @@ required to, for example, correctly parse the peptide modifications from the sea
 engine output. If no configuration file is passed, or some options are not configured,
 the
 [default values](https://github.com/compomics/ms2rescore/blob/master/ms2rescore/package_data/config_default.json)
-for these settings will be used. Options passed from the CLI and the GUI will override the configuration file. The full configuration is validated against a
+for these settings will be used. Options passed from the CLI and the GUI will override
+the configuration file. The full configuration is validated against a
 [JSON Schema](https://github.com/compomics/ms2rescore/blob/master/ms2rescore/package_data/config_schema.json).
 
 A full example configuration file can be found in
