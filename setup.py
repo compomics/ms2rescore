@@ -57,7 +57,6 @@ setup(
     include_package_data=True,
     entry_points={"console_scripts": [
         "ms2rescore=ms2rescore.__main__:main",
-        "ms2rescore-gui=ms2rescore.gui:main",
     ]},
     python_requires=">=3.7",
     install_requires=[

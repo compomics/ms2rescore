@@ -86,7 +86,7 @@ To replicate the experiments described in this article, check out the
 
 
 MS²Rescore requires:
-- Python 3.7 or higher on Linux, macOS, or Windows
+- Python 3.7 or 3.8 on Linux, macOS, or Windows
 - If the option `run_percolator` is set to `True`,
 [Percolator](https://github.com/percolator/percolator/) needs to be installed and  callable with the
 `percolator` command (tested with v3.02.1)
@@ -120,7 +120,7 @@ We highly recommend using a [venv](https://docs.python.org/3/library/venv.html) 
 
 ### GUI
 
-Run `ms2rescore-gui` or run the Windows executable to start the graphical user
+Run `python -m ms2rescore.gui` or run the Windows executable to start the graphical user
 interface. Most common settings can be configured through the UI. For some advanced
 settings, see [Configuration file](#configuration-file).
 
