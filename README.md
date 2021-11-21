@@ -1,4 +1,4 @@
-<img src="https://github.com/compomics/ms2rescore/raw/dev/img/ms2rescore_logo.png" width="150" height="150" />
+<img src="https://github.com/compomics/ms2rescore/raw/master/img/ms2rescore_logo.png" width="150" height="150" />
 <br/><br/>
 
 [![GitHub release](https://img.shields.io/github/release-pre/compomics/ms2rescore.svg?style=flat-square)](https://github.com/compomics/ms2rescore/releases)
