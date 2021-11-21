@@ -1,25 +1,26 @@
-"""Graphical user interface using Gooey."""
+"""Graphical user interface for MS²Rescore using Gooey."""
 
 import argparse
 import ast
 import json
 import logging
 import pprint
+import multiprocessing
 
-import xgboost
+
 from gooey import Gooey, GooeyParser, local_resource_path
 from ms2pip.ms2pipC import MODELS as ms2pip_models
-
 from ms2rescore import MS2ReScore, package_data
 from ms2rescore._exceptions import MS2RescoreError
-from ms2rescore._version import __version__
 
 try:
     import importlib.resources as pkg_resources
 except ImportError:
     import importlib_resources as pkg_resources
 
+
 logger = logging.getLogger(__name__)
+
 
 with pkg_resources.path(package_data, "img") as img_dir:
     img_dir = local_resource_path(img_dir)
@@ -257,8 +258,11 @@ def parse_settings(config:dict) -> dict:
             "modification configuration field is formatted correctly."
         )
 
-
     return parsed_config
 
+
 if __name__ == "__main__":
+    # Required for PyInstalller package (https://github.com/pyinstaller/pyinstaller/wiki/Recipe-Multiprocessing)
+    # Avoids opening new windows upon multiprocessing
+    multiprocessing.freeze_support()
     main()
