@@ -8,7 +8,7 @@ import tempfile
 from multiprocessing import cpu_count
 from typing import Dict, Optional, Union
 
-from ms2pip import ms2pipC  # Explicit import required for pyinstaller
+from ms2pip.ms2pipC import MS2PIP
 
 from ms2rescore import id_file_parser, plotting, rescore_core, setup_logging
 from ms2rescore._exceptions import MS2RescoreError
@@ -137,29 +137,33 @@ class MS2ReScore:
     ):
         """Get predicted MS² peak intensities from MS2PIP."""
         logger.info("Adding MS2 peak intensity features with MS²PIP.")
-        ms2pip_config_filename = output_filename + "_ms2pip_config.txt"
-        rescore_core.make_ms2pip_config(ms2pip_config, filename=ms2pip_config_filename)
+        ms2pip_config = rescore_core.make_ms2pip_config_dict(ms2pip_config)
 
         # Check if input files exist
         for f in [peprec_filename, mgf_filename]:
             if not os.path.isfile(f):
                 raise FileNotFoundError(f)
 
-        ms2pip_command = "ms2pip {} -c {} -s {} -n {}".format(
+        logger.debug("Running MS²PIP...")
+        ms2pip = MS2PIP(
             peprec_filename,
-            ms2pip_config_filename,
-            mgf_filename,
-            num_cpu,
+            spec_file=mgf_filename,
+            params=ms2pip_config,
+            num_cpu=num_cpu,
+            add_retention_time=False,
+            compute_correlations=False,
         )
-
-        logger.debug("Running MS2PIP: %s", ms2pip_command)
-        subprocess.run(ms2pip_command, shell=True, check=True)
+        try:
+            ms2pip.run()
+        finally:
+            ms2pip.cleanup()
+        logger.debug("MS²PIP finished.")
 
         logger.info("Calculating features from predicted spectra")
         preds_filename = (
             peprec_filename.replace(".peprec", "")
             + "_"
-            + ms2pip_config["model"]
+            + ms2pip_config["ms2pip"]["model"]
             + "_pred_and_emp.csv"
         )
         rescore_core.calculate_features(
