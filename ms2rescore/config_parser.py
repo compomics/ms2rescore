@@ -9,7 +9,7 @@ from typing import Dict, Optional
 from cascade_config import CascadeConfig
 
 from ms2rescore import package_data
-from ms2rescore._exceptions import MS2ReScoreConfigurationError
+from ms2rescore._exceptions import MS2RescoreConfigurationError
 from ms2rescore._version import __version__
 
 try:
@@ -132,14 +132,14 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
         args = _parse_arguments()
         config_user = args.config_file
         if config_class:
-            raise MS2ReScoreConfigurationError(
+            raise MS2RescoreConfigurationError(
                 "If `parse_cli_args` is True, `config_class` must be None."
             )
     elif config_class:
         args = None
-        config_user = config_class["config_file"]
+        config_user = config_class["general"]["config_file"]
     else:
-        raise MS2ReScoreConfigurationError(
+        raise MS2RescoreConfigurationError(
             "If `parse_cli_args` is False, `config_class` arguments are required."
         )
 
@@ -150,7 +150,7 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
     if parse_cli_args:
         cascade_conf.add_namespace(args, subkey="general")
     elif config_class:
-        cascade_conf.add_dict(config_class, subkey="general")
+        cascade_conf.add_dict(config_class)
     config = cascade_conf.parse()
 
     config = _validate_filenames(config)

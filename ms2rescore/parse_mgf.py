@@ -7,12 +7,12 @@ import re
 
 from tqdm import tqdm
 
-from ms2rescore._exceptions import MS2ReScoreError
+from ms2rescore._exceptions import MS2RescoreError
 
 logger = logging.getLogger(__name__)
 
 
-class ParseMGFError(MS2ReScoreError):
+class ParseMGFError(MS2RescoreError):
     """Error parsing MGF file."""
 
     pass

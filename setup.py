@@ -22,10 +22,10 @@ setup(
     name="ms2rescore",
     version=get_version("ms2rescore/_version.py"),
     license="apache-2.0",
-    description="MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and retention times.",
+    description="MS²Rescore: Sensitive PSM rescoring with predicted MS² peak intensities and retention times.",
     long_description=get_readme(),
     long_description_content_type="text/markdown",
-    author="Ana Sílvia C. Silva, Ralf Gabriels, Tim Van Den Bossche",
+    author="Ralf Gabriels, Arthur Declercq, Ana Sílvia C. Silva, Tim Van Den Bossche",
     author_email="compomics.list@gmail.com",
     url="https://compomics.github.io/projects/ms2rescore/",
     project_urls={
@@ -43,7 +43,7 @@ setup(
         "Development Status :: 4 - Beta",
     ],
     keywords=[
-        "MS2ReScore",
+        "MS2Rescore",
         "MS2PIP",
         "DeepLC",
         "Percolator",
@@ -55,7 +55,9 @@ setup(
     ],
     packages=["ms2rescore"],
     include_package_data=True,
-    entry_points={"console_scripts": ["ms2rescore=ms2rescore.__main__:main"]},
+    entry_points={"console_scripts": [
+        "ms2rescore=ms2rescore.__main__:main",
+    ]},
     python_requires=">=3.7",
     install_requires=[
         "importlib-resources;python_version<'3.7'",
@@ -66,15 +68,16 @@ setup(
         "tqdm>=4.31.0,<5",
         "pyteomics>=4.1.0,<5",
         "lxml>=4.5,<5",
-        "ms2pip>=3.6.3,<4",
+        "ms2pip>=3.8,<4",
         "click>=7,<8",
-        "cascade-config",
-        "matplotlib>=3, <4",
+        "cascade-config>=0.3.0,<2",
+        "matplotlib>=3,<4",
         "seaborn>=0.11",
-        "statsmodels>=0.12"
+        "statsmodels>=0.12",
+        "deeplc>=0.1.17",
     ],
     extras_require={
-        'deeplc': ["deeplc>=0.1.17"]
+        "gui": ["gooey>=1.0"],
     },
     test_suite="tests",
     tests_require=["ms2rescore", "pytest>=4.3.0,<5"],

@@ -8,13 +8,13 @@ import tempfile
 from multiprocessing import cpu_count
 from typing import Dict, Optional, Union
 
-from ms2rescore import id_file_parser, rescore_core, setup_logging
-from ms2rescore._exceptions import MS2ReScoreError
+from ms2pip.ms2pipC import MS2PIP
+
+from ms2rescore import id_file_parser, plotting, rescore_core, setup_logging
+from ms2rescore._exceptions import MS2RescoreError
 from ms2rescore._version import __version__
 from ms2rescore.config_parser import parse_config
 from ms2rescore.retention_time import RetentionTimeIntegration
-from ms2rescore import plotting
-
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +47,8 @@ class MS2ReScore:
         if set_logger:
             setup_logging.setup_logging(self.config["general"]["log_level"])
 
-        self._validate_cli_dependency("percolator -h")
-        self._validate_cli_dependency("ms2pip -h")
+        if self.config["general"]["run_percolator"]:
+            self._validate_cli_dependency("percolator -h")
 
         logger.debug(
             "Using %i of %i available CPUs.",
@@ -97,7 +97,7 @@ class MS2ReScore:
         elif identification_file.lower().endswith(".mzid"):
             pipeline = id_file_parser.MSGFPipeline
         else:
-            raise MS2ReScoreError(
+            raise MS2RescoreError(
                 "Could not infer pipeline from identification filename. Please specify "
                 "`general` > `pipeline` in your configuration file."
             )
@@ -133,35 +133,40 @@ class MS2ReScore:
     ):
         """Get predicted MS² peak intensities from MS2PIP."""
         logger.info("Adding MS2 peak intensity features with MS²PIP.")
-        ms2pip_config_filename = output_filename + "_ms2pip_config.txt"
-        rescore_core.make_ms2pip_config(ms2pip_config, filename=ms2pip_config_filename)
+        ms2pip_config = rescore_core.make_ms2pip_config_dict(ms2pip_config)
 
         # Check if input files exist
         for f in [peprec_filename, mgf_filename]:
             if not os.path.isfile(f):
                 raise FileNotFoundError(f)
 
-        ms2pip_command = "ms2pip {} -c {} -s {} -n {}".format(
+        logger.debug("Running MS²PIP...")
+        ms2pip = MS2PIP(
             peprec_filename,
-            ms2pip_config_filename,
-            mgf_filename,
-            num_cpu,
+            spec_file=mgf_filename,
+            params=ms2pip_config,
+            num_cpu=num_cpu,
+            add_retention_time=False,
+            compute_correlations=False,
         )
-
-        logger.debug("Running MS2PIP: %s", ms2pip_command)
-        subprocess.run(ms2pip_command, shell=True, check=True)
+        try:
+            ms2pip.run()
+        finally:
+            ms2pip.cleanup()
+        logger.debug("MS²PIP finished.")
 
         logger.info("Calculating features from predicted spectra")
         preds_filename = (
             peprec_filename.replace(".peprec", "")
             + "_"
-            + ms2pip_config["model"]
+            + ms2pip_config["ms2pip"]["model"]
             + "_pred_and_emp.csv"
         )
         rescore_core.calculate_features(
             preds_filename,
             output_filename + "_ms2pipfeatures.csv",
             num_cpu,
+            show_progress_bar=False,
         )
 
     @staticmethod

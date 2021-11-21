@@ -112,7 +112,7 @@
             "description": "Settings specific to the MaxQuant pipeline",
             "type": "object",
             "required": ["mgf_dir", "modification_mapping", "fixed_modifications"],
-            "additionalProperties": false,
+            "additionalProperties": true,
             "properties": {
                 "mgf_dir": {
                     "description": "Path to directory with MGF files",
