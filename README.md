@@ -110,11 +110,19 @@ We highly recommend using a [venv](https://docs.python.org/3/library/venv.html) 
 ### Windows installer
 [![get for windows](https://flat.badgen.net/badge/install%20for/windows/blue?icon=windows)](https://github.com/compomics/ms2rescore/releases)
 
-1. Download and install [Percolator](https://github.com/percolator/percolator/releases/latest).
-2. Download the zip file from the [latest release](https://github.com/compomics/ms2rescore/releases) and unzip.
+1. Download and install [Percolator](https://github.com/percolator/percolator/releases/latest)
+and the percolator-converters. Make sure to select "Add percolator to the system PATH
+for all users" during setup.
+2. Download the zip file from the [latest release](https://github.com/compomics/ms2rescore/releases)
+and unzip.
 3. Run `install-gui-windows.bat` to install Python and MS²Rescore.
 4. Run `start-gui-windows.bat` to start the MS²Rescore GUI.
 
+If Microsoft Defender SmartScreen displays a warning, click "More info" and then click
+"Run anyway". When starting the GUI, don't mind the terminal windows that opens next
+to the GUI.
+
+To install a newer version of MS³Rescore, run `upgrade-gui-windows.bat`.
 
 ---
 
