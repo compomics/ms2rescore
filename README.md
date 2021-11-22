@@ -20,7 +20,7 @@ Sensitive peptide identification rescoring with predicted spectra using
 - [About MS²Rescore](#about-msrescore)
 - [Installation](#installation)
   - [Python package](#python-package)
-  - [Windows executable](#windows-executable)
+  - [Windows installer](#windows-installer)
 - [Usage](#usage)
   - [GUI](#gui)
   - [Command line interface](#command-line-interface)
