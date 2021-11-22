@@ -119,7 +119,7 @@ and unzip.
 4. Run `start-gui-windows.bat` to start the MS²Rescore GUI.
 
 If Microsoft Defender SmartScreen displays a warning, click "More info" and then click
-"Run anyway". When starting the GUI, don't mind the terminal windows that opens next
+"Run anyway". When starting the GUI, don't mind the terminal window that opens next
 to the GUI.
 
 To install a newer version of MS²Rescore, run `upgrade-gui-windows.bat`.
