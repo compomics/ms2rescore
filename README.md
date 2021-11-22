@@ -122,7 +122,7 @@ If Microsoft Defender SmartScreen displays a warning, click "More info" and then
 "Run anyway". When starting the GUI, don't mind the terminal windows that opens next
 to the GUI.
 
-To install a newer version of MS³Rescore, run `upgrade-gui-windows.bat`.
+To install a newer version of MS²Rescore, run `upgrade-gui-windows.bat`.
 
 ---
 
