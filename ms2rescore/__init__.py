@@ -290,5 +290,6 @@ class MS2ReScore:
                     self.config["general"]["output_filename"] + "_plots.pdf",
                     FDR_thresholds=[0.01, 0.001],
                 )
-
+        if not self.config["general"]["run_percolator"] and self.config["general"]["plotting"]:
+            logger.warn("To plot rescore results run_percolator should be enabled")
         logger.info("MS²ReScore finished!")
