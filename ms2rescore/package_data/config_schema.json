@@ -113,6 +113,7 @@
             "type": "object",
             "required": ["modification_mapping", "fixed_modifications"],
             "additionalProperties": false,
+
             "properties": {
                 "modification_mapping": {
                     "description": "Mapping of MaxQuant modification labels to modifications names for MS²PIP",

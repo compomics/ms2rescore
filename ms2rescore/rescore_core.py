@@ -16,48 +16,51 @@ from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm
 import itertools
 
-from ms2rescore._exceptions import MS2ReScoreError
+from ms2rescore._exceptions import MS2RescoreError
 
 logger = logging.getLogger(__name__)
 
 
-def make_ms2pip_config(
-    options: Dict, filename: Optional[Union[str, os.PathLike]] = "ms2pip_config.txt"
-):
+def make_ms2pip_config_dict(options: Dict):
     """Write ms2pip configuration file based on ms2pip config dict."""
-    with open(filename, "wt") as ms2pip_config:
-        if "frag" in options:
-            ms2pip_config.write("frag_method={}\n".format(options["frag"]))
-        if "model" in options:
-            ms2pip_config.write("model={}\n".format(options["model"]))
+
+    # Parse model
+    if "frag" in options:
+        options["model"] = options["frag"]
+    elif not "model" in options:
+        options["model"] = "HCD"  # Assume HCD
+
+    # Parse MS2 error tolerance
+    if not "frag_error" in options:
+        if options["model"] in ["CID", "CIDch2"]:
+            options["frag_error"] = 0.8
         else:
-            # Assume HCD
-            ms2pip_config.write("frag_method=HCD\n")
+            options["frag_error"] = 0.02  # Assume HCD / QTOF
 
-        if "frag_error" in options:
-            ms2pip_config.write("frag_error={}\n".format(options["frag_error"]))
+    # Add config items
+    ms2pip_config = {
+        "ms2pip": {
+            "model": options["model"],
+            "frag_error": options["frag_error"],
+            "ptm": [],
+            "sptm": [],
+            "gptm": [],
+        }
+    }
+
+    # Parse modifications
+    for mod in options["modifications"]:
+        if mod["amino_acid"] is None and mod["n_term"]:
+            aa = "N-term"
+        elif mod["amino_acid"] is None and mod["c_term"]:
+            aa = "C-term"
         else:
-            if options["frag"] == "CID":
-                ms2pip_config.write("frag_error=0.8\n")
-            elif options["frag"] == "phospho":
-                ms2pip_config.write("frag_error=0.02\n")
-            else:
-                # Assume HCD
-                ms2pip_config.write("frag_error=0.02\n")
+            aa = mod["amino_acid"]
+        ms2pip_config["ms2pip"]["ptm"].append(
+            ",".join([mod["name"], str(mod["mass_shift"]), "opt", aa])
+        )
 
-        ms2pip_config.write("\n")
-
-        modifications = options["modifications"]
-        for mod in modifications:
-            if mod["amino_acid"] is None and mod["n_term"]:
-                aa = "N-term"
-            elif mod["amino_acid"] is None and mod["c_term"]:
-                aa = "C-term"
-            else:
-                aa = mod["amino_acid"]
-            tmp = ",".join([mod["name"], str(mod["mass_shift"]), "opt", aa])
-            ms2pip_config.write("ptm=" + tmp + "\n")
-
+    return ms2pip_config
 
 def df_to_dict(df):
     """Create easy to access dict from pred_and_emp."""
@@ -445,7 +448,7 @@ def write_pin_files(
             try:
                 feature_config[feature] = True
             except KeyError:
-                raise MS2ReScoreError(f'Feature "{feature}" not available')
+                raise MS2RescoreError(f'Feature "{feature}" not available')
 
     # Read search engine features & Get list with feature names split by type of feature
     if feature_config["searchengine"]:
@@ -550,7 +553,7 @@ def write_pin_files(
             # Else, just use concat
             else:
                 if not len(complete_df) == len(feature_set):
-                    raise MS2ReScoreError("Feature sets do not match.")
+                    raise MS2RescoreError("Feature sets do not match.")
                 complete_df = pd.concat(
                     [
                         complete_df.reset_index(drop=True),

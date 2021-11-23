@@ -20,13 +20,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools wheel pytest twine
 
-    - name: Build and publish to PyPI
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+    - name: Build source and wheel
       run: |
         python setup.py sdist bdist_wheel
-        
+
     - name: Test built package
       run: |
         pip install dist/ms2rescore-*.whl
@@ -37,6 +34,19 @@ jobs:
       with:
         name: python-package
         path: dist/*
+
+    - name: Zip GUI windows installer
+      run: zip ms2rescore-gui-windows.zip ./gui-windows/* -r
+
+    - name: Upload GUI windows installer
+      uses: actions/upload-release-asset@v1.0.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./ms2rescore-gui-windows.zip
+        asset_name: ms2rescore-gui-windows.zip
+        asset_content_type: application/zip
 
     - uses: pypa/gh-action-pypi-publish@master
       with:

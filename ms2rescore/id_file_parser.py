@@ -11,7 +11,7 @@ import pandas as pd
 from pyteomics import tandem, mzid
 from tqdm import tqdm
 
-from ms2rescore._exceptions import MS2ReScoreError
+from ms2rescore._exceptions import MS2RescoreError
 from ms2rescore.maxquant import MSMSAccessor
 from ms2rescore.parse_mgf import parse_mgf
 from ms2rescore.peptide_record import PeptideRecord
@@ -22,7 +22,7 @@ from ms2rescore.percolator import PercolatorIn, run_percolator_converter
 logger = logging.getLogger(__name__)
 
 
-class IDFileParserError(MS2ReScoreError):
+class IDFileParserError(MS2RescoreError):
     """Error parsing ID file."""
 
     pass
@@ -386,6 +386,7 @@ class MaxQuantPipeline(_Pipeline):
             filename_col="Raw file",
             spec_title_col="spec_id",
             title_parsing_method="run.scan.scan",
+
         )
         self._path_to_new_mgf = path_to_new_mgf
 

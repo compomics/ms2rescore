@@ -1,4 +1,4 @@
-<img src="https://github.com/compomics/ms2rescore/raw/dev/img/ms2rescore_logo.png" width="150" height="150" />
+<img src="https://github.com/compomics/ms2rescore/raw/master/img/ms2rescore_logo.png" width="150" height="150" />
 <br/><br/>
 
 [![GitHub release](https://img.shields.io/github/release-pre/compomics/ms2rescore.svg?style=flat-square)](https://github.com/compomics/ms2rescore/releases)
@@ -17,29 +17,33 @@ Sensitive peptide identification rescoring with predicted spectra using
 
 ---
 
-- [About MS²ReScore](#about-msrescore)
+- [About MS²Rescore](#about-msrescore)
 - [Installation](#installation)
+  - [Python package](#python-package)
+  - [Windows installer](#windows-installer)
 - [Usage](#usage)
+  - [GUI](#gui)
   - [Command line interface](#command-line-interface)
   - [Configuration file](#configuration-file)
   - [Notes for specific search engines](#notes-for-specific-search-engines)
   - [Output](#output)
+- [Contributing](#contributing)
 
 ---
 
-## About MS²ReScore
+## About MS²Rescore
 
-MS²ReScore performs sensitive peptide identification rescoring with predicted
+MS²Rescore performs sensitive peptide identification rescoring with predicted
 spectra using [MS²PIP](https://github.com/compomics/ms2pip_c),
 [DeepLC](https://github.com/compomics/deeplc), and
 [Percolator](https://github.com/percolator/percolator/). This results in more confident
 peptide identifications, which allows you to get **more peptide IDs** at the same false
 discovery rate (FDR) threshold, or to set a **more stringent FDR threshold** while still
-retaining a similar number of peptide IDs. MS²ReScore is **ideal for challenging
+retaining a similar number of peptide IDs. MS²Rescore is **ideal for challenging
 proteomics identification workflows**, such as proteogenomics, metaproteomics, or
 immunopeptidomics.
 
-MS²ReScore uses identifications from a
+MS²Rescore uses identifications from a
 [Percolator IN (PIN) file](https://github.com/percolator/percolator/wiki/Interface#tab-delimited-file-format),
 or from the output of one of these search engines:
 
@@ -53,12 +57,21 @@ or from the output of one of these search engines:
 - [PeptideShaker](http://compomics.github.io/projects/peptide-shaker): Start with a
   PeptideShaker Extended PSM Report and corresponding `.mgf` file.
 
-If you use MS²ReScore for your research, please cite the following article:
+<br>
+
+If you use MS²Rescore, please cite the following article:
+> **MS2Rescore: Data-driven rescoring dramatically boosts immunopeptide identification rates.**  \
+Arthur Declercq, Robbin Bouwmeester, Sven Degroeve, Lennart Martens, and Ralf Gabriels.  \
+_bioRxiv_ (2021) [doi:10.1101/2021.11.02.466886](https://doi.org/10.1101/2021.11.02.466886)
+
+<br>
+
+The concept of rescoring with predicted spectrum features was first described in:
 
 > **Accurate peptide fragmentation predictions allow data driven approaches to replace
-and improve upon proteomics search engine scoring functions.** Ana S C Silva, Robbin
-Bouwmeester, Lennart Martens, and Sven Degroeve. _Bioinformatics_ (2019)
-[doi:10.1093/bioinformatics/btz383](https://doi.org/10.1093/bioinformatics/btz383)
+and improve upon proteomics search engine scoring functions.**  \
+Ana S C Silva, Robbin Bouwmeester, Lennart Martens, and Sven Degroeve.  \
+_Bioinformatics_ (2019) [doi:10.1093/bioinformatics/btz383](https://doi.org/10.1093/bioinformatics/btz383)
 
 To replicate the experiments described in this article, check out the
 [pub branch](https://github.com/compomics/ms2rescore/tree/pub) of this repository.
@@ -67,15 +80,16 @@ To replicate the experiments described in this article, check out the
 
 ## Installation
 
-[![install pip](https://flat.badgen.net/badge/install%20with/pip/green)](https://pypi.org/project/ms2rescore/)
+### Python package
 
-MS²ReScore requires:
-- Python 3.7 or higher on Linux, macOS, or
-[Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl)
+[![install pip](https://flat.badgen.net/badge/install%20with/pip/green?icon=pypi)](https://pypi.org/project/ms2rescore/)
+
+
+MS²Rescore requires:
+- Python 3.7 or 3.8 on Linux, macOS, or Windows
 - If the option `run_percolator` is set to `True`,
-[Percolator](https://github.com/percolator/percolator/) needs to be callable with the
-`percolator` command (tested with
-[version 3.02.1](https://github.com/percolator/percolator/releases/tag/rel-3-02-01))
+[Percolator](https://github.com/percolator/percolator/) needs to be installed and
+callable with the `percolator` command (tested with v3.02.1)
 - Some pipelines require the Percolator converters, such as `tandem2pin`, as well. These
 are usually installed alongside Percolator.
 
@@ -84,22 +98,48 @@ Minimal installation:
 pip install ms2rescore
 ```
 
-Recommended installation, including DeepLC for retention time prediction:
+Installation including dependencies for the graphical user interface:
 ```sh
-pip install ms2rescore[deeplc]
+pip install ms2rescore[gui]
 ```
 
-We recommend using a [venv](https://docs.python.org/3/library/venv.html) or
+We highly recommend using a [venv](https://docs.python.org/3/library/venv.html) or
 [conda](https://docs.conda.io/en/latest/) virtual environment.
 
+
+### Windows installer
+[![get for windows](https://flat.badgen.net/badge/install%20for/windows/blue?icon=windows)](https://github.com/compomics/ms2rescore/releases)
+
+1. Download and install [Percolator](https://github.com/percolator/percolator/releases/latest)
+and the percolator-converters. Make sure to select "Add percolator to the system PATH
+for all users" during setup.
+2. Download the zip file from the [latest release](https://github.com/compomics/ms2rescore/releases)
+and unzip.
+3. Run `install-gui-windows.bat` to install Python and MS²Rescore.
+4. Run `start-gui-windows.bat` to start the MS²Rescore GUI.
+
+If Microsoft Defender SmartScreen displays a warning, click "More info" and then click
+"Run anyway". When starting the GUI, don't mind the terminal window that opens next
+to the GUI.
+
+To install a newer version of MS²Rescore, run `upgrade-gui-windows.bat`.
 
 ---
 
 ## Usage
 
+### GUI
+
+Run `start-gui-windows.bat` or run `python -m ms2rescore.gui` in your terminal to start
+the graphical user interface. Most common settings can be configured through the UI.
+For some advanced settings, see [Configuration file](#configuration-file).
+
+<img src="img/gui-screenshot.png" height=480 />
+
+
 ### Command line interface
 
-Run MS²ReScore from the command line as follows:
+Run MS²Rescore from the command line as follows:
 
 ```
 ms2rescore -c <path-to-config-file> -m <path-to-mgf> <path-to-identification-file>
@@ -109,12 +149,13 @@ Run `ms2rescore --help` to see all command line options.
 
 ### Configuration file
 
-MS²ReScore can be further configured through a **JSON configuration file**. A correct
-configuration is required to, for example, correctly parse the peptide modifications
-from the search engine output. If no configuration file is passed, or some options are
-not configured, the
+Although most options can be configered through the CLI and the GUI, MS²Rescore can be
+further configured through a **JSON configuration file**. A correct configuration is
+required to, for example, correctly parse the peptide modifications from the search
+engine output. If no configuration file is passed, or some options are not configured,
+the
 [default values](https://github.com/compomics/ms2rescore/blob/master/ms2rescore/package_data/config_default.json)
-for these settings will be used. Options passed from the command line will override
+for these settings will be used. Options passed from the CLI and the GUI will override
 the configuration file. The full configuration is validated against a
 [JSON Schema](https://github.com/compomics/ms2rescore/blob/master/ms2rescore/package_data/config_schema.json).
 
@@ -147,9 +188,13 @@ one of the modifications listed in the MS²PIP configuration (see
 MaxQuant search (as this is not denoted in the msms.txt file). Keys refer to the
 amino acid, values to the modification name used in the MS²PIP configuration.
 
+As a general rule, MS²Rescore always needs access to all target and decoy PSMs, not
+only the FDR-filtered targets.
+
+
 ### Output
 Several intermediate files are created when the entire pipeline is run. These can be
-accessed by specifying the `tmp_dir` option. Depending on whether or not Percolator is
+accessed by specifying the `tmp_dir` or `Temporary file directory` option. Depending on whether or not Percolator is
 run, the following output files can be expected:
 
 For each feature set combination (e.g. [`rt`, `ms2pip`, `searchengine`]):
@@ -157,3 +202,10 @@ For each feature set combination (e.g. [`rt`, `ms2pip`, `searchengine`]):
 - `<file>.pout` Percolator OUT file with target PSMs
 - `<file>.pout_dec` Percolator OUT file with decoy PSMs
 - `<file>.weights` Internal feature weights used by Percolator's scoring function.
+
+---
+
+## Contributing
+Bugs, questions or suggestions? Feel free to post an issue in the
+[issue tracker](https://github.com/compomics/ms2rescore/issues/) or to make a pull
+request!
