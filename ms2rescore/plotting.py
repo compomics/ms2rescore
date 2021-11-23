@@ -536,7 +536,7 @@ class PIN(RescoreRecord):
             self.score_metric = "psm_score"
             self.df = self._read_pin_from_peprec(path_to_file)
         else:
-            raise MS2RescoreError("Not a peprec or pin file")
+            raise MS2ReScoreError("Not a peprec or pin file")
 
         self.rerecs.append(self)  # add PIN record to RescoreRecord
 
