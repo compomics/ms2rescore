@@ -502,7 +502,7 @@ class RescoreRecord(ABC):
 
         """
         if not cls.rerecs:
-            raise MS2RescoreError("no pin/pout files listed")
+            raise MS2ReScoreError("no pin/pout files listed")
 
         pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
         cls._separate_unique_peptides(FDR_thresholds)
