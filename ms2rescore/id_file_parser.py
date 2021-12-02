@@ -456,7 +456,7 @@ class PeaksPipeline(_Pipeline):
         super().__init__(config, output_basename)
 
         # Private attributes, specific to this pipeline
-        self.df = self.read_df_from_mzid()
+        self.df = None
 
     @property
     def original_pin(self):
@@ -475,7 +475,7 @@ class PeaksPipeline(_Pipeline):
     def _get_peprec_modifications(modifications: List):
         # TODO: Add unit tests for this function
         """get peprec modifications out of the peaks id file."""
-        suffix_list = ["Phospho"]
+        suffix_list = ["Phospho", "Dioxidation"]
         if isinstance(modifications, List):
             mods = []
             for m in modifications:
@@ -511,16 +511,17 @@ class PeaksPipeline(_Pipeline):
 
     def read_df_from_mzid(self) -> pd.DataFrame:
         """Read mzid to Dataframe."""
+        logger.info("Processing mzid file")
         df = pd.DataFrame(
             columns=[
                 "spec_id",
                 "peptide",
+                "peptide_length",
                 "modifications",
                 "charge",
                 "PEAKS:peptideScore",
                 "Label",
                 "Raw file",
-                "Rank",
             ]
         )
         with mzid.read(self.path_to_id_file) as reader:
@@ -529,13 +530,13 @@ class PeaksPipeline(_Pipeline):
                     index=[
                         "spec_id",
                         "peptide",
+                        "peptide_length",
                         "modifications",
                         "charge",
                         "protein_list",
                         "PEAKS:peptideScore",
                         "Label",
                         "Raw file",
-                        "Rank",
                     ]
                 )
                 flat_dict = dict(
@@ -553,6 +554,7 @@ class PeaksPipeline(_Pipeline):
                 retrieved_data["peptide"] = flat_dict[
                     "SpectrumIdentificationItem_PeptideSequence"
                 ]
+                retrieved_data["peptide_length"] = len(retrieved_data["peptide"])
                 try:
                     retrieved_data["modifications"] = self._get_peprec_modifications(
                         flat_dict["SpectrumIdentificationItem_Modification"]
@@ -581,7 +583,6 @@ class PeaksPipeline(_Pipeline):
                     .split(".", 1)[0]
                     .replace(",", "_", 1)
                 )
-                retrieved_data["Rank"] = flat_dict["SpectrumIdentificationItem_rank"]
                 df = df.append(retrieved_data, ignore_index=True)
             df["Label"] = df["Label"].apply(lambda x: -1 if x else 1)
             return df
@@ -603,6 +604,8 @@ class PeaksPipeline(_Pipeline):
     def get_peprec(self) -> PeptideRecord:
         """Get PeptideRecord."""
 
+        if not self.df:
+            self.df = self.read_df_from_mzid()
         peprec_df = self.df[
             [
                 "spec_id",
@@ -623,7 +626,6 @@ class PeaksPipeline(_Pipeline):
         }
         id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
         peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
-
         return PeptideRecord.from_dataframe(peprec_df)
 
     def get_search_engine_features(self) -> pd.DataFrame:
@@ -639,4 +641,5 @@ class PeaksPipeline(_Pipeline):
         ]
 
         feature_cols = [col for col in self.df.columns if col not in peprec_cols]
+        print(feature_cols)
         return self.df[feature_cols]

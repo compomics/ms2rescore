@@ -207,7 +207,6 @@ class RetentionTimeIntegration:
                         cnn_model=True,
                         verbose=False
                     )
-                    logger.info(f"{self.deeplc_predictor.model}")
                     self.deeplc_predictor.calibrate_preds(
                         seq_df=self.get_calibration_data(peprec_raw_df)
                     )

@@ -154,3 +154,11 @@ class PeptideRecord:
             line = f.readline()
             separator = line[7]
         return separator
+
+    def validate_decoy_presence(self):
+        "check whether decoys are present in peprec file"
+
+        if sum(self.df["Label"] == -1) == 0:
+            raise InvalidPeprecError("No decoys present, make sure to provide decoys along targets")
+        else:
+            pass

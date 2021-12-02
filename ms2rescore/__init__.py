@@ -221,6 +221,7 @@ class MS2ReScore:
     def run(self):
         """Run MS²ReScore."""
         peprec = self.pipeline.get_peprec()
+        peprec.validate_decoy_presence()
         peprec_filename = self.tmpfile_basepath + ".peprec"
         peprec.to_csv(peprec_filename)
 
