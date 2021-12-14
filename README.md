@@ -48,12 +48,13 @@ MS²Rescore uses identifications from a
 or from the output of one of these search engines:
 
 - [MaxQuant](https://www.maxquant.org/): Start from `msms.txt` identification
-  file and directory with `.mgf` files. (Be sure to export without FDR
-  filtering!)
+  file and directory with `.mgf` files.
 - [MSGFPlus](https://omics.pnl.gov/software/ms-gf): Start with an `.mzid`
   identification file and corresponding `.mgf`.
 - [X!Tandem](https://www.thegpm.org/tandem/): Start with an X!Tandem `.xml`
   identification file and corresponding `.mgf`.
+- [PEAKS](https://www.bioinfor.com/peaksdb/): Start with an `.mzid` identification
+  file and directory with `.mgf` files.
 - [PeptideShaker](http://compomics.github.io/projects/peptide-shaker): Start with a
   PeptideShaker Extended PSM Report and corresponding `.mgf` file.
 
