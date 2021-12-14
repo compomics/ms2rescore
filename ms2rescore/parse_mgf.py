@@ -129,7 +129,7 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
                     if 'CHARGE=' in line:
                         continue
                     # Only print lines when spectrum is found and intensity != 0
-                    if found and line[-4:] != ' 0.0\n':
+                    if found and line[-5:] != ' 0.0\n':
                         out.write(line)
 
     num_expected = len(df_in[spec_title_col].unique())
