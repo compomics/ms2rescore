@@ -88,7 +88,7 @@ class RescoreRecord(ABC):
             score_cutoff = None
 
         # Score distribution plot
-        plot_list =[
+        plot_list = [
             list(self.df[self.df[decoy_label]][score_label]),
             list(self.df[~self.df[decoy_label]][score_label]),
         ]
@@ -305,7 +305,6 @@ class RescoreRecord(ABC):
         unique : Boolean
             If true only plot unique identifications
             If false plot total amount of identifications
-
         """
         if unique:
             if cls.unique_df.empty:
@@ -316,7 +315,7 @@ class RescoreRecord(ABC):
             if cls.count_df.empty:
                 cls._count_identifications()
             y_label = "number of identified peptides"
-            count_df = cls.unique_df
+            count_df = cls.count_df
 
         g = sns.catplot(
             x="sample",
@@ -336,7 +335,7 @@ class RescoreRecord(ABC):
         return g
 
     @classmethod
-    def calculate_loss_gain_df(cls, reference="Before rescoring", FDR_threshold=[0.01]):
+    def calculate_loss_gain_df(cls, reference=None, FDR_threshold=[0.01]):
         """
         Calculate relative amount of gained, lossed and shared unique peptides for each
         rescoring method relative to the reference.
@@ -368,10 +367,16 @@ class RescoreRecord(ABC):
                             ].item()
                         )
                     )
-                if "After rescoring: searchengine" in ft_dict.keys():
-                    reference = "After rescoring: searchengine"
-                total = len(ft_dict[reference])
+                if reference:
+                    pass
+                elif "After rescoring: Searchengine" in ft_dict.keys():
+                    reference = "After rescoring: Searchengine"
+                else:
+                    reference = "Before rescoring"
 
+                total = len(ft_dict[reference])
+                if total == 0:
+                    continue
                 for feature in cls.unique_df["rescoring"][
                     cls.unique_df["sample"] == sample
                 ].unique():
@@ -401,16 +406,17 @@ class RescoreRecord(ABC):
         ----------
         FDR : float
             single FDR threshold used for the plot
-
         """
+        fig = plt.figure()
+
         if cls.loss_gain_df.empty:
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])
         if FDR not in cls.loss_gain_df["FDR"].unique():
             cls._separate_unique_peptides(FDR_threshold=[FDR])
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])
 
-        fig = plt.figure()
         tmp = cls.loss_gain_df[cls.loss_gain_df["FDR"] == FDR]
+
         for sample in zip(
             tmp["sample"].unique(), list(range(1, len(tmp["sample"].unique()) + 1))
         ):
@@ -509,10 +515,9 @@ class RescoreRecord(ABC):
         plt.tight_layout()
         pdf.savefig()
 
-        for fdr in FDR_thresholds:
-            cls.loss_gain_plot(FDR=fdr)
-            plt.tight_layout()
-            pdf.savefig()
+        cls.loss_gain_plot(FDR=0.01)
+        plt.tight_layout()
+        pdf.savefig()
         pdf.close()
 
 
@@ -574,7 +579,7 @@ class PIN(RescoreRecord):
         pin_qvalues = pd.DataFrame(
             qvalues(
                 peprec,
-                key=peprec['psm_score'],
+                key=peprec["psm_score"],
                 is_decoy=peprec["Label"] == -1,
                 reverse=True,
                 remove_decoy=False,

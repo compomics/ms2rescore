@@ -35,7 +35,6 @@
         ]
     },
     "maxquant_to_rescore": {
-        "mgf_dir": "",
         "modification_mapping":{
             "ox":"Oxidation",
             "ac":"Acetyl",
@@ -44,7 +43,6 @@
             "gl":"Gln->pyro-Glu"
         },
         "fixed_modifications":{
-            "C":"Carbamidomethyl"
         }
     },
     "percolator": {}

@@ -13,7 +13,7 @@
                 "pipeline": {
                     "description": "Pipeline to use, depending on input format",
                     "type": "string",
-                    "enum": ["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker"],
+                    "enum": ["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker", "peaks"],
                     "default": "infer"
                 },
                 "feature_sets": {
@@ -111,13 +111,10 @@
         "maxquant_to_rescore":{
             "description": "Settings specific to the MaxQuant pipeline",
             "type": "object",
-            "required": ["mgf_dir", "modification_mapping", "fixed_modifications"],
-            "additionalProperties": true,
+            "required": ["modification_mapping", "fixed_modifications"],
+            "additionalProperties": false,
+
             "properties": {
-                "mgf_dir": {
-                    "description": "Path to directory with MGF files",
-                    "type": "string"
-                },
                 "modification_mapping": {
                     "description": "Mapping of MaxQuant modification labels to modifications names for MS²PIP",
                     "type": "object",

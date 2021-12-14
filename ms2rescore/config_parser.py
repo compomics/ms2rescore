@@ -72,6 +72,42 @@ def _parse_arguments() -> argparse.Namespace:
         default="info",
         help="logging level (default: `info`)",
     )
+    parser.add_argument(
+        "-n",
+        metavar="VALUE",
+        action="store",
+        type=int,
+        dest="num_cpu",
+        default=None,
+        help="number of cpus available to MS²Rescore",
+    )
+    parser.add_argument(
+        "--pipeline",
+        metavar="PIPELINE",
+        action="store",
+        type=str,
+        dest="pipeline",
+        default=None,
+        help="determines which pipeline to use (default: 'infer')",
+    )
+    parser.add_argument(
+        "--percolator",
+        metavar="BOOL",
+        action="store",
+        type=bool,
+        dest="run_percolator",
+        default=None,
+        help="run percolator (default: 'True')",
+    )
+    parser.add_argument(
+        "--plotting",
+        metavar="BOOL",
+        action="store",
+        type=bool,
+        dest="plotting",
+        default=None,
+        help="write PDF with result plots",
+    )
     return parser.parse_args()
 
 
@@ -155,5 +191,7 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
 
     config = _validate_filenames(config)
     config = _validate_num_cpu(config)
+
+    config["general"]["pipeline"] = config["general"]["pipeline"].lower()
 
     return config

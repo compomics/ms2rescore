@@ -596,6 +596,7 @@ def write_pin_files(
             col_names = col_names + search_engine_feature_names
 
         outname = "_".join(fset)
+        complete_df.sort_values("SpecId", axis=0, inplace=True)
         complete_df[
             ["SpecId", "Label", "ScanNr"] + col_names + ["Peptide", "Proteins"]
         ].to_csv(

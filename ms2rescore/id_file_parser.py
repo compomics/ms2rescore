@@ -4,11 +4,12 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple, Union, List
 
 import numpy as np
 import pandas as pd
-from pyteomics import tandem
+from pyteomics import tandem, mzid
+from tqdm import tqdm
 
 from ms2rescore._exceptions import MS2RescoreError
 from ms2rescore.maxquant import MSMSAccessor
@@ -65,6 +66,7 @@ class _Pipeline(ABC):
             "generic": r".+_([0-9]+)_[0-9]+_[0-9]+",
             "tandem": r".+_([0-9]+)_[0-9]+_[0-9]+",
             "msgfplus": r".+_SII_([0-9]+)_[0-9]+_[0-9]+_[0-9]+",
+            # "USI": r"mzspec:PXD[0-9]{6}:[^\s\:]*:scan:([0-9]+)"
         }
 
         # Private attributes specific to pipeline, override these in each subclass
@@ -81,7 +83,7 @@ class _Pipeline(ABC):
         passed_path: Union[None, str, os.PathLike],
         default_dir: Union[str, os.PathLike],
         expected_rootname: str,
-        expected_ext: str = ".mgf"
+        expected_ext: str = ".mgf",
     ) -> Union[str, os.PathLike]:
         """
         Infer MGF path from passed path and expected filename (e.g. from ID file).
@@ -113,8 +115,7 @@ class _Pipeline(ABC):
         # If passed path is directory, join with expected rootname + ext
         elif os.path.isdir(passed_path):
             path_to_mgf_file = os.path.join(
-                passed_path,
-                expected_rootname + expected_ext
+                passed_path, expected_rootname + expected_ext
             )
 
         # If passed path is file, use that, but warn if basename doesn't match expected
@@ -125,7 +126,7 @@ class _Pipeline(ABC):
                     "Passed MGF name root `%s` does not match MGF name root `%s` from "
                     "identifications file. Continuing with passed MGF name.",
                     passed_rootname,
-                    expected_rootname
+                    expected_rootname,
                 )
             path_to_mgf_file = passed_path
 
@@ -144,7 +145,7 @@ class _Pipeline(ABC):
             self.path_to_id_file,
             self._path_to_original_pin,
             id_decoy_pattern=self.id_decoy_pattern,
-            log_level=self.log_level
+            log_level=self.log_level,
         )
 
     @property
@@ -153,7 +154,7 @@ class _Pipeline(ABC):
         path_to_mgf_file = self._validate_mgf_path(
             self.passed_mgf_path,
             os.path.dirname(self.path_to_id_file),
-            os.path.basename(os.path.splitext(self.path_to_id_file)[0])
+            os.path.basename(os.path.splitext(self.path_to_id_file)[0]),
         )
         return path_to_mgf_file
 
@@ -167,8 +168,7 @@ class _Pipeline(ABC):
                 self._run_percolator_converter()
             self._original_pin = PercolatorIn(self._path_to_original_pin)
             self._original_pin.modification_mapping_from_list(
-                self.modification_list,
-                label_style=self._pin_modification_style
+                self.modification_list, label_style=self._pin_modification_style
             )
         return self._original_pin
 
@@ -178,11 +178,14 @@ class _Pipeline(ABC):
         peprec = self.original_pin.to_peptide_record(
             spectrum_index_pattern=self._pin_spec_id_patterns[self._pin_spec_id_style]
         )
-
-        # Map MGF titles and observed retention times
         titles, retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
-        peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(retention_times)
         peprec.df["spec_id"] = peprec.df["spec_id"].map(titles)
+        if "observed_retention_time" not in peprec.df.columns:
+            # Map MGF titles and observed retention times
+            peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(
+                retention_times
+            )
+
         if not ~peprec.df["observed_retention_time"].isna().any():
             raise IDFileParserError(
                 "Could not map all MGF retention times to spectrum indices."
@@ -264,7 +267,7 @@ class TandemPipeline(_Pipeline):
         path_to_mgf_file = self._validate_mgf_path(
             self.passed_mgf_path,
             os.path.dirname(self.path_to_id_file),
-            self.original_pin.get_spectrum_filename()
+            self.original_pin.get_spectrum_filename(),
         )
         return path_to_mgf_file
 
@@ -285,14 +288,14 @@ class TandemPipeline(_Pipeline):
             "rt": "observed_retention_time",
             "expect": "psm_score",
             "hyperscore": "hyperscore_tandem",
-            "id": "tandem_id"
+            "id": "tandem_id",
         }
 
         peprec_df = tandem_df[tandem_peprec_mapping.keys()].rename(
             columns=tandem_peprec_mapping
         )
         # Set PSM score as -log(e-value)
-        peprec_df["psm_score"] = - np.log(peprec_df["psm_score"])
+        peprec_df["psm_score"] = -np.log(peprec_df["psm_score"])
 
         logger.debug("Adding modifications from original PIN to PEPREC...")
         pin = self.original_pin
@@ -300,18 +303,24 @@ class TandemPipeline(_Pipeline):
         pin.add_spectrum_index_column(label="tandem_id")
         pin.df["ModPeptide"] = pin.df["Peptide"]
         peprec_df = peprec_df.merge(
-            pin.df[["modifications", "tandem_id", "hyperscore", "Label", "ModPeptide", "Proteins"]],
-            on="tandem_id"
+            pin.df[
+                [
+                    "modifications",
+                    "tandem_id",
+                    "hyperscore",
+                    "Label",
+                    "ModPeptide",
+                    "Proteins",
+                ]
+            ],
+            on="tandem_id",
         )
         # Validate merge by comparing the hyperscore columns
         if not (peprec_df["hyperscore_tandem"] == peprec_df["hyperscore"]).all():
             raise IDFileParserError(
                 "Could not merge tandem xml and generated pin files."
             )
-        peprec_df.drop(
-            columns=["tandem_id", "hyperscore_tandem"],
-            inplace=True
-        )
+        peprec_df.drop(columns=["tandem_id", "hyperscore_tandem"], inplace=True)
 
         peprec = PeptideRecord.from_dataframe(peprec_df)
         peprec.reorder_columns()
@@ -374,10 +383,10 @@ class MaxQuantPipeline(_Pipeline):
             peprec.df,
             self.passed_mgf_path,
             outname=path_to_new_mgf,
-            filename_col='Raw file',
-            spec_title_col='spec_id',
-            title_parsing_method='run.scan.scan',
-            show_progress_bar=False,
+            filename_col="Raw file",
+            spec_title_col="spec_id",
+            title_parsing_method="run.scan.scan",
+
         )
         self._path_to_new_mgf = path_to_new_mgf
 
@@ -386,11 +395,10 @@ class MaxQuantPipeline(_Pipeline):
         logger.debug("Converting MaxQuant msms.txt to PEPREC...")
         peprec = self.msms_df.msms.to_peprec(
             modification_mapping=self._modification_mapping,
-            fixed_modifications=self._fixed_modifications
+            fixed_modifications=self._fixed_modifications,
         )
         if parse_mgf:
             self.parse_mgf_files(peprec)
-        peprec.df.drop("Raw file", axis=1, inplace=True)
         return peprec
 
     def get_search_engine_features(self) -> pd.DataFrame:
@@ -438,3 +446,200 @@ class PeptideShakerPipeline(_Pipeline):
     def get_search_engine_features(self) -> pd.DataFrame:
         """Get pandas.DataFrame with search engine features."""
         return self.extended_psm_report.ext_psm_report.get_search_engine_features()
+
+
+class PeaksPipeline(_Pipeline):
+    # TODO: move code to separate file and create mzid class
+    """Peaks mzid report to PeptideRecord and search engine features."""
+
+    def __init__(self, config: Dict, output_basename: Union[str, os.PathLike]) -> None:
+        super().__init__(config, output_basename)
+
+        # Private attributes, specific to this pipeline
+        self.df = None
+
+    @property
+    def original_pin(self):
+        """Get PercolatorIn object from identification file."""
+        raise NotImplementedError(
+            "Property `original_pin` is not implemented in class `PeaksPipeline`."
+        )
+
+    def peprec_from_pin(self):
+        """Get PeptideRecord from PIN file and MGF file."""
+        raise NotImplementedError(
+            "Method `peprec_from_pin` is not implemented in class " "`PeaksPipeline`."
+        )
+
+    @staticmethod
+    def _get_peprec_modifications(modifications: List):
+        # TODO: Add unit tests for this function
+        """get peprec modifications out of the peaks id file."""
+        suffix_list = ["Phospho", "Dioxidation"]
+        if isinstance(modifications, List):
+            mods = []
+            for m in modifications:
+                if m["name"] in suffix_list:
+                    mods.append(f"{m['location']}|{m['name'] + m['residues'][0]}")
+                elif "residues" not in m.keys() and m["location"] != 0:
+                    mods.append(f"-1|{m['name']}")
+                else:
+                    mods.append(f"{m['location']}|{m['name']}")
+            return "|".join(mods)
+        else:
+            raise TypeError("`modifications` should be of type list.")
+
+    def _convert_to_flat_dict(self, nested_dict, parent_key="", sep="_"):
+        """Convert nested dict to flat dict with concatenated keys."""
+
+        items = []
+        for k, v in nested_dict.items():
+            new_key = parent_key + sep + k if parent_key else k
+
+            if isinstance(v, Dict):
+                items.extend(self._convert_to_flat_dict(v, new_key, sep=sep))
+            elif isinstance(v, List):
+                if isinstance(v[0], Dict) and k != "Modification":
+                    items.extend(self._convert_to_flat_dict(v[0], new_key, sep=sep))
+                elif isinstance(v[0], Dict) and k == "Modification":
+                    items.append((new_key, v))
+                else:
+                    items.append((new_key, v[0]))
+            else:
+                items.append((new_key, v))
+        return items
+
+    def read_df_from_mzid(self) -> pd.DataFrame:
+        """Read mzid to Dataframe."""
+        logger.info("Processing mzid file")
+        df = pd.DataFrame(
+            columns=[
+                "spec_id",
+                "peptide",
+                "peptide_length",
+                "modifications",
+                "charge",
+                "PEAKS:peptideScore",
+                "Label",
+                "Raw file",
+            ]
+        )
+        with mzid.read(self.path_to_id_file) as reader:
+            for spectrum_identification_result in tqdm(reader):
+                retrieved_data = pd.Series(
+                    index=[
+                        "spec_id",
+                        "peptide",
+                        "peptide_length",
+                        "modifications",
+                        "charge",
+                        "protein_list",
+                        "PEAKS:peptideScore",
+                        "Label",
+                        "Raw file",
+                    ]
+                )
+                flat_dict = dict(
+                    self._convert_to_flat_dict(spectrum_identification_result)
+                )
+                spec_id = (
+                    flat_dict["location"]
+                    .rsplit("/", 1)[1]
+                    .split(".", 1)[0]
+                    .replace(",", "_", 1)
+                    + ":"
+                    + flat_dict["spectrumID"]
+                )
+                retrieved_data["spec_id"] = spec_id
+                retrieved_data["peptide"] = flat_dict[
+                    "SpectrumIdentificationItem_PeptideSequence"
+                ]
+                retrieved_data["peptide_length"] = len(retrieved_data["peptide"])
+                try:
+                    retrieved_data["modifications"] = self._get_peprec_modifications(
+                        flat_dict["SpectrumIdentificationItem_Modification"]
+                    )
+                except KeyError:
+                    retrieved_data["modifications"] = "-"
+                retrieved_data["charge"] = flat_dict[
+                    "SpectrumIdentificationItem_chargeState"
+                ]
+                retrieved_data["protein_list"] = [
+                    d["accession"]
+                    for d in spectrum_identification_result[
+                        "SpectrumIdentificationItem"
+                    ][0]["PeptideEvidenceRef"]
+                    if "accession" in d.keys()
+                ]
+                retrieved_data["PEAKS:peptideScore"] = flat_dict[
+                    "SpectrumIdentificationItem_PEAKS:peptideScore"
+                ]
+                retrieved_data["Label"] = flat_dict[
+                    "SpectrumIdentificationItem_PeptideEvidenceRef_isDecoy"
+                ]
+                retrieved_data["Raw file"] = (
+                    flat_dict["location"]
+                    .rsplit("/", 1)[1]
+                    .split(".", 1)[0]
+                    .replace(",", "_", 1)
+                )
+                df = df.append(retrieved_data, ignore_index=True)
+            df["Label"] = df["Label"].apply(lambda x: -1 if x else 1)
+            return df
+
+    def parse_mgf_files(self, peprec):
+        """Parse multiple MGF files into one for MS²PIP."""
+        logger.debug("Parsing MGF files into one for MS²PIP")
+        path_to_new_mgf = self.output_basename + "_unified.mgf"
+        parse_mgf(
+            peprec,
+            self.passed_mgf_path,
+            outname=path_to_new_mgf,
+            filename_col="Raw file",
+            spec_title_col="spec_id",
+            title_parsing_method="full_run",
+        )
+        self.passed_mgf_path = path_to_new_mgf
+
+    def get_peprec(self) -> PeptideRecord:
+        """Get PeptideRecord."""
+
+        if not self.df:
+            self.df = self.read_df_from_mzid()
+        peprec_df = self.df[
+            [
+                "spec_id",
+                "peptide",
+                "modifications",
+                "charge",
+                "protein_list",
+                "PEAKS:peptideScore",
+                "Label",
+                "Raw file",
+            ]
+        ].rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
+        self.parse_mgf_files(peprec_df)
+        titles, rt = parse_mgf_title_rt(self.passed_mgf_path)
+        id_rt_dict = {
+            "spec_id": list(titles.values()),
+            "observed_retention_time": list(rt.values()),
+        }
+        id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
+        peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
+        return PeptideRecord.from_dataframe(peprec_df)
+
+    def get_search_engine_features(self) -> pd.DataFrame:
+        """Get pandas.DataFrame with search engine features."""
+
+        peprec_cols = [
+            "peptide",
+            "modifications",
+            "observed_retention_time",
+            "Raw file",
+            "protein_list",
+            "Label",
+        ]
+
+        feature_cols = [col for col in self.df.columns if col not in peprec_cols]
+        print(feature_cols)
+        return self.df[feature_cols]

@@ -4,7 +4,7 @@ import logging
 import mmap
 import os.path
 import re
-
+import random
 from tqdm import tqdm
 
 from ms2rescore._exceptions import MS2RescoreError
@@ -38,6 +38,7 @@ def title_parser(line, method='full', run=None):
     line: string, line from MGF file containing 'TITLE='
     method: string, one of the following:
     - 'full': take everything after 'TITLE='
+    - 'full_run': take everything after 'TITLE=' and add run to title
     - 'first_space': take everything between 'TITLE=' and first space.
     - 'first_space_no_charge': take everything between 'TITLE=' and first space,
       but leave out everything after last dot. (required for MaxQuant pipeline).
@@ -46,6 +47,10 @@ def title_parser(line, method='full', run=None):
 
     if method == 'full':
         title = line[6:].strip()
+    elif method == 'full_run':
+        if not run:
+            raise TypeError("If `method` is `full_run`, `run` cannot be None.")
+        title = run + ':' + line[6:].strip()
     elif method == 'first_space':
         title = line[6:].split(' ')[0].strip()
     elif method == 'first_space_no_charge':
@@ -89,18 +94,17 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
 
     with open(outname, 'w') as out:
         count = 0
-        for run in runs:
+        iterator = tqdm(runs) if show_progress_bar else runs
+        for run in iterator:
             current_mgf_file = os.path.join(mgf_folder, run + file_suffix)
             spec_set = set(df_in[(df_in[filename_col] == run)][spec_title_col].values)
-
             # Temporary fix: replace charges in MGF with ID'ed charges
             # Until MS2PIP uses ID'ed charge instead of MGF charge
             id_charges = df_in[(df_in[filename_col] == run)].set_index('spec_id')['charge'].to_dict()
 
             found = False
             with open(current_mgf_file, 'r') as f:
-                iterator = tqdm(f, total=get_num_lines(current_mgf_file)) if show_progress_bar else f
-                for line in iterator:
+                for line in f:
                     if 'TITLE=' in line:
                         title = title_parser(line, method=title_parsing_method, run=run)
                         if title in spec_set:
@@ -115,14 +119,17 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
                             out.write(line + '\n')
                             found = False
                             continue
-                    # Temporary fix (see above)
-                    if 'CHARGE=' in line:
+                    # Temporary fix (see above, write charge if pepmass is written)
+                    if 'PEPMASS=' in line:
                         if found:
                             charge = id_charges[title]
+                            out.write(line)
                             out.write("CHARGE=" + str(charge) + "+\n")
                             continue
+                    if 'CHARGE=' in line:
+                        continue
                     # Only print lines when spectrum is found and intensity != 0
-                    if found and line[-4:] != '0.0\n':
+                    if found and line[-5:] != ' 0.0\n':
                         out.write(line)
 
     num_expected = len(df_in[spec_title_col].unique())

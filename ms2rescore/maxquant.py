@@ -180,7 +180,6 @@ class MSMSAccessor:
                 for k, v
                 in fixed_modifications.items()
             }
-
         # Apply fixed modifications
         if fixed_modifications:
             for aa, mod in fixed_modifications.items():

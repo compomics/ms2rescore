@@ -48,12 +48,13 @@ MS²Rescore uses identifications from a
 or from the output of one of these search engines:
 
 - [MaxQuant](https://www.maxquant.org/): Start from `msms.txt` identification
-  file and directory with `.mgf` files. (Be sure to export without FDR
-  filtering!)
+  file and directory with `.mgf` files.
 - [MSGFPlus](https://omics.pnl.gov/software/ms-gf): Start with an `.mzid`
   identification file and corresponding `.mgf`.
 - [X!Tandem](https://www.thegpm.org/tandem/): Start with an X!Tandem `.xml`
   identification file and corresponding `.mgf`.
+- [PEAKS](https://www.bioinfor.com/peaksdb/): Start with an `.mzid` identification
+  file and directory with `.mgf` files.
 - [PeptideShaker](http://compomics.github.io/projects/peptide-shaker): Start with a
   PeptideShaker Extended PSM Report and corresponding `.mgf` file.
 
@@ -187,6 +188,17 @@ one of the modifications listed in the MS²PIP configuration (see
     - `fixed_modifications`: Must list all modifications set as fixed during the
 MaxQuant search (as this is not denoted in the msms.txt file). Keys refer to the
 amino acid, values to the modification name used in the MS²PIP configuration.
+    - The maxquant specific configuration could for example be:
+      ```json
+      "maxquant_to_rescore": {
+        "modification_mapping":{
+          "ox":"Oxidation",
+          "cm":"Carbamidomethyl"
+        },
+        "fixed_modifications":{
+          "C":"Carbamidomethyl"
+        }
+      ```
 
 As a general rule, MS²Rescore always needs access to all target and decoy PSMs, not
 only the FDR-filtered targets.
