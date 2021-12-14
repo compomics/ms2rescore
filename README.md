@@ -187,6 +187,17 @@ one of the modifications listed in the MS²PIP configuration (see
     - `fixed_modifications`: Must list all modifications set as fixed during the
 MaxQuant search (as this is not denoted in the msms.txt file). Keys refer to the
 amino acid, values to the modification name used in the MS²PIP configuration.
+    - The maxquant specific configuration could for example be:
+      ```json
+      "maxquant_to_rescore": {
+        "modification_mapping":{
+          "ox":"Oxidation",
+          "cm":"Carbamidomethyl"
+        },
+        "fixed_modifications":{
+          "C":"Carbamidomethyl"
+        }
+      ```
 
 As a general rule, MS²Rescore always needs access to all target and decoy PSMs, not
 only the FDR-filtered targets.
