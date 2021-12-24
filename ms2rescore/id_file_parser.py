@@ -434,18 +434,18 @@ class PeptideShakerPipeline(_Pipeline):
     def extended_psm_report(self):
         """Get Extended PSM Report with identification results."""
         if self._extended_psm_report is None:
-            self._extended_psm_report = pd.DataFrame.ext_psm_report.from_file(
+            self._extended_psm_report = pd.DataFrame.ext_psm_ann_report.from_file(
                 self.path_to_id_file
             )
         return self._extended_psm_report
 
     def get_peprec(self) -> PeptideRecord:
         """Get PeptideRecord."""
-        return self.extended_psm_report.ext_psm_report.to_peprec()
+        return self.extended_psm_report.ext_psm_ann_report.to_peprec()
 
     def get_search_engine_features(self) -> pd.DataFrame:
         """Get pandas.DataFrame with search engine features."""
-        return self.extended_psm_report.ext_psm_report.get_search_engine_features()
+        return self.extended_psm_report.ext_psm_ann_report.get_search_engine_features()
 
 
 class PeaksPipeline(_Pipeline):
