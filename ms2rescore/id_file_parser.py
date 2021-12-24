@@ -15,7 +15,7 @@ from ms2rescore._exceptions import MS2RescoreError
 from ms2rescore.maxquant import MSMSAccessor
 from ms2rescore.parse_mgf import parse_mgf
 from ms2rescore.peptide_record import PeptideRecord
-from ms2rescore.peptideshaker import ExtendedPsmReportAccessor
+from ms2rescore.peptideshaker import ExtendedPsmAnnotationReportAccessor
 from ms2rescore.percolator import PercolatorIn, run_percolator_converter
 
 
