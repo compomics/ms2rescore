@@ -60,6 +60,7 @@ class _Pipeline(ABC):
         self.modification_list = config["ms2pip"]["modifications"]
         self.id_decoy_pattern = config["general"]["id_decoy_pattern"]
         self.log_level = config["general"]["log_level"]
+        self.mgf_TITLE_pattern = config["general"]["mgf_TITLE_pattern"]
 
         # General private attributes
         self._pin_spec_id_patterns = {

@@ -77,7 +77,13 @@
                     "description": "Output PDF with additional Rescore plots",
                     "type": "boolean",
                     "default": false
-            }
+                },
+                "mgf_TITLE_pattern":{
+                    "description": "regex pattern to extract index or scan number from mgf TITLE field",
+                    "type": "string",
+                    "default": "TITLE=.*scan=([0-9]+).*$",
+                    "format": "regex"
+                }
         },
         "ms2pip": {
             "description": "MS²PIP settings.",

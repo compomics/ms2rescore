@@ -11,7 +11,8 @@
         "mgf_path":null,
         "output_filename":null,
         "log_level": "info",
-        "plotting": false
+        "plotting": false,
+        "mgf_TITLE_pattern": "TITLE=.*scan=([0-9]+).*$",
     },
     "ms2pip": {
         "model": "HCD",
