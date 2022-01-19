@@ -69,7 +69,7 @@ class ExtendedPsmAnnotationReportAccessor:
             peak_anns = psm['peak_anns']
             row = psm_attrs
             row.update({
-                'Mass':psm_attrs['m/z']*psm_attrs['Measured Charge'],
+                'Mass':psm_attrs['m/z']*psm_attrs['Identification Charge'],
                 'Length': len(psm_attrs['Sequence']),
                 'Missed cleavages': psm_attrs['Sequence'][:-1].count('K') + psm_attrs['Sequence'][:-1].count('R'), # TODO get info from report (update custom report)..
                 'Intensities':';'.join([str(p['Intensity']) for p in peak_anns]),
@@ -154,7 +154,7 @@ class ExtendedPsmAnnotationReportAccessor:
             'Spectrum Array List':str,
             'RT':float,
             'm/z':float,
-            'Measured Charge':lambda x: int(x[:-1]),
+            'Measured Charge':lambda x: 'na' if not x else int(x[:-1]),
             'Total Spectrum Intensity':float,
             'Intensity Coverage [%]':float,
             'Maximal Spectrum Intensity':float,
@@ -373,7 +373,7 @@ class ExtendedPsmAnnotationReportAccessor:
             "Spectrum Title": "spec_id",
             "Modified Sequence": "modifications",
             "Sequence": "peptide",
-            "Measured Charge": "charge",
+            "Identification Charge": "charge",
             "Decoy": "Label",
             "RT": "observed_retention_time",
             "Confidence [%]": "psm_score",
