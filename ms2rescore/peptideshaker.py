@@ -60,6 +60,9 @@ class ExtendedPsmAnnotationReportAccessor:
 
     @staticmethod
     def df_from_all_psms(all_psms):
+        """
+        TODO select only b and y fargment ions?
+        """
         df = []
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
@@ -404,13 +407,13 @@ class ExtendedPsmAnnotationReportAccessor:
         logger.debug("Calculating search engine features...")
         
         spec_id = self._obj["Spectrum Title"].rename("spec_id")
-        charge = self._obj["Measured Charge"].rename("charge")
+        charge = self._obj["Identification Charge"].rename("charge")
 
         directly_copied = self._obj[[
             "Raw score",
             "Delta Confidence [%]",
             "Localization Confidence",
-            "Measured Charge",
+            "Identification Charge",
             "Mass",
             "Length",
             f"Precursor m/z Error [{self._mass_error_unit}]",
@@ -421,13 +424,13 @@ class ExtendedPsmAnnotationReportAccessor:
             "Localization Confidence": "RawModLocProb",
             "Length": "PepLen",
             f"Precursor m/z Error [{self._mass_error_unit}]": "dM",
-            "Measured Charge": "ChargeN",
+            "Identification Charge": "ChargeN",
             "Missed cleavages": "enzInt",
         })
 
         absdM = self._obj[f"Precursor m/z Error [{self._mass_error_unit}]"].abs().rename("absdM")
 
-        charges_encoded = pd.get_dummies(self._obj["Measured Charge"], prefix="Charge", prefix_sep='')
+        charges_encoded = pd.get_dummies(self._obj["Identification Charge"], prefix="Charge", prefix_sep='')
 
         top7_features = pd.DataFrame([
             self._calculate_top7_peak_features(i, md)
