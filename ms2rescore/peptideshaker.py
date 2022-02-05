@@ -57,7 +57,8 @@ class ExtendedPsmAnnotationReportAccessor:
                 invalid_amino_acids
             )
             self._obj = self._obj.drop(index=to_drop)
-
+    
+    @staticmethod
     def _get_RawModLocProb(prob_ptm_score):
         probs = re.findall("\d+\.\d+", prob_ptm_score)
         if probs:
