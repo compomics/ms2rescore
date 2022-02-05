@@ -101,8 +101,7 @@ class ExtendedPsmAnnotationReportAccessor:
             'Theoretic m/z',
             'm/z',
             'Intensity',
-            'm/z Error (Da)',
-            'm/z Error (ppm)'
+            'm/z Error (Da)'
         ]
         peak_ann_dtypes = {
             'Peak Annotation':str,
