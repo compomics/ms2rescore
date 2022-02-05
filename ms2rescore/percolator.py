@@ -246,7 +246,7 @@ class PercolatorIn:
 
     def _get_sequence_column(self) -> pd.Series:
         """Get unmodified sequence column to PIN DataFrame."""
-        return self.df["Peptide"].apply(self._get_unmodified_sequence).apply(lambda x: f'_.{x}._') # to it works with fido
+        return self.df["Peptide"].apply(self._get_unmodified_sequence)
 
     def _get_charge_column(self) -> pd.Series:
         """Get charge column from one-hot encoded `ChargeX` columns."""
