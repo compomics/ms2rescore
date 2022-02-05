@@ -406,6 +406,7 @@ class ExtendedPsmAnnotationReportAccessor:
         # Convert DataFrame to PEPREC
         df = self._obj[column_mapping.keys()].rename(columns=column_mapping)
         #df["charge"] = df["charge"].str.strip("+")
+        df["protein_list"] = self._obj["Proteins"].str.split(";")
         df["charge"] = df["charge"].astype(str)
         df["modifications"] = df["modifications"].apply(self._parse_modification)
         df["Label"] = df["Label"].apply(
