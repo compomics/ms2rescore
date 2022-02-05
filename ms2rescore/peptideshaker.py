@@ -82,7 +82,7 @@ class ExtendedPsmAnnotationReportAccessor:
                 'Intensities':';'.join([str(p['Intensity']) for p in peak_anns]),
                 'm/z Errors (Da)':';'.join([str(p['m/z Error (Da)']) for p in peak_anns]),
                 'Matches':';'.join([p['Name'] for p in peak_anns]),
-                'RawModLocProb':_get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
+                'RawModLocProb':pd.DataFrame.ext_psm_ann_report._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
             df.append(row)
         return pd.DataFrame(df)
