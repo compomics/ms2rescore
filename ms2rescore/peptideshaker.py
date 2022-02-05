@@ -58,6 +58,12 @@ class ExtendedPsmAnnotationReportAccessor:
             )
             self._obj = self._obj.drop(index=to_drop)
 
+    def _get_RawModLocProb(prob_ptm_score):
+        probs = re.findall("\d+\.\d+", prob_ptm_score)
+        if probs:
+            return max([float(x) for x in probs])
+        return 0
+
     @staticmethod
     def df_from_all_psms(all_psms):
         """
@@ -71,10 +77,11 @@ class ExtendedPsmAnnotationReportAccessor:
             row.update({
                 'Mass':psm_attrs['m/z']*psm_attrs['Identification Charge'],
                 'Length': len(psm_attrs['Sequence']),
-                'Missed cleavages': psm_attrs['Sequence'][:-1].count('K') + psm_attrs['Sequence'][:-1].count('R'), # TODO get info from report (update custom report)..
+                'Missed cleavages': psm_attrs['Sequence'][:-1].count('K') + psm_attrs['Sequence'][:-1].count('R'), # TODO get info from report? (update custom report)..
                 'Intensities':';'.join([str(p['Intensity']) for p in peak_anns]),
                 'm/z Errors (Da)':';'.join([str(p['m/z Error (Da)']) for p in peak_anns]),
-                'Matches':';'.join([p['Name'] for p in peak_anns])
+                'Matches':';'.join([p['Name'] for p in peak_anns]),
+                'RawModLocProb':_get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
             df.append(row)
         return pd.DataFrame(df)
@@ -414,7 +421,7 @@ class ExtendedPsmAnnotationReportAccessor:
         directly_copied = self._obj[[
             "Raw score",
             "Delta Confidence [%]",
-            "Localization Confidence",
+            "RawModLocProb",
             "Identification Charge",
             "Mass",
             "Length",
@@ -423,7 +430,7 @@ class ExtendedPsmAnnotationReportAccessor:
         ]].rename(columns={
             "Raw score": "RawScore",
             "Delta Confidence [%]": "RawDeltaScore",
-            "Localization Confidence": "RawModLocProb",
+            "RawModLocProb": "RawModLocProb",
             "Length": "PepLen",
             f"Precursor m/z Error [{self._mass_error_unit}]": "dM",
             "Identification Charge": "ChargeN",
