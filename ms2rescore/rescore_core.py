@@ -535,6 +535,9 @@ def write_pin_files(
         inplace=True,
     )
 
+    # format peptide sequence to work with fido TODO: check!!
+    pep['peptide'] = pep['peptide'].apply(lambda x: f'_.{x}._')
+
     # Merge features and peprec DataFrames
     complete_df = pep
     for feature_set in [searchengine_features, ms2pip_features, rt_features]:
