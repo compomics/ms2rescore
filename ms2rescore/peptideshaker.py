@@ -66,6 +66,18 @@ class ExtendedPsmAnnotationReportAccessor:
             return max([float(x) for x in probs])
         return 0
 
+    @staticmethod       
+    def _cleanup_protein_ids(prot_ids):
+        # TODO this is too specific to our pipline (OpenProt library)
+        clean_prot_ids = []
+        for prot_id in prot_ids.split(', '):
+            decoy = '_REVERSED' in prot_id
+            prot_acc = prot_id.split('|')[0]
+            if decoy:
+                prot_acc += '_REVERSED'
+            clean_prot_ids.append(prot_acc)
+        return ';'.join(clean_prot_ids)
+
     @staticmethod
     def df_from_all_psms(all_psms):
         """
@@ -77,6 +89,7 @@ class ExtendedPsmAnnotationReportAccessor:
             peak_anns = psm['peak_anns']
             row = psm_attrs
             row.update({
+                'Proteins':pd.DataFrame.ext_psm_ann_report._cleanup_protein_ids(psm_attrs['Protein(s)']),
                 'Mass':psm_attrs['m/z']*psm_attrs['Identification Charge'],
                 'Length': len(psm_attrs['Sequence']),
                 'Missed cleavages': psm_attrs['Sequence'][:-1].count('K') + psm_attrs['Sequence'][:-1].count('R'), # TODO get info from report? (update custom report)..
@@ -86,6 +99,7 @@ class ExtendedPsmAnnotationReportAccessor:
                 'RawModLocProb':pd.DataFrame.ext_psm_ann_report._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
             df.append(row)
+
         return pd.DataFrame(df)
 
     @staticmethod
