@@ -523,6 +523,9 @@ def write_pin_files(
         else:
             pep["Proteins"] = pep["peptide"]
 
+    # format peptide sequence to work with fido TODO: check!!
+    pep['peptide'] = pep['peptide'].apply(lambda x: f'_.{x}._')
+
     # ModPeptide contains sequence with modifications (e.g. from MaxQuant)
     if "ModPeptide" not in pep.columns:
         pep["ModPeptide"] = pep["peptide"]
@@ -534,9 +537,6 @@ def write_pin_files(
         },
         inplace=True,
     )
-
-    # format peptide sequence to work with fido TODO: check!!
-    pep['peptide'] = pep['peptide'].apply(lambda x: f'_.{x}._')
 
     # Merge features and peprec DataFrames
     complete_df = pep
