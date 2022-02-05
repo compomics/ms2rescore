@@ -199,19 +199,10 @@ class MS2ReScore:
                 + "_features"
             )
             percolator_cmd = "percolator "
-            for op in self.config["percolator"].keys():
-                percolator_cmd = percolator_cmd + "--{} {} ".format(
-                    op, self.config["percolator"][op]
-                )
-            percolator_cmd = (
-                percolator_cmd
-                + "{} -m {} -M {} -w {} -v 0 -U --post-processing-tdc\n".format(
-                    subname + ".pin",
-                    subname + ".pout",
-                    subname + ".pout_dec",
-                    subname + ".weights",
-                )
-            )
+            percolator_cmd += f'{subname}.pin -m {subname}.pout -M {subname}.pout_dec -w {subname}.weights -v 0 '
+            for op, val in self.config["percolator"].items():
+                percolator_cmd += f'--{op} {val} '
+            percolator_cmd += '\n'
 
             logger.info("Running Percolator: %s", percolator_cmd)
             subprocess.run(percolator_cmd, shell=True)
