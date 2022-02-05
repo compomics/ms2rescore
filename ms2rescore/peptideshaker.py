@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import csv
 from typing import Dict, List, Optional, Tuple, Union
 
