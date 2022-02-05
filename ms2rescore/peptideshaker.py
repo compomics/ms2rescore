@@ -101,7 +101,8 @@ class ExtendedPsmAnnotationReportAccessor:
             'Theoretic m/z',
             'm/z',
             'Intensity',
-            'm/z Error (Da)'
+            'm/z Error (Da)',
+            'm/z Error (ppm)'
         ]
         peak_ann_dtypes = {
             'Peak Annotation':str,
@@ -118,6 +119,7 @@ class ExtendedPsmAnnotationReportAccessor:
         }
         psm_attr_col_names = [
             'Rank',
+            'Protein(s)',
             'Sequence',
             'Missed Cleavages',
             'Modified Sequence',
@@ -140,11 +142,8 @@ class ExtendedPsmAnnotationReportAccessor:
             'Algorithm Confidence [%]',
             'Delta Confidence [%]',
             'Decoy',
-            'Localization Confidence',
             'Probabilistic PTM score',
             'D-score',
-            'Confidently Localized Modification Sites',
-            '# Confidently Localized Modification Sites',
             'Algorithm Score',
             'Score',
             'Raw score',
@@ -153,6 +152,7 @@ class ExtendedPsmAnnotationReportAccessor:
         ]
         psm_attr_dtypes = {
             'Rank':int,
+            'Protein(s)':str,
             'Sequence':str,
             'Missed Cleavages':str,
             'Modified Sequence':str,
