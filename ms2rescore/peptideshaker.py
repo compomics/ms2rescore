@@ -78,29 +78,38 @@ class ExtendedPsmAnnotationReportAccessor:
             clean_prot_ids.append(prot_acc)
         return ';'.join(clean_prot_ids)
 
-    @staticmethod
-    def df_from_all_psms(all_psms):
+
+    def df_from_all_psms(self, all_psms):
         """
         TODO select only b and y fargment ions?
         """
+        all_algos = list(set([x[0] for y in [self._parse_algo_scores(psm['Algorithm Score']) for psm in all_psms.values()] for x in y ]))
+
         df = []
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
             peak_anns = psm['peak_anns']
             row = psm_attrs
             row.update({
-                'Proteins':pd.DataFrame.ext_psm_ann_report._cleanup_protein_ids(psm_attrs['Protein(s)']),
+                'Proteins':self._cleanup_protein_ids(psm_attrs['Protein(s)']),
                 'Mass':psm_attrs['m/z']*psm_attrs['Identification Charge'],
                 'Length': len(psm_attrs['Sequence']),
                 'Missed cleavages': psm_attrs['Sequence'][:-1].count('K') + psm_attrs['Sequence'][:-1].count('R'), # TODO get info from report? (update custom report)..
                 'Intensities':';'.join([str(p['Intensity']) for p in peak_anns]),
                 'm/z Errors (Da)':';'.join([str(p['m/z Error (Da)']) for p in peak_anns]),
                 'Matches':';'.join([p['Name'] for p in peak_anns]),
-                'RawModLocProb':pd.DataFrame.ext_psm_ann_report._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
+                'RawModLocProb':self._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
+
             df.append(row)
 
         return pd.DataFrame(df)
+
+    @staticmethod
+    def _parse_algo_scores(algo_scores):
+        algo_scores = [x.split(' ') for x in algo_scores.split(', ')]
+        algo_scores = [(algo, float(score[1:-1])) for algo, score in algo_scores]
+        return algo_scores
 
     @staticmethod
     def parse_Extended_PSM_Annotation_Report(path):
