@@ -241,10 +241,9 @@ class ExtendedPsmAnnotationReportAccessor:
                 print(field, e)
         return df
 
-    @staticmethod
-    def from_file(path: Union[str, os.PathLike]) -> pd.DataFrame:
-        all_psms = pd.DataFrame.ext_psm_ann_report.parse_Extended_PSM_Annotation_Report(path)
-        return pd.DataFrame.ext_psm_ann_report.df_from_all_psms(all_psms)
+    def from_file(self, path: Union[str, os.PathLike]) -> pd.DataFrame:
+        all_psms = self.parse_Extended_PSM_Annotation_Report(path)
+        return self.df_from_all_psms(all_psms)
 
     @staticmethod
     def _parse_modification(modified_seq):
