@@ -84,7 +84,7 @@ class ExtendedPsmAnnotationReportAccessor:
         """
         TODO select only b and y fargment ions?
         """
-        all_algos = list(set([x[0] for y in [pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm['Algorithm Score']) for psm in all_psms.values()] for x in y ]))
+        all_algos = list(set([x[0] for y in [pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm['psm_attrs']['Algorithm Score']) for psm in all_psms.values()] for x in y ]))
 
         df = []
         for spec_id, psm in all_psms.items():
@@ -101,7 +101,7 @@ class ExtendedPsmAnnotationReportAccessor:
                 'Matches':';'.join([p['Name'] for p in peak_anns]),
                 'RawModLocProb':pd.DataFrame.ext_psm_ann_report._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
-            algo_scores = dict(pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm['Algorithm Score']))
+            algo_scores = dict(pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm_attrs['Algorithm Score']))
             row.update({algo:0 if algo not in algo_scores else algo_scores[algo] for algo in all_algos})
             df.append(row)
 
