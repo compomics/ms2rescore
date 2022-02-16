@@ -79,13 +79,11 @@ class ExtendedPsmAnnotationReportAccessor:
             clean_prot_ids.append(prot_acc)
         return ';'.join(clean_prot_ids)
 
-    @staticmethod
     def df_from_all_psms(all_psms):
         """
         TODO select only b and y fargment ions?
         """
         all_algos = list(set([x[0] for y in [pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm['psm_attrs']['Algorithm Score']) for psm in all_psms.values()] for x in y ]))
-
         df = []
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
@@ -102,7 +100,7 @@ class ExtendedPsmAnnotationReportAccessor:
                 'RawModLocProb':pd.DataFrame.ext_psm_ann_report._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
             algo_scores = dict(pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm_attrs['Algorithm Score']))
-            row.update({algo:0 if algo not in algo_scores else algo_scores[algo] for algo in all_algos})
+            row.update({algo + '_score':0 if algo not in algo_scores else algo_scores[algo] for algo in all_algos})
             df.append(row)
 
         return pd.DataFrame(df)
@@ -446,7 +444,7 @@ class ExtendedPsmAnnotationReportAccessor:
         charge = self._obj["Identification Charge"].rename("charge")
 
         directly_copied = self._obj[[
-            "Raw score",
+            #"Raw score",
             "Delta Confidence [%]",
             "RawModLocProb",
             "Identification Charge",
@@ -454,8 +452,8 @@ class ExtendedPsmAnnotationReportAccessor:
             "Length",
             f"Precursor m/z Error [{self._mass_error_unit}]",
             "Missed cleavages",
-        ]].rename(columns={
-            "Raw score": "RawScore",
+        ] + [x for x in self._obj.columns if '_score' in x]].rename(columns={
+            #"Raw score": "RawScore",
             "Delta Confidence [%]": "RawDeltaScore",
             "RawModLocProb": "RawModLocProb",
             "Length": "PepLen",
