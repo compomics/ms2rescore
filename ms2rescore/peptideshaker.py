@@ -108,7 +108,7 @@ class ExtendedPsmAnnotationReportAccessor:
     @staticmethod
     def _parse_algo_scores(algo_scores):
         algo_scores = [x.split(' ') for x in algo_scores.split(', ')]
-        algo_scores = [(algo, float(score[1:-1])) for algo, score in algo_scores]
+        algo_scores = [(algo, -np.log10(float(score[1:-1]))*10) for algo, score in algo_scores]
         return algo_scores
 
     @staticmethod
