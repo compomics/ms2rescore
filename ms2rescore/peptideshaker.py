@@ -442,7 +442,7 @@ class ExtendedPsmAnnotationReportAccessor:
         
         spec_id = self._obj["Spectrum Title"].rename("spec_id")
         charge = self._obj["Identification Charge"].rename("charge")
-
+#[x for x in self._obj.columns if '_score' in x]
         directly_copied = self._obj[[
             #"Raw score",
             "Delta Confidence [%]",
@@ -452,7 +452,7 @@ class ExtendedPsmAnnotationReportAccessor:
             "Length",
             f"Precursor m/z Error [{self._mass_error_unit}]",
             "Missed cleavages",
-        ] + [x for x in self._obj.columns if '_score' in x]].rename(columns={
+        ] + ['MS-GF+_score', 'Comet_score']].rename(columns={
             #"Raw score": "RawScore",
             "Delta Confidence [%]": "RawDeltaScore",
             "RawModLocProb": "RawModLocProb",
