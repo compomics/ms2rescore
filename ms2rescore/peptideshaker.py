@@ -102,7 +102,7 @@ class ExtendedPsmAnnotationReportAccessor:
                 'RawModLocProb':pd.DataFrame.ext_psm_ann_report._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
             algo_scores = dict(pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm['Algorithm Score']))
-            row.update({algo:0 if algo not in algo_scores else algo_scores[algo] for all_algos})
+            row.update({algo:0 if algo not in algo_scores else algo_scores[algo] for algo in all_algos})
             df.append(row)
 
         return pd.DataFrame(df)
