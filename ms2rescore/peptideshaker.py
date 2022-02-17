@@ -87,7 +87,8 @@ class ExtendedPsmAnnotationReportAccessor:
         df = []
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
-            peak_anns = psm['peak_anns']
+            #peak_anns = psm['peak_anns']
+            peak_anns = [x for x in psm['peak_anns'] if any(i in x['Type'] for i in ['y', 'b'])]
             row = psm_attrs
             row.update({
                 'Proteins':pd.DataFrame.ext_psm_ann_report._cleanup_protein_ids(psm_attrs['Protein(s)']),
