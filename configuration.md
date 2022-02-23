@@ -25,7 +25,6 @@
     - **Items**: Refer to *#/definitions/modifications*.
 - **`percolator`** *(object)*: Command line options directly passed to Percolator (see the Percolator wiki).
 - **`maxquant_to_rescore`** *(object)*: Settings specific to the MaxQuant pipeline. Cannot contain additional properties.
-  - **`mgf_dir`** *(string)*: Path to directory with MGF files.
   - **`modification_mapping`** *(object)*: Mapping of MaxQuant modification labels to modifications names for MS²PIP. Default: `{}`.
   - **`fixed_modifications`** *(object)*: Mapping of amino acids with fixed modifications to the modification name. Default: `{}`.
 ## Definitions
