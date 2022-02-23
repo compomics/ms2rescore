@@ -157,7 +157,7 @@ def _parse_arguments() -> argparse.Namespace:
     )
     maxquant_settings.add_argument(
         "--regex_pattern",
-        metavar="mgf TITLE field regex pattern",
+        metavar="MGF TITLE field regex pattern",
         action="store",
         type=str,
         default="TITLE=.*scan=([0-9]+).*$",
@@ -167,8 +167,8 @@ def _parse_arguments() -> argparse.Namespace:
             "full_width":True
             },
         help=(
-            "Regex pattern to extract index number from mgf TITLE field. "
-            "Default: \'TITLE=.*scan=([0-9]+).*$\' (ThermoRawFileParsed mgf files)\n"
+            "Regex pattern to extract index number from MGF TITLE field. "
+            "Default: \'TITLE=.*scan=([0-9]+).*$\' (ThermoRawFileParsed MGF files)\n"
             "Example: \'TITLE=([0-9]+).*$\' (index number immediately after TITLE field)"
         )
     )

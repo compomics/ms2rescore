@@ -191,6 +191,8 @@ class MS2ReScore:
 
     def _run_percolator(self):
         """Run Percolator with different feature subsets."""
+
+
         for subset in self.config["general"]["feature_sets"]:
             subname = (
                 self.config["general"]["output_filename"]
@@ -198,23 +200,30 @@ class MS2ReScore:
                 + "_".join(subset)
                 + "_features"
             )
-            percolator_cmd = "percolator "
-            for op in self.config["percolator"].keys():
-                percolator_cmd = percolator_cmd + "--{} {} ".format(
-                    op, self.config["percolator"][op]
-                )
-            percolator_cmd = (
-                percolator_cmd
-                + "{} -m {} -M {} -w {} -v 0 -U --post-processing-tdc\n".format(
-                    subname + ".pin",
-                    subname + ".pout",
-                    subname + ".pout_dec",
-                    subname + ".weights",
-                )
-            )
 
+            kwargs = {
+                    "results-psms": os.path.join(subname, ".pout"),
+                    "decoy-results-psms": os.path.join(subname, ".pout_dec"),
+                    "weights": os.path.join(subname, "result.decoy"),
+                    "verbose": 0
+                    }
+            kwargs.update(self.config["percolator"])
+
+            percolator_cmd = ["percolator "]
+            for key, value in kwargs:
+                percolator_cmd.extend(f"--{key}")
+                if (value) & isinstance(value,bool):
+                    continue
+                else:
+                    percolator_cmd.extend(value)
+
+            print(percolator_cmd)
             logger.info("Running Percolator: %s", percolator_cmd)
-            subprocess.run(percolator_cmd, shell=True)
+            output = subprocess.run(percolator_cmd, check=True, capture_output=True, universal_newlines=True)
+
+            logger.debug(output.stdout)
+            logger.info(output.stderr)
+
             if not os.path.isfile(subname + ".pout"):
                 logger.error("Error running Percolator")
 
