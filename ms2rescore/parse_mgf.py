@@ -27,7 +27,7 @@ def get_num_lines(file_path):
     return lines
 
 
-def title_parser(line, method='full', run=None):
+def title_parser(line, mgf_title_pattern, method='full', run=None):
     """
     Take an MGF TITLE line and return the spectrum title.
 
@@ -58,7 +58,7 @@ def title_parser(line, method='full', run=None):
     elif method == 'run.scan.scan':
         if not run:
             raise TypeError("If `method` is `run.scan.scan`, `run` cannot be None.")
-        scan_m = re.match(r"TITLE=.*scan=([0-9]+).*$", line)
+        scan_m = re.match(mgf_title_pattern, line)
         if scan_m:
             scan = scan_m.group(1)
         else:
@@ -73,7 +73,7 @@ def title_parser(line, method='full', run=None):
     return title
 
 
-def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
+def parse_mgf(df_in, mgf_folder, mgf_title_pattern, outname='scan_mgf_result.mgf',
               filename_col='mgf_filename', spec_title_col='spec_id',
               title_parsing_method='full',
               show_progress_bar=True):
@@ -106,7 +106,7 @@ def parse_mgf(df_in, mgf_folder, outname='scan_mgf_result.mgf',
             with open(current_mgf_file, 'r') as f:
                 for line in f:
                     if 'TITLE=' in line:
-                        title = title_parser(line, method=title_parsing_method, run=run)
+                        title = title_parser(line, mgf_title_pattern=mgf_title_pattern, method=title_parsing_method, run=run)
                         if title in spec_set:
                             found = True
                             line = "TITLE=" + title + "\n"

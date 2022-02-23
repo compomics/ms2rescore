@@ -424,7 +424,7 @@ class RescoreRecord(ABC):
                 ax = fig.add_subplot(
                     int(f"{len(tmp['sample'].unique())}1{sample[1]}"), frameon=False
                 )
-                ax.title.set_text(f"{sample[0]}\nFDR={FDR}")
+                ax.title.set_text(f"{sample[1]}\nFDR={FDR}")
                 sns.barplot(
                     y="feature",
                     x="gain",
@@ -453,7 +453,7 @@ class RescoreRecord(ABC):
                 ax.axes.set_ylabel("")
             else:
                 ax = fig.add_subplot(
-                    int(f"{tmp['sample'].unique()}1{sample[1]}"), frameon=False
+                    int(f"{len(tmp['sample'].unique())}1{sample[1]}"), frameon=False
                 )
                 ax.title.set_text(sample[0])
                 sns.barplot(
