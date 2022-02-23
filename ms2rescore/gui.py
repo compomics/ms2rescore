@@ -2,6 +2,8 @@
 
 import argparse
 import ast
+from distutils.command.config import config
+from email.policy import default
 import json
 import logging
 import pprint
@@ -43,6 +45,8 @@ def main():
     """Run MS²Rescore."""
     conf = _parse_arguments().__dict__
     conf = parse_settings(conf)
+    print(conf)
+    exit()
     rescore = MS2ReScore(parse_cli_args=False, configuration=conf, set_logger=True)
     rescore.run()
 
@@ -53,7 +57,7 @@ def _parse_arguments() -> argparse.Namespace:
     ms2pip_mods = default_config["ms2pip"]["modifications"]
 
     parser = GooeyParser()
-    general = parser.add_argument_group("General configuration")
+    general = parser.add_argument_group("General configuration",gooey_options={'columns':2})
     general.add_argument(
         "identification_file",
         metavar="Identification file (required)",
@@ -126,6 +130,20 @@ def _parse_arguments() -> argparse.Namespace:
         widget="Dropdown",
         choices=["debug", "info", "warning", "error", "critical"],
     )
+    general.add_argument(
+        "-n",
+        metavar="num cpu",
+        action="store",
+        type=int,
+        dest="num_cpu",
+        default=-1,
+        help="Number of parallel processes to use; -1 for all available",
+        widget="IntegerField",
+        gooey_options={
+            'min': -1,
+            'max': multiprocessing.cpu_count()
+        }
+    )
 
     maxquant_settings = parser.add_argument_group(
         "MaxQuant settings",
@@ -137,6 +155,24 @@ def _parse_arguments() -> argparse.Namespace:
             "PSM-level FDR filtering; i.e. the FDR Threshold set at 1."
         )
     )
+    maxquant_settings.add_argument(
+        "--regex_pattern",
+        metavar="mgf TITLE field regex pattern",
+        action="store",
+        type=str,
+        default="TITLE=.*scan=([0-9]+).*$",
+        widget="Textarea",
+        gooey_options={
+            "height":27,
+            "full_width":True
+            },
+        help=(
+            "Regex pattern to extract index number from mgf TITLE field. "
+            "Default: \'TITLE=.*scan=([0-9]+).*$\' (ThermoRawFileParsed mgf files)\n"
+            "Example: \'TITLE=([0-9]+).*$\' (index number immediately after TITLE field)"
+        )
+    )
+
     maxquant_settings.add_argument(
         "--fixed_modifications",
         metavar="Fixed modifications",
