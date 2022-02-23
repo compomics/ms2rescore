@@ -45,8 +45,6 @@ def main():
     """Run MS²Rescore."""
     conf = _parse_arguments().__dict__
     conf = parse_settings(conf)
-    print(conf)
-    exit()
     rescore = MS2ReScore(parse_cli_args=False, configuration=conf, set_logger=True)
     rescore.run()
 
@@ -158,6 +156,7 @@ def _parse_arguments() -> argparse.Namespace:
     maxquant_settings.add_argument(
         "--regex_pattern",
         metavar="MGF TITLE field regex pattern",
+        dest="mgf_title_pattern",
         action="store",
         type=str,
         default="TITLE=.*scan=([0-9]+).*$",
@@ -277,6 +276,7 @@ def parse_settings(config:dict) -> dict:
                 "Invalid MaxQuant modification configuration. Make sure that the "
                 "modification configuration fields are formatted correctly."
             )
+    parsed_config["maxquant_to_rescore"]["mgf_title_pattern"] = parsed_config["general"].pop("mgf_title_pattern")
 
     # MS²PIP configuration
     parsed_config["ms2pip"] = {
