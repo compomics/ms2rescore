@@ -115,7 +115,7 @@
             "additionalProperties": false,
 
             "properties": {
-                "mgf_TITLE_pattern":{
+                "mgf_title_pattern":{
                     "description": "regex pattern to extract index or scan number from maxquant mgf TITLE field",
                     "type": "string",
                     "default": "TITLE=.*scan=([0-9]+).*$",
