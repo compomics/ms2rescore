@@ -60,7 +60,7 @@ class _Pipeline(ABC):
         self.modification_list = config["ms2pip"]["modifications"]
         self.id_decoy_pattern = config["general"]["id_decoy_pattern"]
         self.log_level = config["general"]["log_level"]
-        self.mgf_TITLE_pattern = config["general"]["mgf_TITLE_pattern"]
+        self.mgf_TITLE_pattern = config["maxquant_to_rescore"]["mgf_TITLE_pattern"]
 
         # General private attributes
         self._pin_spec_id_patterns = {
@@ -387,7 +387,7 @@ class MaxQuantPipeline(_Pipeline):
             filename_col="Raw file",
             spec_title_col="spec_id",
             title_parsing_method="run.scan.scan",
-
+            mgf_TITLE_pattern=self.mgf_TITLE_pattern
         )
         self._path_to_new_mgf = path_to_new_mgf
 
@@ -642,5 +642,4 @@ class PeaksPipeline(_Pipeline):
         ]
 
         feature_cols = [col for col in self.df.columns if col not in peprec_cols]
-        print(feature_cols)
         return self.df[feature_cols]

@@ -77,12 +77,6 @@
                     "description": "Output PDF with additional Rescore plots",
                     "type": "boolean",
                     "default": false
-                },
-                "mgf_TITLE_pattern":{
-                    "description": "regex pattern to extract index or scan number from mgf TITLE field",
-                    "type": "string",
-                    "default": "TITLE=.*scan=([0-9]+).*$",
-                    "format": "regex"
                 }
         },
         "ms2pip": {
@@ -121,6 +115,12 @@
             "additionalProperties": false,
 
             "properties": {
+                "mgf_TITLE_pattern":{
+                    "description": "regex pattern to extract index or scan number from maxquant mgf TITLE field",
+                    "type": "string",
+                    "default": "TITLE=.*scan=([0-9]+).*$",
+                    "format": "regex"
+                },
                 "modification_mapping": {
                     "description": "Mapping of MaxQuant modification labels to modifications names for MS²PIP",
                     "type": "object",

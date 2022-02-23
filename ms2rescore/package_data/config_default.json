@@ -11,8 +11,7 @@
         "mgf_path":null,
         "output_filename":null,
         "log_level": "info",
-        "plotting": false,
-        "mgf_TITLE_pattern": "TITLE=.*scan=([0-9]+).*$",
+        "plotting": false
     },
     "ms2pip": {
         "model": "HCD",
@@ -36,6 +35,7 @@
         ]
     },
     "maxquant_to_rescore": {
+        "mgf_TITLE_pattern": "TITLE=.*scan=([0-9]+).*$",
         "modification_mapping":{
             "ox":"Oxidation",
             "ac":"Acetyl",

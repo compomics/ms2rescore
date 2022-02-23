@@ -196,7 +196,7 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
     config["general"]["pipeline"] = config["general"]["pipeline"].lower()
 
     try:
-        config["general"]["mgf_TITLE_pattern"] = re.compile(config["general"]["mgf_TITLE_pattern"])
+        config["maxquant_to_rescore"]["mgf_TITLE_pattern"] = re.compile(config["maxquant_to_rescore"]["mgf_TITLE_pattern"])
     except re.error:
         raise MS2RescoreConfigurationError(
             "Invalid regex pattern, please provide valid regex patttern"
