@@ -4,6 +4,7 @@ import argparse
 import json
 import multiprocessing as mp
 import os
+import re
 from typing import Dict, Optional
 
 from cascade_config import CascadeConfig
@@ -193,5 +194,12 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
     config = _validate_num_cpu(config)
 
     config["general"]["pipeline"] = config["general"]["pipeline"].lower()
+
+    try:
+        config["maxquant_to_rescore"]["mgf_title_pattern"] = re.compile(config["maxquant_to_rescore"]["mgf_title_pattern"])
+    except re.error:
+        raise MS2RescoreConfigurationError(
+            "Invalid regex pattern, please provide valid regex patttern"
+        )
 
     return config

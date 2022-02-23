@@ -35,6 +35,7 @@
         ]
     },
     "maxquant_to_rescore": {
+        "mgf_title_pattern": "TITLE=.*scan=([0-9]+).*$",
         "modification_mapping":{
             "ox":"Oxidation",
             "ac":"Acetyl",
