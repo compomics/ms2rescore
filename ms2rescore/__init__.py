@@ -202,30 +202,31 @@ class MS2ReScore:
             )
 
             kwargs = {
-                    "results-psms": os.path.join(subname, ".pout"),
-                    "decoy-results-psms": os.path.join(subname, ".pout_dec"),
-                    "weights": os.path.join(subname, "result.decoy"),
-                    "verbose": 0
+                    "results-psms": subname + ".pout",
+                    "decoy-results-psms": subname + ".pout_dec",
+                    "weights": subname + ".weights",
+                    "verbose": 0,
+                    "post-processing-tdc": True
                     }
             kwargs.update(self.config["percolator"])
 
-            percolator_cmd = ["percolator "]
-            for key, value in kwargs:
-                percolator_cmd.extend(f"--{key}")
-                if (value) & isinstance(value,bool):
+            percolator_cmd = ["percolator"]
+            for key, value in kwargs.items():
+
+                if not isinstance(value,bool):
+                    percolator_cmd.append(f"--{key}")
+                    percolator_cmd.append(str(value))
+                elif isinstance(value, bool) & value==False:
                     continue
                 else:
-                    percolator_cmd.extend(value)
-
-            print(percolator_cmd)
-            logger.info("Running Percolator: %s", percolator_cmd)
-            output = subprocess.run(percolator_cmd, check=True, capture_output=True, universal_newlines=True)
+                    percolator_cmd.append(f"--{key}")
+            percolator_cmd.append(subname+".pin")
+            logger.info("Running Percolator: %s", " ".join(percolator_cmd))
+            output = subprocess.run(percolator_cmd, capture_output=True, shell=True, check=True)
 
             logger.debug(output.stdout)
             logger.info(output.stderr)
 
-            if not os.path.isfile(subname + ".pout"):
-                logger.error("Error running Percolator")
 
     def run(self):
         """Run MS²ReScore."""

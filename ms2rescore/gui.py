@@ -283,7 +283,6 @@ def parse_settings(config:dict) -> dict:
 
     # general configuration
     parsed_config["general"]["feature_sets"] = [parsed_config["general"]["feature_sets"].split(" ")]
-    print(parsed_config["general"]["feature_sets"])
     # MaxQuant configuration
     for conf_item in ["modification_mapping", "fixed_modifications"]:
         parsed_conf_item = parsed_config["general"].pop(conf_item)
