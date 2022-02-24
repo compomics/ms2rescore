@@ -2,6 +2,8 @@
 
 import argparse
 import ast
+from distutils.command.config import config
+from email.policy import default
 import json
 import logging
 import pprint
@@ -53,7 +55,7 @@ def _parse_arguments() -> argparse.Namespace:
     ms2pip_mods = default_config["ms2pip"]["modifications"]
 
     parser = GooeyParser()
-    general = parser.add_argument_group("General configuration")
+    general = parser.add_argument_group("General configuration",gooey_options={'columns':2})
     general.add_argument(
         "identification_file",
         metavar="Identification file (required)",
@@ -126,6 +128,40 @@ def _parse_arguments() -> argparse.Namespace:
         widget="Dropdown",
         choices=["debug", "info", "warning", "error", "critical"],
     )
+    general.add_argument(
+        "-f",
+        metavar="Feature sets",
+        action="store",
+        dest="feature_sets",
+        default="searchengine ms2pip rt",
+        help="Feature sets to use for rescoring, to select multiple feature set combinations use configuration file",
+        widget="Dropdown",
+        choices=[
+            "searchengine ms2pip rt",
+            "searchengine ms2pip",
+            "searchengine rt",
+            "ms2pip rt",
+            "searchengine",
+            "ms2pip",
+            "rt"
+        ]
+    )
+
+    general.add_argument(
+        "-n",
+        metavar="Num cpu",
+        action="store",
+        type=int,
+        dest="num_cpu",
+        default=-1,
+        help="Number of parallel processes to use; -1 for all available",
+        widget="IntegerField",
+        gooey_options={
+            'min': -1,
+            'max': multiprocessing.cpu_count()
+        }
+    )
+
 
     maxquant_settings = parser.add_argument_group(
         "MaxQuant settings",
@@ -137,6 +173,25 @@ def _parse_arguments() -> argparse.Namespace:
             "PSM-level FDR filtering; i.e. the FDR Threshold set at 1."
         )
     )
+    maxquant_settings.add_argument(
+        "--regex_pattern",
+        metavar="MGF TITLE field regex pattern",
+        dest="mgf_title_pattern",
+        action="store",
+        type=str,
+        default="TITLE=.*scan=([0-9]+).*$",
+        widget="Textarea",
+        gooey_options={
+            "height":27,
+            "full_width":True
+            },
+        help=(
+            "Regex pattern to extract index number from MGF TITLE field. "
+            "Default: \'TITLE=.*scan=([0-9]+).*$\' (ThermoRawFileParsed MGF files)\n"
+            "Example: \'TITLE=([0-9]+).*$\' (index number immediately after TITLE field)"
+        )
+    )
+
     maxquant_settings.add_argument(
         "--fixed_modifications",
         metavar="Fixed modifications",
@@ -226,6 +281,8 @@ def parse_settings(config:dict) -> dict:
         "ms2pip": {},
     }
 
+    # general configuration
+    parsed_config["general"]["feature_sets"] = [parsed_config["general"]["feature_sets"].split(" ")]
     # MaxQuant configuration
     for conf_item in ["modification_mapping", "fixed_modifications"]:
         parsed_conf_item = parsed_config["general"].pop(conf_item)
@@ -241,6 +298,7 @@ def parse_settings(config:dict) -> dict:
                 "Invalid MaxQuant modification configuration. Make sure that the "
                 "modification configuration fields are formatted correctly."
             )
+    parsed_config["maxquant_to_rescore"]["mgf_title_pattern"] = parsed_config["general"].pop("mgf_title_pattern")
 
     # MS²PIP configuration
     parsed_config["ms2pip"] = {

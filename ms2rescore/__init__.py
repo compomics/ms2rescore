@@ -191,6 +191,8 @@ class MS2ReScore:
 
     def _run_percolator(self):
         """Run Percolator with different feature subsets."""
+
+
         for subset in self.config["general"]["feature_sets"]:
             subname = (
                 self.config["general"]["output_filename"]
@@ -198,25 +200,33 @@ class MS2ReScore:
                 + "_".join(subset)
                 + "_features"
             )
-            percolator_cmd = "percolator "
-            for op in self.config["percolator"].keys():
-                percolator_cmd = percolator_cmd + "--{} {} ".format(
-                    op, self.config["percolator"][op]
-                )
-            percolator_cmd = (
-                percolator_cmd
-                + "{} -m {} -M {} -w {} -v 0 -U --post-processing-tdc\n".format(
-                    subname + ".pin",
-                    subname + ".pout",
-                    subname + ".pout_dec",
-                    subname + ".weights",
-                )
-            )
 
-            logger.info("Running Percolator: %s", percolator_cmd)
-            subprocess.run(percolator_cmd, shell=True)
-            if not os.path.isfile(subname + ".pout"):
-                logger.error("Error running Percolator")
+            kwargs = {
+                    "results-psms": subname + ".pout",
+                    "decoy-results-psms": subname + ".pout_dec",
+                    "weights": subname + ".weights",
+                    "verbose": 0,
+                    "post-processing-tdc": True
+                    }
+            kwargs.update(self.config["percolator"])
+
+            percolator_cmd = ["percolator"]
+            for key, value in kwargs.items():
+
+                if not isinstance(value,bool):
+                    percolator_cmd.append(f"--{key}")
+                    percolator_cmd.append(str(value))
+                elif isinstance(value, bool) & value==False:
+                    continue
+                else:
+                    percolator_cmd.append(f"--{key}")
+            percolator_cmd.append(subname+".pin")
+            logger.info("Running Percolator: %s", " ".join(percolator_cmd))
+            output = subprocess.run(percolator_cmd, capture_output=True, shell=True, check=True)
+
+            logger.debug(output.stdout)
+            logger.info(output.stderr)
+
 
     def run(self):
         """Run MS²ReScore."""
