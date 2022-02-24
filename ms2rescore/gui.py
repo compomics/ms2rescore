@@ -129,6 +129,25 @@ def _parse_arguments() -> argparse.Namespace:
         choices=["debug", "info", "warning", "error", "critical"],
     )
     general.add_argument(
+        "-f",
+        metavar="Feature sets",
+        action="store",
+        dest="feature_sets",
+        default="searchengine ms2pip rt",
+        help="Feature sets to use for rescoring, to select multiple feature set combinations use configuration file",
+        widget="Dropdown",
+        choices=[
+            "searchengine ms2pip rt",
+            "searchengine ms2pip",
+            "searchengine rt",
+            "ms2pip rt",
+            "searchengine",
+            "ms2pip",
+            "rt"
+        ]
+    )
+
+    general.add_argument(
         "-n",
         metavar="num cpu",
         action="store",
@@ -142,6 +161,7 @@ def _parse_arguments() -> argparse.Namespace:
             'max': multiprocessing.cpu_count()
         }
     )
+
 
     maxquant_settings = parser.add_argument_group(
         "MaxQuant settings",
@@ -261,6 +281,9 @@ def parse_settings(config:dict) -> dict:
         "ms2pip": {},
     }
 
+    # general configuration
+    parsed_config["general"]["feature_sets"] = [parsed_config["general"]["feature_sets"].split(" ")]
+    print(parsed_config["general"]["feature_sets"])
     # MaxQuant configuration
     for conf_item in ["modification_mapping", "fixed_modifications"]:
         parsed_conf_item = parsed_config["general"].pop(conf_item)
