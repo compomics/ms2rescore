@@ -149,7 +149,7 @@ def _parse_arguments() -> argparse.Namespace:
 
     general.add_argument(
         "-n",
-        metavar="num cpu",
+        metavar="Num cpu",
         action="store",
         type=int,
         dest="num_cpu",
