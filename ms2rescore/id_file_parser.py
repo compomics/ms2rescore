@@ -513,33 +513,10 @@ class PeaksPipeline(_Pipeline):
     def read_df_from_mzid(self) -> pd.DataFrame:
         """Read mzid to Dataframe."""
         logger.info("Processing mzid file")
-        df = pd.DataFrame(
-            columns=[
-                "spec_id",
-                "peptide",
-                "peptide_length",
-                "modifications",
-                "charge",
-                "PEAKS:peptideScore",
-                "Label",
-                "Raw file",
-            ]
-        )
+        psm_list = []
         with mzid.read(self.path_to_id_file) as reader:
             for spectrum_identification_result in tqdm(reader):
-                retrieved_data = pd.Series(
-                    index=[
-                        "spec_id",
-                        "peptide",
-                        "peptide_length",
-                        "modifications",
-                        "charge",
-                        "protein_list",
-                        "PEAKS:peptideScore",
-                        "Label",
-                        "Raw file",
-                    ]
-                )
+                psm = {}
                 flat_dict = dict(
                     self._convert_to_flat_dict(spectrum_identification_result)
                 )
@@ -551,40 +528,42 @@ class PeaksPipeline(_Pipeline):
                     + ":"
                     + flat_dict["spectrumID"]
                 )
-                retrieved_data["spec_id"] = spec_id
-                retrieved_data["peptide"] = flat_dict[
+                psm["spec_id"] = spec_id
+                psm["peptide"] = flat_dict[
                     "SpectrumIdentificationItem_PeptideSequence"
                 ]
-                retrieved_data["peptide_length"] = len(retrieved_data["peptide"])
+                psm["peptide_length"] = len(psm["peptide"])
                 try:
-                    retrieved_data["modifications"] = self._get_peprec_modifications(
+                    psm["modifications"] = self._get_peprec_modifications(
                         flat_dict["SpectrumIdentificationItem_Modification"]
                     )
                 except KeyError:
-                    retrieved_data["modifications"] = "-"
-                retrieved_data["charge"] = flat_dict[
+                    psm["modifications"] = "-"
+                psm["charge"] = flat_dict[
                     "SpectrumIdentificationItem_chargeState"
                 ]
-                retrieved_data["protein_list"] = [
+                psm["protein_list"] = [
                     d["accession"]
                     for d in spectrum_identification_result[
                         "SpectrumIdentificationItem"
                     ][0]["PeptideEvidenceRef"]
                     if "accession" in d.keys()
                 ]
-                retrieved_data["PEAKS:peptideScore"] = flat_dict[
+                psm["PEAKS:peptideScore"] = flat_dict[
                     "SpectrumIdentificationItem_PEAKS:peptideScore"
                 ]
-                retrieved_data["Label"] = flat_dict[
+                psm["Label"] = flat_dict[
                     "SpectrumIdentificationItem_PeptideEvidenceRef_isDecoy"
                 ]
-                retrieved_data["Raw file"] = (
+                psm["Raw file"] = (
                     flat_dict["location"]
                     .rsplit("/", 1)[1]
                     .split(".", 1)[0]
                     .replace(",", "_", 1)
                 )
-                df = df.append(retrieved_data, ignore_index=True)
+                psm_list.append(psm)
+
+            df = pd.DataFrame(psm_list)
             df["Label"] = df["Label"].apply(lambda x: -1 if x else 1)
             return df
 
