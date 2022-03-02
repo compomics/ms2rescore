@@ -27,7 +27,7 @@ def get_num_lines(file_path):
     return lines
 
 
-def title_parser(line, mgf_title_pattern, method='full', run=None):
+def title_parser(line, mgf_title_pattern=None, method='full', run=None):
     """
     Take an MGF TITLE line and return the spectrum title.
 
@@ -73,7 +73,7 @@ def title_parser(line, mgf_title_pattern, method='full', run=None):
     return title
 
 
-def parse_mgf(df_in, mgf_folder, mgf_title_pattern, outname='scan_mgf_result.mgf',
+def parse_mgf(df_in, mgf_folder, mgf_title_pattern=None, outname='scan_mgf_result.mgf',
               filename_col='mgf_filename', spec_title_col='spec_id',
               title_parsing_method='full',
               show_progress_bar=True):
