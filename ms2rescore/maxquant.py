@@ -3,13 +3,15 @@
 import logging
 import os
 import re
-from typing import Dict, List, Optional, Tuple, Union
+from functools import cmp_to_key
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 import click
 import numpy as np
 import pandas as pd
 
 from ms2rescore.peptide_record import PeptideRecord
+from ms2rescore._exceptions import ModificationParsingError
 
 logger = logging.getLogger(__name__)
 
@@ -155,52 +157,164 @@ class MSMSAccessor:
         ).rename("spec_id")
 
     @staticmethod
-    def _get_peprec_modifications(
-        modified_sequences: pd.Series,
-        modification_mapping: Optional[Dict] = None,
-        fixed_modifications: Optional[List] = None
-    ) -> List:
-        """Get peprec-formatted modifications."""
-        # Process input mods
-        if not modification_mapping:
-            modification_mapping = dict()
-        else:
-            # Put braces around labels
-            modification_mapping = {
-                "({})".format(k): v for k, v in modification_mapping.items()
-            }
+    def _minus_one_compare_fn(mod_1, mod_2):
+        """Custom comparision function where `-1` is always larger."""
+        location_1 = mod_1[0]
+        location_2 = mod_2[0]
 
-        if not fixed_modifications:
-            fixed_modifications = dict()
+        if location_1 == -1:
+            if location_2 == -1:
+                return 0
+            else:
+                return 1
+        elif location_2 == -1:
+            return -1
         else:
-            # Match mod name to label
-            modification_mapping_rev = {v: k for k, v in modification_mapping.items()}
-            fixed_modifications = {
-                k: modification_mapping_rev[v]
-                for k, v
-                in fixed_modifications.items()
-            }
-        # Apply fixed modifications
-        if fixed_modifications:
-            for aa, mod in fixed_modifications.items():
-                modified_sequences = modified_sequences.str.replace(
-                    aa, "{}{}".format(aa, mod)
+            return location_1 - location_2
+
+    @staticmethod
+    def _find_mods_recursively(
+        mod_seq, pattern_mapping, regex_pattern, mod_list=None
+    ):
+        """
+        Find modifications in MaxQuant modified sequence recursively.
+
+        Parameters
+        ----------
+        mod_seq : string
+            MaxQuant modified sequence stripped of flanking amino acids and
+            underscores
+        pattern_mapping : dict[str, tuple]
+            Mapping of modification pattern to name (e.g. `"(ox)": "Oxidation"`)
+        regex_pattern : re.Pattern
+            Compiled regex pattern containing all modification labels, including
+            amino acid prefix (if not N/C-terminal)
+        mod_list : list, optional
+            List with modification positions and labels to recursively extend.
+
+        """
+        if not mod_list:
+            mod_list = []
+
+        # Recursively find matches
+        match = re.search(regex_pattern, mod_seq)
+
+        if match:
+            pattern = match.group(0)
+            mod_name = pattern_mapping[pattern]
+
+            # Handle N/C-terminal modification locations
+            if match.start() == 0:
+                mod_location = 0
+            elif match.end() == len(mod_seq):
+                mod_location = -1
+            else:
+                mod_location = match.start()
+
+            mod_list.append((mod_location, mod_name))
+
+            # Remove current modification and recurse
+            mod_seq = re.sub(regex_pattern, "", mod_seq, count=1)
+            mod_list = MSMSAccessor._find_mods_recursively(
+                mod_seq, pattern_mapping, regex_pattern, mod_list
+            )
+
+        # Validate that all modifications are found
+        else:
+            if not re.fullmatch(r"[A-Z]+", mod_seq):
+                raise ModificationParsingError(
+                    f"Coud not match remaining modification labels in sequence "
+                    f"`{mod_seq}`. Ensure that all modifications are "
+                    "configured in the MaxQuant `modification_mapping` setting."
                 )
 
-        # Parse all modifications
-        parsed_modifications = [
-            "|".join([
-                "{}|{}".format(m.start(0) - 1 - i * 4, modification_mapping[m.group()])
-                for i, m
-                in enumerate(re.finditer(r"\([a-z].\)", s))
-            ])
-            for s in modified_sequences
-        ]
-        parsed_modifications = [
-            "-" if mods == "" else mods for mods in parsed_modifications
-        ]
+        return mod_list
 
-        return parsed_modifications
+    @staticmethod
+    def _get_single_peprec_modification(
+        sequence, modified_sequence, modification_mapping, fixed_modifications
+    ):
+        """
+        Get single PEPREC-style modifications from MaxQuant modified sequence.
+        """
+
+        # Prepare modifications regex pattern
+        pattern_mapping = {}
+        for label, name in modification_mapping.items():
+            pattern_mapping[f"({label})"] = name
+        regex_pattern = re.compile("|".join(
+            [re.escape(p) for p in pattern_mapping.keys()])
+        )
+
+        # Find variable modifications
+        mod_list = MSMSAccessor._find_mods_recursively(
+            modified_sequence, pattern_mapping, regex_pattern
+        )
+
+        # Add fixed modifications
+        for aa, name in fixed_modifications.items():
+            mod_list.extend(
+                [(m.start() + 1, name) for m in re.finditer(aa, sequence)]
+            )
+
+        # Sort and format mod_list
+        if mod_list:
+            mod_string = "|".join(
+                ["|".join([str(x) for x in mod])
+                for mod
+                in sorted(
+                    mod_list, key=cmp_to_key(MSMSAccessor._minus_one_compare_fn)
+                )]
+            )
+        else:
+            mod_string = "-"
+
+        return mod_string
+
+    def get_peprec_modifications(
+        self, modification_mapping=None, fixed_modifications=None
+    ) -> List:
+        """
+        Get PEPREC-formatted modifications for full MSMS.
+
+        Parameters
+        ----------
+        modification_mapping: dict
+            Mapping used to convert the MaxQuant modification labels to
+            PSI-MS modification names (e.g.
+            `{"M", "Oxidation (M)"): "Oxidation"}`)
+        fixed_modifications: dict
+            Dictionary (`{aa: mod}`) with fixed modifications to be added to the
+            peprec. E.g. `{'C': 'Carbamidomethyl'}`. MaxQuant output does not
+            include modifications that were set as fixed during the search. The
+            first tuple element contains the one-letter amino acid code. The
+            second tuple element contains the full modification name, as listed
+            in the MS²PIP configuration.
+        """
+
+        if not modification_mapping:
+            modification_mapping = {}
+        if not fixed_modifications:
+            fixed_modifications = {}
+
+        # Remove surrounding underscores
+        if "_" in self._obj["Modified sequence"].iloc[0]:
+            mod_sequences = self._obj["Modified sequence"].str.extract(
+                "_(.*)_",
+                expand=False
+            )
+        else:
+            mod_sequences = self._obj["Modified sequence"]
+
+        # Apply over PSMs
+        peprec_mods = []
+        for seq, mod_seq in zip(
+            self._obj["Sequence"].to_list(), mod_sequences.to_list()
+        ):
+            peprec_mods.append(self._get_peprec_modification(
+                seq, mod_seq, modification_mapping, fixed_modifications
+            ))
+        return peprec_mods
 
     @staticmethod
     def _calculate_top7_peak_features(
@@ -317,10 +431,8 @@ class MSMSAccessor:
         )
         peprec["spec_id"] = self._get_spec_id()
         peprec["peptide"] = self._obj["Sequence"]
-        peprec["modifications"] = self._get_peprec_modifications(
-            self._obj["Modified sequence"],
-            modification_mapping=modification_mapping,
-            fixed_modifications=fixed_modifications
+        peprec["modifications"] = self.get_peprec_modifications(
+            modification_mapping, fixed_modifications
         )
         peprec["charge"] = self._obj["Charge"]
 

@@ -11,3 +11,10 @@ class MS2RescoreConfigurationError(MS2RescoreError):
     """Invalid MS2Rescore configuration."""
 
     pass
+
+class IDFileParsingError(MS2RescoreError):
+    """Identification file parsing error."""
+
+class ModificationParsingError(IDFileParsingError):
+    """Identification file parsing error."""
+

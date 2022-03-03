@@ -21,8 +21,19 @@ class TestMSMS:
     def test_get_peprec_modifications(self):
 
         test_cases = {
-            "input": [
+            "input_sequence": [
+                'VGVGFGR',
+                'MCK',
+                'EEEIAALVIDNGSGMCK',
+                'QYDADLEQILIQWITTQCRK',
+                'LAMQEFMILPVGAANFR',
+                'VGVNGFGR',
+                'EEEIAALVIDNGSGMCK',
+                'SDKPDMAEIEK',
+            ],
+            "input_modified_sequence": [
                 '_VGVGFGR_',
+                '_MCK_',
                 '_(ac)EEEIAALVIDNGSGMCK_',
                 '_(gl)QYDADLEQILIQWITTQCRK_',
                 '_LAM(ox)QEFMILPVGAANFR_',
@@ -32,6 +43,7 @@ class TestMSMS:
             ],
             "expected_output": [
                 '-',
+                '2|Carbamidomethyl',
                 '0|Acetyl|16|Carbamidomethyl',
                 '0|Gln->pyro-Glu|18|Carbamidomethyl',
                 '3|Oxidation',
@@ -42,12 +54,12 @@ class TestMSMS:
         }
 
         df = pd.DataFrame({
-            "Modified sequence": test_cases["input"],
-            "Mass error [Da]": [''] * len(test_cases["input"])
+            "Sequence": test_cases["input_sequence"],
+            "Modified sequence": test_cases["input_modified_sequence"],
+            "Mass error [Da]": [''] * len(test_cases["input_sequence"])
         })
 
-        observed_output = df.msms._get_peprec_modifications(
-            df["Modified sequence"],
+        observed_output = df.msms.get_peprec_modifications(
             modification_mapping=self.modification_mapping,
             fixed_modifications=self.fixed_modifications
         )
