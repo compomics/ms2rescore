@@ -311,7 +311,7 @@ class MSMSAccessor:
         for seq, mod_seq in zip(
             self._obj["Sequence"].to_list(), mod_sequences.to_list()
         ):
-            peprec_mods.append(self._get_peprec_modification(
+            peprec_mods.append(self._get_single_peprec_modification(
                 seq, mod_seq, modification_mapping, fixed_modifications
             ))
         return peprec_mods
