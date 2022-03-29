@@ -23,7 +23,7 @@ class RetentionTimeIntegration:
         peprec_path: str,
         feature_path: str,
         higher_psm_score_better: bool = True,
-        calibration_set_size: Optional[Union[int, float]] = 0.20,
+        calibration_set_size: Optional[Union[int, float]] = 0.10,
         num_cpu: Optional[int] = None,
     ):
         """

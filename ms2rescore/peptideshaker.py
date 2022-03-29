@@ -88,7 +88,8 @@ class ExtendedPsmAnnotationReportAccessor:
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
             peak_anns = psm['peak_anns']
-            #peak_anns = [x for x in psm['peak_anns'] if any(i in x['Type'] for i in ['y', 'b'])]
+            peak_anns = [x for x in psm['peak_anns'] if x['Type'] in ['y', 'b', 'a']]
+
             row = psm_attrs
             row.update({
                 'Proteins':pd.DataFrame.ext_psm_ann_report._cleanup_protein_ids(psm_attrs['Protein(s)']),
@@ -100,8 +101,8 @@ class ExtendedPsmAnnotationReportAccessor:
                 'Matches':';'.join([p['Name'] for p in peak_anns]),
                 'RawModLocProb':pd.DataFrame.ext_psm_ann_report._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
-            algo_scores = dict(pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm_attrs['Algorithm Score']))
-            row.update({algo + '_score':0 if algo not in algo_scores else algo_scores[algo] for algo in all_algos})
+            #algo_scores = dict(pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm_attrs['Algorithm Score']))
+            #row.update({algo + '_score':0 if algo not in algo_scores else algo_scores[algo] for algo in all_algos})
             df.append(row)
 
         return pd.DataFrame(df)
