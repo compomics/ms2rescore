@@ -88,7 +88,7 @@ class ExtendedPsmAnnotationReportAccessor:
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
             peak_anns = psm['peak_anns']
-            peak_anns = [x for x in psm['peak_anns'] if x['Type'] in ['y', 'b', 'a']]
+            peak_anns = [x for x in psm['peak_anns'] if x['Subtype'] != 'Prec']
 
             row = psm_attrs
             row.update({
