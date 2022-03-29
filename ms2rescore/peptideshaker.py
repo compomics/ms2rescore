@@ -90,7 +90,7 @@ class ExtendedPsmAnnotationReportAccessor:
             #peak_anns = psm['peak_anns']
             peak_anns = [p for p in psm['peak_anns'] if p['Subtype'] != 'Prec']
             if not peak_anns:
-                peak_anns = [{'Intensity':0., 'm/z Error (Da)':0., 'Name':'na'}] # some spectra have no peaks annotated...
+                continue # some spectra have no peaks annotated...
 
             row = psm_attrs
             row.update({
