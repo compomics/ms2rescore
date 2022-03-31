@@ -80,21 +80,17 @@ class ExtendedPsmAnnotationReportAccessor:
         return ';'.join(clean_prot_ids)
 
     def df_from_all_psms(all_psms):
-        """
-        TODO select only b and y fargment ions?
-        """
         all_algos = list(set([x[0] for y in [pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm['psm_attrs']['Algorithm Score']) for psm in all_psms.values()] for x in y ]))
         df = []
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
-            #peak_anns = psm['peak_anns']
             peak_anns = [p for p in psm['peak_anns'] if p['Subtype'] != 'Prec']
             if not peak_anns:
-                continue # some spectra have no peaks annotated...
+                continue # some spectra have no peaks annotated... skip'em
 
             row = psm_attrs
             row.update({
-                'Proteins':pd.DataFrame.ext_psm_ann_report._cleanup_protein_ids(psm_attrs['Protein(s)']),
+                'Proteins':pd.DataFrame.ext_psm_ann_report._cleanup_protein_ids(psm_attrs['Protein(s)']), # these are a weird way to call a function?
                 'Mass':psm_attrs['m/z']*psm_attrs['Identification Charge'],
                 'Length': len(psm_attrs['Sequence']),
                 'Missed cleavages': psm_attrs['Sequence'][:-1].count('K') + psm_attrs['Sequence'][:-1].count('R'), # TODO get info from report? (update custom report)..
@@ -117,19 +113,6 @@ class ExtendedPsmAnnotationReportAccessor:
 
     @staticmethod
     def parse_Extended_PSM_Annotation_Report(path):
-        peak_ann_col_names = [
-            'Peak Annotation',
-            'Type',
-            'Subtype',
-            'Number',
-            'Neutral losses',
-            'Name',
-            'Fragment Charge',
-            'Theoretic m/z',
-            'm/z',
-            'Intensity',
-            'm/z Error (Da)'
-        ]
         peak_ann_dtypes = {
             'Peak Annotation':str,
             'Type':str,
@@ -143,39 +126,6 @@ class ExtendedPsmAnnotationReportAccessor:
             'Intensity':float,
             'm/z Error (Da)':float
         }
-        psm_attr_col_names = [
-            'Rank',
-            'Protein(s)',
-            'Sequence',
-            'Missed Cleavages',
-            'Modified Sequence',
-            'Variable Modifications',
-            'Fixed Modifications',
-            'Spectrum File',
-            'Spectrum Title',
-            'Spectrum Scan Number',
-            'RT',
-            'm/z',
-            'Measured Charge',
-            'Total Spectrum Intensity',
-            'Intensity Coverage [%]',
-            'Maximal Spectrum Intensity',
-            'Identification Charge',
-            'Theoretical Mass',
-            'Precursor m/z Error [ppm]',
-            'Precursor m/z Error [Da]',
-            'Algorithm Score',
-            'Algorithm Confidence [%]',
-            'Delta Confidence [%]',
-            'Decoy',
-            'Probabilistic PTM score',
-            'D-score',
-            'Algorithm Score',
-            'Score',
-            'Raw score',
-            'Confidence [%]',
-            'Validation'
-        ]
         psm_attr_dtypes = {
             'Rank':int,
             'Protein(s)':str,
@@ -214,35 +164,44 @@ class ExtendedPsmAnnotationReportAccessor:
         all_psms = dict()
         with open(path, 'r') as f:
             reader = csv.reader(f, delimiter='\t')
+            psm_attrs_colnames, peak_anns_colnames = [], []
             peak_anns = []
             for n,row in enumerate(reader):
                 if not row[0]:
+                    col_names = row[1:]
                     continue
 
                 h_level = row[0].count('.')
 
                 if h_level == 0:
+                    if not psm_attrs_colnames:
+                        psm_attrs_colnames = col_names
                     if peak_anns:
                         all_psms[psm_attrs['Spectrum Title']] = {
                             'psm_attrs':psm_attrs,
                             'peak_anns':peak_anns
                         }
-                    psm_attrs = pd.DataFrame.ext_psm_ann_report.set_dtypes(dict(zip(psm_attr_col_names, row[1:])), psm_attr_dtypes)
+                    psm_attrs = pd.DataFrame.ext_psm_ann_report.set_dtypes(dict(zip(psm_attrs_colnames, row[1:])), psm_attr_dtypes)
                     peak_anns = []
 
                 if h_level == 1:
+                    if not peak_anns_colnames:
+                        peak_anns_colnames = col_names
                     peak_anns.append(
-                        pd.DataFrame.ext_psm_ann_report.set_dtypes(dict(zip(peak_ann_col_names, row[1:])), peak_ann_dtypes)
+                        pd.DataFrame.ext_psm_ann_report.set_dtypes(dict(zip(peak_anns_colnames, row[1:])), peak_ann_dtypes)
                                     )
         return all_psms
 
     @staticmethod
     def set_dtypes(df, dtypes):    
         for field in df:
+            if field not in dtypes:
+                continue
             try:
                 df[field] = dtypes[field](df[field])
             except ValueError as e:
-                print(field, e)
+                print(field, e) # log data type error instead!!
+
         return df
 
     @staticmethod
@@ -446,10 +405,7 @@ class ExtendedPsmAnnotationReportAccessor:
         
         spec_id = self._obj["Spectrum Title"].rename("spec_id")
         charge = self._obj["Identification Charge"].rename("charge")
-# + [x for x in self._obj.columns if '_score' in x]
         directly_copied = self._obj[[
-            #"Raw score",
-            #'MS-GF+_score',
             "Score",
             "Delta Confidence [%]",
             "RawModLocProb",
@@ -459,7 +415,6 @@ class ExtendedPsmAnnotationReportAccessor:
             f"Precursor m/z Error [{self._mass_error_unit}]",
             "Missed cleavages",
         ]].rename(columns={
-            #"Raw score": "RawScore",
             "Delta Confidence [%]": "RawDeltaScore",
             "RawModLocProb": "RawModLocProb",
             "Length": "PepLen",
