@@ -115,7 +115,7 @@ def _parse_arguments() -> argparse.Namespace:
         ),
         widget="Dropdown",
         default="infer",
-        choices=["infer", "pin","maxquant", "msgfplus", "tandem", "peptideschaker", "peaks"]
+        choices=["infer", "pin","maxquant", "msgfplus", "tandem", "peptideshaker", "peaks"]
     )
     general.add_argument(
         "-l",
