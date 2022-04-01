@@ -567,7 +567,11 @@ class PeaksPipeline(_Pipeline):
                 psm_list.append(psm)
                 
             df = pd.DataFrame(psm_list)
+
             df["Label"] = df["Label"].apply(lambda x: -1 if x else 1)
+            df["dM"] = df["experimentalMassToCharge"].astype(float) - df["calculatedMassToCharge"].astype(float)
+            df["absdM"] = abs(df["dM"])
+
             return df
 
     def parse_mgf_files(self, peprec):
@@ -611,10 +615,8 @@ class PeaksPipeline(_Pipeline):
         }
         id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
         peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
-
-        peprec_df["dM"] = peprec_df["experimentalMassToCharge"] - peprec_df["calculatedMassToCharge"]
-        peprec_df["absdM"] = abs(peprec_df["dM"])
         
+        print(peprec_df.columns)
         return PeptideRecord.from_dataframe(peprec_df)
 
     def get_search_engine_features(self) -> pd.DataFrame:
