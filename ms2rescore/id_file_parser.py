@@ -577,7 +577,7 @@ class PeaksPipeline(_Pipeline):
             outname=path_to_new_mgf,
             filename_col="Raw file",
             spec_title_col="spec_id",
-            title_parsing_method="full_run",
+            title_parsing_method="run_index",
         )
         self.passed_mgf_path = path_to_new_mgf
 
@@ -606,6 +606,7 @@ class PeaksPipeline(_Pipeline):
         }
         id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
         peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
+
         return PeptideRecord.from_dataframe(peprec_df)
 
     def get_search_engine_features(self) -> pd.DataFrame:
