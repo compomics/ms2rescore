@@ -616,7 +616,6 @@ class PeaksPipeline(_Pipeline):
         id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
         peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
         
-        print(peprec_df.columns)
         return PeptideRecord.from_dataframe(peprec_df)
 
     def get_search_engine_features(self) -> pd.DataFrame:
