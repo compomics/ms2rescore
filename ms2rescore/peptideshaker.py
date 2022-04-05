@@ -248,6 +248,8 @@ class ExtendedPsmAnnotationReportAccessor:
                 mod_description = False
                 if mod_name == 'ox':
                     mod_peprec += 'Oxidation'
+                elif mod_name == 'p':
+                    mod_peprec += 'Phosphorylation'
                 elif mod_name == 'cmm':
                     mod_peprec += 'Carbamidomethyl'
                 elif mod_name == 'deam':
