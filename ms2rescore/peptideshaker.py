@@ -241,6 +241,7 @@ class ExtendedPsmAnnotationReportAccessor:
         # Check internal sequence
         for char in seq:
             if char == "<":
+                mod_aa = prev_char
                 mod_peprec = "{}|".format(mod_index)
                 mod_name = ""
                 mod_description = True
@@ -249,7 +250,7 @@ class ExtendedPsmAnnotationReportAccessor:
                 if mod_name == 'ox':
                     mod_peprec += 'Oxidation'
                 elif mod_name == 'p':
-                    mod_peprec += 'Phosphorylation'
+                    mod_peprec += 'Phospho' + mod_aa
                 elif mod_name == 'cmm':
                     mod_peprec += 'Carbamidomethyl'
                 elif mod_name == 'deam':
@@ -280,6 +281,7 @@ class ExtendedPsmAnnotationReportAccessor:
                         mod_name += char
                     else:
                         mod_index += 1
+            prev_char = char
 
         mods_peprec = "|".join(mod_list)
         if mods_peprec == "":
