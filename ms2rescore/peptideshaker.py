@@ -85,7 +85,7 @@ class ExtendedPsmAnnotationReportAccessor:
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
             peak_anns = [p for p in psm['peak_anns'] if p['Subtype'] != 'Prec']
-            if not peak_anns:
+            if len(peak_anns)>3:
                 continue # some spectra have no peaks annotated... skip'em
 
             row = psm_attrs
