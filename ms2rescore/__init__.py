@@ -222,7 +222,7 @@ class MS2ReScore:
                     percolator_cmd.append(f"--{key}")
             percolator_cmd.append(subname+".pin")
             logger.info("Running Percolator: %s", " ".join(percolator_cmd))
-            output = subprocess.run(percolator_cmd, capture_output=True, shell=True, check=True)
+            output = subprocess.run(percolator_cmd, capture_output=True, check=True)
 
             logger.debug(output.stdout)
             logger.info(output.stderr)

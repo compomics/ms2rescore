@@ -561,10 +561,17 @@ class PeaksPipeline(_Pipeline):
                     .split(".", 1)[0]
                     .replace(",", "_", 1)
                 )
-                psm_list.append(psm)
+                psm["calculatedMassToCharge"] = flat_dict["SpectrumIdentificationItem_calculatedMassToCharge"]
+                psm["experimentalMassToCharge"] = flat_dict["SpectrumIdentificationItem_experimentalMassToCharge"]
 
+                psm_list.append(psm)
+                
             df = pd.DataFrame(psm_list)
+
             df["Label"] = df["Label"].apply(lambda x: -1 if x else 1)
+            df["dM"] = df["experimentalMassToCharge"].astype(float) - df["calculatedMassToCharge"].astype(float)
+            df["absdM"] = abs(df["dM"])
+
             return df
 
     def parse_mgf_files(self, peprec):
@@ -577,7 +584,7 @@ class PeaksPipeline(_Pipeline):
             outname=path_to_new_mgf,
             filename_col="Raw file",
             spec_title_col="spec_id",
-            title_parsing_method="full_run",
+            title_parsing_method="run_index",
         )
         self.passed_mgf_path = path_to_new_mgf
 
@@ -596,6 +603,8 @@ class PeaksPipeline(_Pipeline):
                 "PEAKS:peptideScore",
                 "Label",
                 "Raw file",
+                "calculatedMassToCharge",
+                "experimentalMassToCharge"
             ]
         ].rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
         self.parse_mgf_files(peprec_df)
@@ -606,6 +615,7 @@ class PeaksPipeline(_Pipeline):
         }
         id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
         peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
+        
         return PeptideRecord.from_dataframe(peprec_df)
 
     def get_search_engine_features(self) -> pd.DataFrame:

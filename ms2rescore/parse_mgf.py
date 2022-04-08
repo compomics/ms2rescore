@@ -38,7 +38,7 @@ def title_parser(line, mgf_title_pattern=None, method='full', run=None):
     line: string, line from MGF file containing 'TITLE='
     method: string, one of the following:
     - 'full': take everything after 'TITLE='
-    - 'full_run': take everything after 'TITLE=' and add run to title
+    - 'run_index': takes 'index=' from TITLE and add run (PEAKS)
     - 'first_space': take everything between 'TITLE=' and first space.
     - 'first_space_no_charge': take everything between 'TITLE=' and first space,
       but leave out everything after last dot. (required for MaxQuant pipeline).
@@ -47,10 +47,10 @@ def title_parser(line, mgf_title_pattern=None, method='full', run=None):
 
     if method == 'full':
         title = line[6:].strip()
-    elif method == 'full_run':
+    elif method == 'run_index':
         if not run:
             raise TypeError("If `method` is `full_run`, `run` cannot be None.")
-        title = run + ':' + line[6:].strip()
+        title = run + ':' + re.match(r"TITLE=(index=[0-9]*)",line).group(1)
     elif method == 'first_space':
         title = line[6:].split(' ')[0].strip()
     elif method == 'first_space_no_charge':
