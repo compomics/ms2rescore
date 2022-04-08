@@ -8,11 +8,12 @@ import json
 import logging
 import pprint
 import multiprocessing
-
+from pathlib import Path
 
 from gooey import Gooey, GooeyParser, local_resource_path
 from ms2pip.ms2pipC import MODELS as ms2pip_models
 from ms2rescore import MS2ReScore, package_data
+import ms2rescore.package_data.img as img_module
 from ms2rescore._exceptions import MS2RescoreError
 
 try:
@@ -23,9 +24,10 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-
-with pkg_resources.path(package_data, "img") as img_dir:
-    img_dir = local_resource_path(img_dir)
+# Get path to package_data/images
+# Workaround with parent of specific file required for Python 3.9+ support
+with pkg_resources.path(img_module, "config_icon.png") as img_dir:
+    _IMG_DIR = Path(img_dir).parent
 
 
 class MS2RescoreGUIError(MS2RescoreError):
@@ -36,7 +38,7 @@ class MS2RescoreGUIError(MS2RescoreError):
 @Gooey(
     program_name="MS²Rescore",
     program_description="Sensitive PSM rescoring with MS²PIP, DeepLC, and Percolator.",
-    image_dir=img_dir,
+    image_dir=local_resource_path(_IMG_DIR),
     tabbed_groups=True,
     requires_shell=False,
     default_size=(760, 720),
