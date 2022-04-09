@@ -540,7 +540,7 @@ def write_pin_files(
     for feature_set in [searchengine_features, ms2pip_features, rt_features]:
         if isinstance(feature_set, pd.DataFrame):
             on_cols = ["spec_id", "charge"]
-            cols_to_use = (
+            cols_to_use = list(
                 set(feature_set.columns)
                 .difference(set(complete_df.columns))
                 .union(set(on_cols))
