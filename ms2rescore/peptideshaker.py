@@ -80,7 +80,7 @@ class ExtendedPsmAnnotationReportAccessor:
         return ';'.join(clean_prot_ids)
 
     def df_from_all_psms(all_psms):
-        all_algos = list(set([x[0] for y in [pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm['psm_attrs']['Algorithm Score']) for psm in all_psms.values()] for x in y ]))
+        all_algos = list(set([x[0] for y in [self._parse_algo_scores(psm['psm_attrs']['Algorithm Score']) for psm in all_psms.values()] for x in y]))
         df = []
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
