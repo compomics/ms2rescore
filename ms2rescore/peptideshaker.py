@@ -90,7 +90,8 @@ class ExtendedPsmAnnotationReportAccessor:
 
             row = psm_attrs
             row.update({
-                'Proteins':pd.DataFrame.ext_psm_ann_report._cleanup_protein_ids(psm_attrs['Protein(s)']), # these are a weird way to call a function?
+                'Proteins': self._cleanup_protein_ids(psm_attrs['Protein(s)']),
+
                 'Mass':psm_attrs['m/z']*psm_attrs['Identification Charge'],
                 'Length': len(psm_attrs['Sequence']),
                 'Missed cleavages': psm_attrs['Sequence'][:-1].count('K') + psm_attrs['Sequence'][:-1].count('R'), # TODO get info from report? (update custom report)..
