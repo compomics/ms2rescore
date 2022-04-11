@@ -2,24 +2,21 @@
 
 import argparse
 import ast
-from distutils.command.config import config
-from email.policy import default
+import importlib.resources as pkg_resources
 import json
 import logging
-import pprint
 import multiprocessing
+import pprint
+import sys
+import warnings
 from pathlib import Path
 
 from gooey import Gooey, GooeyParser, local_resource_path
 from ms2pip.ms2pipC import MODELS as ms2pip_models
-from ms2rescore import MS2ReScore, package_data
-import ms2rescore.package_data.img as img_module
-from ms2rescore._exceptions import MS2RescoreError
 
-try:
-    import importlib.resources as pkg_resources
-except ImportError:
-    import importlib_resources as pkg_resources
+from ms2rescore import MS2ReScore, package_data
+from ms2rescore._exceptions import MS2RescoreError
+import ms2rescore.package_data.img as img_module
 
 
 logger = logging.getLogger(__name__)
@@ -42,9 +39,15 @@ class MS2RescoreGUIError(MS2RescoreError):
     tabbed_groups=True,
     requires_shell=False,
     default_size=(760, 720),
+    target=None if getattr(sys, 'frozen', False) else "ms2rescore-gui"
 )
 def main():
     """Run MS²Rescore."""
+    # Disable warnings in GUI
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    warnings.filterwarnings('ignore', category=FutureWarning)
+    warnings.filterwarnings('ignore', category=UserWarning)
+
     conf = _parse_arguments().__dict__
     conf = parse_settings(conf)
     rescore = MS2ReScore(parse_cli_args=False, configuration=conf, set_logger=True)

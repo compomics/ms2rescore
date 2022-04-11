@@ -57,13 +57,13 @@ setup(
     include_package_data=True,
     entry_points={"console_scripts": [
         "ms2rescore=ms2rescore.__main__:main",
+        "ms2rescore-gui=ms2rescore.gui:main",
     ]},
     python_requires=">=3.7",
     install_requires=[
-        "importlib-resources;python_version<'3.7'",
         "numpy>=1.16.0,<2",
         "pandas>=0.24.0,<2",
-        "scikit-learn>=0.20.0,<1",
+        "scikit-learn>=0.20.0,<2",
         "scipy>=1.2.0,<2",
         "tqdm>=4.31.0,<5",
         "pyteomics>=4.1.0,<5",
