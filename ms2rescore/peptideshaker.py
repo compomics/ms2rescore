@@ -98,7 +98,7 @@ class ExtendedPsmAnnotationReportAccessor:
                 'Intensities':';'.join([str(p['Intensity']) for p in peak_anns]),
                 'm/z Errors (Da)':';'.join([str(p['m/z Error (Da)']) for p in peak_anns]),
                 'Matches':';'.join([p['Name'] for p in peak_anns]),
-                'RawModLocProb':pd.DataFrame.ext_psm_ann_report._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
+                'RawModLocProb': self._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
             #algo_scores = dict(pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm_attrs['Algorithm Score']))
             #row.update({algo + '_score':0 if algo not in algo_scores else algo_scores[algo] for algo in all_algos})
