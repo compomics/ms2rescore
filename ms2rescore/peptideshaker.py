@@ -182,7 +182,7 @@ class ExtendedPsmAnnotationReportAccessor:
                             'psm_attrs':psm_attrs,
                             'peak_anns':peak_anns
                         }
-                    psm_attrs = pd.DataFrame.ext_psm_ann_report.set_dtypes(dict(zip(psm_attrs_colnames, row[1:])), psm_attr_dtypes)
+                    psm_attrs = self.set_dtypes(dict(zip(psm_attrs_colnames, row[1:])), psm_attr_dtypes)
                     peak_anns = []
 
                 if h_level == 1:
