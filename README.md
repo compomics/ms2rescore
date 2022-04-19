@@ -131,9 +131,10 @@ To install a newer version of MS²Rescore, run `upgrade-gui-windows.bat`.
 
 ### GUI
 
-Run `start-gui-windows.bat` or run `python -m ms2rescore.gui` in your terminal to start
-the graphical user interface. Most common settings can be configured through the UI.
-For some advanced settings, see [Configuration file](#configuration-file).
+Run `start-gui-windows.bat` or run `ms2rescore-gui` or
+`python -m ms2rescore.gui`in your terminal to start the graphical user
+interface. Most common settings can be configured through the
+UI. For some advanced settings, see [Configuration file](#configuration-file).
 
 <img src="img/gui-screenshot.png" height=480 />
 

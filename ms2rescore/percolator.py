@@ -151,7 +151,7 @@ class PercolatorIn:
         """Infer modification label style (e.g. unimod_accession or mass shift)."""
         # TODO: What happens if there are no mods? Crashes?
         modified_peptides = self.df[
-            self.df["Peptide"].str.contains(r"\[([^\[^\]]*)\]", regex=True)
+            self.df["Peptide"].str.contains(r"\[[^\[^\]]*\]", regex=True)
         ]["Peptide"]
         if (
             modified_peptides.str.extract(r"\[([^\[^\]]*)\]", expand=False)
