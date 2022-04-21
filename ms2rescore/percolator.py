@@ -427,7 +427,7 @@ class PercolatorIn:
     # TODO if USI is used extract_spectrum_index should be False
     def to_peptide_record(
         self,
-        extract_spectrum_index: Optional[bool] = True,
+        extract_spectrum_index: Optional[bool] = False,
         spectrum_index_pattern: Optional[str] = None,
         score_column_label: Optional[str] = None,
     ) -> PeptideRecord:
@@ -454,7 +454,7 @@ class PercolatorIn:
         """
         # Assign one of the default score column labels, if available
         if not score_column_label:
-            for col in ["lnEValue", "hyperscore", "Score", "COMET:lnExpect"]:
+            for col in ["lnEValue", "hyperscore", "Score", "COMET:lnExpect", "lnNumSP" ,"lnExpect"]:
                 if col in self.df.columns:
                     score_column_label = col
                     logger.debug(
