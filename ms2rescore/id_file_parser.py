@@ -563,6 +563,12 @@ class PeaksPipeline(_Pipeline):
                 )
                 psm["calculatedMassToCharge"] = flat_dict["SpectrumIdentificationItem_calculatedMassToCharge"]
                 psm["experimentalMassToCharge"] = flat_dict["SpectrumIdentificationItem_experimentalMassToCharge"]
+                
+                if "retention time" in flat_dict.keys():
+                    psm["observed retention time"] = flat_dict["retention time"]
+                
+                if "inverse reduced ion mobility" in flat_dict.keys():
+                    psm["ion mobility"] = flat_dict["inverse reduced ion mobility"]
 
                 psm_list.append(psm)
                 
@@ -593,28 +599,16 @@ class PeaksPipeline(_Pipeline):
 
         if not self.df:
             self.df = self.read_df_from_mzid()
-        peprec_df = self.df[
-            [
-                "spec_id",
-                "peptide",
-                "modifications",
-                "charge",
-                "protein_list",
-                "PEAKS:peptideScore",
-                "Label",
-                "Raw file",
-                "calculatedMassToCharge",
-                "experimentalMassToCharge"
-            ]
-        ].rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
+        peprec_df = self.df.rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
         self.parse_mgf_files(peprec_df)
-        titles, rt = parse_mgf_title_rt(self.passed_mgf_path)
-        id_rt_dict = {
-            "spec_id": list(titles.values()),
-            "observed_retention_time": list(rt.values()),
-        }
-        id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
-        peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
+        if "observed retention time" not in peprec_df.columns:
+            titles, rt = parse_mgf_title_rt(self.passed_mgf_path)
+            id_rt_dict = {
+                "spec_id": list(titles.values()),
+                "observed_retention_time": list(rt.values()),
+            }
+            id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
+            peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
         
         return PeptideRecord.from_dataframe(peprec_df)
 
