@@ -33,7 +33,8 @@ def parse_mgf_title_rt(
     path_to_mgf: Union[str, os.PathLike]
 ) -> Tuple[Dict[int, str], Dict[int, float]]:
     """Parse MGF file to extract title and retention time fields, by spectrum index."""
-    title_rt_dict = dict()
+    titles = dict()
+    retention_times = dict ()
     with open(path_to_mgf, "rt") as mgf_in:
         index = 0
         for line in mgf_in:
@@ -42,11 +43,11 @@ def parse_mgf_title_rt(
                     index += 1
             if line[0] == "T":
                 if line.startswith("TITLE="):
-                    title = line[6:].strip()
+                    titles[index] = line[6:].strip()
             if line[0] == "R":
                 if line.startswith("RTINSECONDS="):
-                    title_rt_dict[title] = float(line[12:].strip())
-    return title_rt_dict
+                    retention_times[index] = float(line[12:].strip())
+    return titles, retention_times
 
 
 class _Pipeline(ABC):
@@ -183,7 +184,11 @@ class _Pipeline(ABC):
 
         if "observed_retention_time" not in peprec.df.columns:
             # Map MGF titles and observed retention times
-            title_rt_dict = parse_mgf_title_rt(self.path_to_mgf_file)
+            titles, observed_retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
+            title_rt_dict = {
+            "spec_id": list(titles.values()),
+            "observed_retention_time": list(observed_retention_times.values()),
+            }
             peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(title_rt_dict)
 
 
