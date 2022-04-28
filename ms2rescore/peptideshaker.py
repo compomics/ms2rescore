@@ -80,7 +80,7 @@ class ExtendedPsmAnnotationReportAccessor:
         return ';'.join(clean_prot_ids)
 
     def df_from_all_psms(all_psms):
-        all_algos = list(set([x[0] for y in [self._parse_algo_scores(psm['psm_attrs']['Algorithm Score']) for psm in all_psms.values()] for x in y]))
+        #all_algos = list(set([x[0] for y in [pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm['psm_attrs']['Algorithm Score']) for psm in all_psms.values()] for x in y]))
         df = []
         for spec_id, psm in all_psms.items():
             psm_attrs = psm['psm_attrs']
@@ -90,7 +90,7 @@ class ExtendedPsmAnnotationReportAccessor:
 
             row = psm_attrs
             row.update({
-                'Proteins': self._cleanup_protein_ids(psm_attrs['Protein(s)']),
+                'Proteins': pd.DataFrame.ext_psm_ann_report._cleanup_protein_ids(psm_attrs['Protein(s)']),
 
                 'Mass':psm_attrs['m/z']*psm_attrs['Identification Charge'],
                 'Length': len(psm_attrs['Sequence']),
@@ -98,7 +98,7 @@ class ExtendedPsmAnnotationReportAccessor:
                 'Intensities':';'.join([str(p['Intensity']) for p in peak_anns]),
                 'm/z Errors (Da)':';'.join([str(p['m/z Error (Da)']) for p in peak_anns]),
                 'Matches':';'.join([p['Name'] for p in peak_anns]),
-                'RawModLocProb': self._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
+                'RawModLocProb': pd.DataFrame.ext_psm_ann_report._get_RawModLocProb(psm_attrs['Probabilistic PTM score'])
             })
             #algo_scores = dict(pd.DataFrame.ext_psm_ann_report._parse_algo_scores(psm_attrs['Algorithm Score']))
             #row.update({algo + '_score':0 if algo not in algo_scores else algo_scores[algo] for algo in all_algos})
@@ -144,7 +144,7 @@ class ExtendedPsmAnnotationReportAccessor:
             'Total Spectrum Intensity':float,
             'Intensity Coverage [%]':float,
             'Maximal Spectrum Intensity':float,
-            'Identification Charge':lambda x: int(x[:-1]),
+            'Identification Charge':lambda x: int(re.search(r"\d*",x).group(0)),
             'Theoretical Mass':float,
             'Precursor m/z Error [ppm]':float,
             'Precursor m/z Error [Da]':float,
@@ -182,7 +182,7 @@ class ExtendedPsmAnnotationReportAccessor:
                             'psm_attrs':psm_attrs,
                             'peak_anns':peak_anns
                         }
-                    psm_attrs = self.set_dtypes(dict(zip(psm_attrs_colnames, row[1:])), psm_attr_dtypes)
+                    psm_attrs = pd.DataFrame.ext_psm_ann_report.set_dtypes(dict(zip(psm_attrs_colnames, row[1:])), psm_attr_dtypes)
                     peak_anns = []
 
                 if h_level == 1:
@@ -378,6 +378,7 @@ class ExtendedPsmAnnotationReportAccessor:
             "Decoy": "Label",
             "RT": "observed_retention_time",
             "Confidence [%]": "psm_score",
+            "Spectrum File": "Raw file"
         }
 
         # Convert DataFrame to PEPREC
@@ -395,8 +396,7 @@ class ExtendedPsmAnnotationReportAccessor:
                 "Report."
             )
 
-        peprec = PeptideRecord()
-        peprec.df = df
+        peprec = PeptideRecord.from_dataframe(df)
         return peprec
 
     def get_search_engine_features(self):

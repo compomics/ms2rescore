@@ -205,7 +205,6 @@ class _Pipeline(ABC):
         """Get pandas.DataFrame with search engine features."""
         raise NotImplementedError
 
-
 class PinPipeline(_Pipeline):
     """Percolator IN file to PeptideRecord and search engine features."""
 
@@ -439,14 +438,31 @@ class PeptideShakerPipeline(_Pipeline):
             )
         return self._extended_psm_report
 
-    def get_peprec(self) -> PeptideRecord:
+    def get_peprec(self, parse_mgf: bool = True) -> PeptideRecord:
         """Get PeptideRecord."""
-        return self.extended_psm_report.ext_psm_ann_report.to_peprec()
+        peprec = self.extended_psm_report.ext_psm_ann_report.to_peprec()
+        if parse_mgf:
+            self.parse_mgf_files(peprec=peprec)
+
+        return peprec
 
     def get_search_engine_features(self) -> pd.DataFrame:
         """Get pandas.DataFrame with search engine features."""
         return self.extended_psm_report.ext_psm_ann_report.get_search_engine_features()
 
+    def parse_mgf_files(self, peprec):
+        """Parse multiple MGF files into one for MS²PIP."""
+        logger.debug("Parsing MGF files into one for MS²PIP")
+        path_to_new_mgf = self.output_basename + "_unified.mgf"
+        parse_mgf(
+            peprec.df,
+            self.passed_mgf_path,
+            outname=path_to_new_mgf,
+            filename_col="Raw file",
+            spec_title_col="spec_id",
+            title_parsing_method="full",
+        )
+        self.passed_mgf_path = path_to_new_mgf
 
 class PeaksPipeline(_Pipeline):
     # TODO: move code to separate file and create mzid class
