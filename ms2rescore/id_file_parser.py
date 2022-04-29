@@ -189,8 +189,11 @@ class _Pipeline(ABC):
             "spec_id": list(titles.values()),
             "observed_retention_time": list(observed_retention_times.values()),
             }
-            peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(title_rt_dict)
 
+            # TODO find more elegant way to do this without merging
+            id_rt_df = pd.DataFrame.from_dict(title_rt_dict)
+            peprec.df = pd.merge(peprec.df, id_rt_df, on="spec_id", how="inner")
+            #peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(title_rt_dict)
 
         if not ~peprec.df["observed_retention_time"].isna().any():
             raise IDFileParserError(

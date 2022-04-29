@@ -454,7 +454,7 @@ class PercolatorIn:
         """
         # Assign one of the default score column labels, if available
         if not score_column_label:
-            for col in ["lnEValue", "hyperscore", "Score", "COMET:lnExpect", "lnNumSP" ,"lnExpect"]:
+            for col in ["lnEValue", "hyperscore", "Score", "COMET:lnExpect","lnExpect", "lnNumSP" , "searchEngineScore"]:
                 if col in self.df.columns:
                     score_column_label = col
                     logger.debug(
