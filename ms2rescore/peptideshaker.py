@@ -10,6 +10,9 @@ import click
 import numpy as np
 import pandas as pd
 
+import sys
+csv.field_size_limit(sys.maxsize)
+
 from ms2rescore.peptide_record import PeptideRecord
 
 logger = logging.getLogger(__name__)
