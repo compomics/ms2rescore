@@ -460,7 +460,7 @@ class PeptideShakerPipeline(_Pipeline):
             outname=path_to_new_mgf,
             filename_col="Raw file",
             spec_title_col="spec_id",
-            title_parsing_method="full",
+            title_parsing_method="full_run",
         )
         self.passed_mgf_path = path_to_new_mgf
 
