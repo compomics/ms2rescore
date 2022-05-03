@@ -104,7 +104,14 @@ class ExtendedPsmAnnotationReportAccessor:
             #row.update({algo + '_score':0 if algo not in algo_scores else algo_scores[algo] for algo in all_algos})
             df.append(row)
 
-        return pd.DataFrame(df)
+        df = pd.DataFrame(df)
+
+        if any(df["Proteins"] == ""):
+            logger.warning("Removing PSMs without Protein hit")
+            df = df[~(df["Proteins"] == "")]
+
+        df["Spectrum Title"] = df["Spectrum File"].astype(str) + ":" + df["Spectrum Title"].astype(str)
+        return df
 
     @staticmethod
     def _parse_algo_scores(algo_scores):
@@ -191,6 +198,7 @@ class ExtendedPsmAnnotationReportAccessor:
                     peak_anns.append(
                         pd.DataFrame.ext_psm_ann_report.set_dtypes(dict(zip(peak_anns_colnames, row[1:])), peak_ann_dtypes)
                                     )
+
         return all_psms
 
     @staticmethod
@@ -390,6 +398,7 @@ class ExtendedPsmAnnotationReportAccessor:
         df["Label"] = df["Label"].apply(
             lambda x: 1 if x == 0 else (-1 if x == 1 else np.nan)
         )
+
         if df["Label"].isna().any():
             raise ValueError(
                 "Missing target/decoy labels in PeptideShaker Extended PSM "
@@ -427,7 +436,6 @@ class ExtendedPsmAnnotationReportAccessor:
             "Identification Charge": "ChargeN",
             "Missed cleavages": "enzInt",
         })
-
         absdM = self._obj[f"Precursor m/z Error [{self._mass_error_unit}]"].abs().rename("absdM")
 
         charges_encoded = pd.get_dummies(self._obj["Identification Charge"], prefix="Charge", prefix_sep='')
