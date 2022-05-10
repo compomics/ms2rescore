@@ -627,4 +627,10 @@ class PeaksPipeline(_Pipeline):
         ]
 
         feature_cols = [col for col in self.df.columns if col not in peprec_cols]
-        return self.df[feature_cols]
+
+        searchengine_features = self.df[feature_cols]
+        searchengine_features["ChargeN"] = searchengine_features["charge"]
+
+        charges_encoded = pd.get_dummies(searchengine_features["charge"], prefix="Charge", prefix_sep='')
+        
+        return pd.concat([searchengine_features, charges_encoded], axis=1).sort_values("spec_id").reset_index(drop=True)
