@@ -565,12 +565,10 @@ class PeaksPipeline(_Pipeline):
                 psm["experimentalMassToCharge"] = flat_dict["SpectrumIdentificationItem_experimentalMassToCharge"]
                 
                 if "retention time" in flat_dict.keys():
-                    logger.info("Copying observed retention time from PEAKS mzid")
-                    psm["observed retention time"] = flat_dict["retention time"]
+                    psm["observed_retention_time"] = flat_dict["retention time"]
                 
                 if "inverse reduced ion mobility" in flat_dict.keys():
-                    logger.info("Copying ion mobility from PEAKS mzid")
-                    psm["ion mobility"] = flat_dict["inverse reduced ion mobility"]
+                    psm["ion_mobility"] = flat_dict["inverse reduced ion mobility"]
 
                 psm_list.append(psm)
                 
@@ -603,7 +601,7 @@ class PeaksPipeline(_Pipeline):
             self.df = self.read_df_from_mzid()
         peprec_df = self.df.rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
         self.parse_mgf_files(peprec_df)
-        if "observed retention time" not in peprec_df.columns:
+        if "observed_retention_time" not in peprec_df.columns:
             titles, rt = parse_mgf_title_rt(self.passed_mgf_path)
             id_rt_dict = {
                 "spec_id": list(titles.values()),
