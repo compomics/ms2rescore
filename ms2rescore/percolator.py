@@ -427,7 +427,7 @@ class PercolatorIn:
     # TODO if USI is used extract_spectrum_index should be False
     def to_peptide_record(
         self,
-        extract_spectrum_index: Optional[bool] = False,
+        extract_spectrum_index: Optional[bool] = True,
         spectrum_index_pattern: Optional[str] = None,
         score_column_label: Optional[str] = None,
     ) -> PeptideRecord:

@@ -5,11 +5,11 @@ import os
 import re
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple, Union, List
-from matplotlib.pyplot import title
 
 import numpy as np
 import pandas as pd
 from pyteomics import tandem, mzid
+from sqlalchemy import false
 from tqdm import tqdm
 
 from ms2rescore._exceptions import MS2RescoreError
@@ -34,7 +34,7 @@ def parse_mgf_title_rt(
 ) -> Tuple[Dict[int, str], Dict[int, float]]:
     """Parse MGF file to extract title and retention time fields, by spectrum index."""
     titles = dict()
-    retention_times = dict ()
+    retention_times = dict()
     with open(path_to_mgf, "rt") as mgf_in:
         index = 0
         for line in mgf_in:
@@ -178,22 +178,19 @@ class _Pipeline(ABC):
         """Get PeptideRecord from PIN file and MGF file."""
         # Get peprec
         peprec = self.original_pin.to_peptide_record(
-            extract_spectrum_index=False,
+            extract_spectrum_index=True,
             spectrum_index_pattern=self._pin_spec_id_patterns[self._pin_spec_id_style]
         )
 
         if "observed_retention_time" not in peprec.df.columns:
             # Map MGF titles and observed retention times
             titles, observed_retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
-            title_rt_dict = {
-            "spec_id": list(titles.values()),
-            "observed_retention_time": list(observed_retention_times.values()),
-            }
-
-            # TODO find more elegant way to do this without merging
-            id_rt_df = pd.DataFrame.from_dict(title_rt_dict)
-            peprec.df = pd.merge(peprec.df, id_rt_df, on="spec_id", how="inner")
-            #peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(title_rt_dict)
+            title_rt_dict = dict(zip(
+                list(titles.values()),
+                list(observed_retention_times.values()),
+            ))
+            print(title_rt_dict)
+            peprec["observed_retention_time"] = peprec["spec_id"].map(title_rt_dict)
 
         if not ~peprec.df["observed_retention_time"].isna().any():
             raise IDFileParserError(
