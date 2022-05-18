@@ -177,15 +177,18 @@ class _Pipeline(ABC):
         """Get PeptideRecord from PIN file and MGF file."""
         # Get peprec
         peprec = self.original_pin.to_peptide_record(
+            extract_spectrum_index=True,
             spectrum_index_pattern=self._pin_spec_id_patterns[self._pin_spec_id_style]
         )
-        titles, retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
-        peprec.df["spec_id"] = peprec.df["spec_id"].map(titles)
+
         if "observed_retention_time" not in peprec.df.columns:
             # Map MGF titles and observed retention times
-            peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(
-                retention_times
-            )
+            titles, observed_retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
+            title_rt_dict = dict(zip(
+                list(titles.values()),
+                list(observed_retention_times.values()),
+            ))
+            peprec["observed_retention_time"] = peprec["spec_id"].map(title_rt_dict)
 
         if not ~peprec.df["observed_retention_time"].isna().any():
             raise IDFileParserError(
