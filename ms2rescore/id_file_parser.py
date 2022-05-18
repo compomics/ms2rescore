@@ -9,7 +9,6 @@ from typing import Dict, Tuple, Union, List
 import numpy as np
 import pandas as pd
 from pyteomics import tandem, mzid
-from sqlalchemy import false
 from tqdm import tqdm
 
 from ms2rescore._exceptions import MS2RescoreError
