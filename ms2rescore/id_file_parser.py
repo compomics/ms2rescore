@@ -599,7 +599,18 @@ class PeaksPipeline(_Pipeline):
 
         if not self.df:
             self.df = self.read_df_from_mzid()
-        peprec_df = self.df.rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
+        peprec_df = self.df[
+            [
+                "spec_id",
+                "peptide",
+                "modifications",
+                "charge",
+                "protein_list",
+                "PEAKS:peptideScore",
+                "Label",
+                "Raw file",
+            ]
+        ].rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
         self.parse_mgf_files(peprec_df)
         if "observed_retention_time" not in peprec_df.columns:
             titles, rt = parse_mgf_title_rt(self.passed_mgf_path)
