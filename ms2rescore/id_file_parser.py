@@ -177,7 +177,7 @@ class _Pipeline(ABC):
         """Get PeptideRecord from PIN file and MGF file."""
         # Get peprec
         peprec = self.original_pin.to_peptide_record(
-            extract_spectrum_index=False,
+            extract_spectrum_index=True,
             spectrum_index_pattern=self._pin_spec_id_patterns[self._pin_spec_id_style]
         )
 
