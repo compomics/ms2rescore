@@ -186,6 +186,8 @@ class MS2ReScore:
             peprec_filename,
             output_filename + "_rtfeatures.csv",
             num_cpu=num_cpu,
+            higher_psm_score_better=True,
+            calibration_set_size=250
         )
         rt_int.run()
 

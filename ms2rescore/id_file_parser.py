@@ -188,7 +188,9 @@ class _Pipeline(ABC):
                 list(titles.values()),
                 list(observed_retention_times.values()),
             ))
-            peprec["observed_retention_time"] = peprec["spec_id"].map(title_rt_dict)
+
+            peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(title_rt_dict)
+
 
         if not ~peprec.df["observed_retention_time"].isna().any():
             raise IDFileParserError(

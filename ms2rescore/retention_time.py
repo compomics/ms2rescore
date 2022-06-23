@@ -205,7 +205,8 @@ class RetentionTimeIntegration:
                         split_cal=10,
                         n_jobs=self.num_cpu,
                         cnn_model=True,
-                        verbose=False
+                        verbose=False,
+                        pygam_calibration=True
                     )
                     self.deeplc_predictor.calibrate_preds(
                         seq_df=self.get_calibration_data(peprec_raw_df)
@@ -217,7 +218,8 @@ class RetentionTimeIntegration:
                         n_jobs=self.num_cpu,
                         cnn_model=True,
                         verbose=False,
-                        path_model=self.deeplc_model
+                        path_model=self.deeplc_model,
+                        pygam_calibration=True
                     )
                     self.deeplc_predictor.calibrate_preds(
                         seq_df=self.get_calibration_data(peprec_raw_df)
@@ -239,14 +241,14 @@ class RetentionTimeIntegration:
             )
         else:
             self.deeplc_predictor = DeepLC(
-                split_cal=10, n_jobs=self.num_cpu, cnn_model=True, verbose=False
+                split_cal=10, n_jobs=self.num_cpu, cnn_model=True, verbose=False, pygam_calibration=True
             )
             self.deeplc_predictor.calibrate_preds(
                 seq_df=self.get_calibration_data(self.peprec.df)
             )
             predicted_rts = pd.Series(
                 self.deeplc_predictor.make_preds(
-                    seq_df=self.get_prediction_data(self.peprec.df)
+                    seq_df=self.get_prediction_data(self.peprec.df),
                 )
             )
             self.peprec.df["predicted_retention_time"] = predicted_rts
