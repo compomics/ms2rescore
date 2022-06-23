@@ -188,7 +188,9 @@ class _Pipeline(ABC):
                 list(titles.values()),
                 list(observed_retention_times.values()),
             ))
+
             peprec.df["observed_retention_time"] = peprec.df["spec_id"].map(title_rt_dict)
+
 
         if not ~peprec.df["observed_retention_time"].isna().any():
             raise IDFileParserError(
@@ -566,6 +568,12 @@ class PeaksPipeline(_Pipeline):
                 )
                 psm["calculatedMassToCharge"] = flat_dict["SpectrumIdentificationItem_calculatedMassToCharge"]
                 psm["experimentalMassToCharge"] = flat_dict["SpectrumIdentificationItem_experimentalMassToCharge"]
+                
+                #if "retention time" in flat_dict.keys():
+                    #psm["observed_retention_time"] = flat_dict["retention time"]
+                
+                if "inverse reduced ion mobility" in flat_dict.keys():
+                    psm["ion_mobility"] = flat_dict["inverse reduced ion mobility"]
 
                 psm_list.append(psm)
                 
@@ -606,18 +614,20 @@ class PeaksPipeline(_Pipeline):
                 "PEAKS:peptideScore",
                 "Label",
                 "Raw file",
-                "calculatedMassToCharge",
-                "experimentalMassToCharge"
             ]
         ].rename({"PEAKS:peptideScore": "psm_score"}, axis=1)
         self.parse_mgf_files(peprec_df)
-        titles, rt = parse_mgf_title_rt(self.passed_mgf_path)
-        id_rt_dict = {
-            "spec_id": list(titles.values()),
-            "observed_retention_time": list(rt.values()),
-        }
-        id_rt_df = pd.DataFrame.from_dict(id_rt_dict)
-        peprec_df = pd.merge(peprec_df, id_rt_df, on="spec_id", how="inner")
+        if "observed_retention_time" not in peprec_df.columns:
+            titles, observed_retention_times = parse_mgf_title_rt(self.path_to_mgf_file)
+            title_rt_dict = dict(zip(
+                list(titles.values()),
+                list(observed_retention_times.values()),
+            ))
+            peprec_df["observed_retention_time"] = peprec_df["spec_id"].map(title_rt_dict)
+
+            if not ~peprec_df["observed_retention_time"].isna().any():
+                raise IDFileParserError(
+                    "Could not map all MGF retention times to spectrum indices.")
         
         return PeptideRecord.from_dataframe(peprec_df)
 
@@ -634,4 +644,10 @@ class PeaksPipeline(_Pipeline):
         ]
 
         feature_cols = [col for col in self.df.columns if col not in peprec_cols]
-        return self.df[feature_cols]
+
+        searchengine_features = self.df[feature_cols]
+        searchengine_features["ChargeN"] = searchengine_features["charge"]
+
+        charges_encoded = pd.get_dummies(searchengine_features["charge"], prefix="Charge", prefix_sep='')
+        
+        return pd.concat([searchengine_features, charges_encoded], axis=1).sort_values("spec_id").reset_index(drop=True)
