@@ -92,6 +92,7 @@ MS2PIP_FEATURES = [
     "cos_ionb",
     "cos_iony",
 ]
+
 DEEPLC_FEATURES = [
     "observed_retention_time",
     "predicted_retention_time",
@@ -780,6 +781,7 @@ class PERCWEIGHT(RescoreRecord):
     def __str__(self) -> str:
         return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
 
+    @staticmethod
     def _check_file_type(filepath):
         """Check if file exists and is a percolator weights file"""
 
@@ -788,7 +790,15 @@ class PERCWEIGHT(RescoreRecord):
 
         return False
 
-    def read_weights_file(self, filename, use_norm_weights):
+    @property
+    def _get_se_features(self):
+        return [
+            ft
+            for ft in self.weights_df.columns
+            if ft not in MS2PIP_FEATURES + DEEPLC_FEATURES
+        ]
+
+    def read_weights_file(self, filename, use_norm_weights: bool):
         """Read weights file to dataframe"""
 
         if not self._check_file_type(filename):
@@ -802,8 +812,8 @@ class PERCWEIGHT(RescoreRecord):
             remove_rows = [0, 2, 3, 5, 6]
 
         weights_df = pd.read_table(filename, sep="\t")
-        weights_df.drop(remove_rows, axis=0, sep="\t", inplace=True)
-        weights_df.drop("m0", axis=1, sep="\t").astype(float)
+        weights_df.drop(remove_rows, axis=0, inplace=True)
+        weights_df = weights_df.drop("m0", axis=1).astype(float)
         weights_df.loc["mean"] = weights_df.mean()
 
         return weights_df
@@ -812,16 +822,15 @@ class PERCWEIGHT(RescoreRecord):
         """Return a dict with the percentage of weight for each feature set"""
         feature_weights = {}
 
-        total_weight = sum(self.weights_df.loc["meain", :].abs())
-
+        total_weight = sum(self.weights_df.loc["mean", :].abs())
         feature_weights["MS²PIP"] = (
             sum(
-                [
-                    abs(
+                np.abs(
+                    [
                         self.weights_df.loc["mean", feature]
                         for feature in MS2PIP_FEATURES
-                    )
-                ]
+                    ]
+                )
             )
             / total_weight
             * 100
@@ -829,12 +838,12 @@ class PERCWEIGHT(RescoreRecord):
 
         feature_weights["DeepLC"] = (
             sum(
-                [
-                    abs(
+                np.abs(
+                    [
                         self.weights_df.loc["mean", feature]
                         for feature in DEEPLC_FEATURES
-                    )
-                ]
+                    ]
+                )
             )
             / total_weight
             * 100
@@ -842,26 +851,26 @@ class PERCWEIGHT(RescoreRecord):
 
         feature_weights["Search engine"] = (
             sum(
-                [
-                    abs(
+                np.abs(
+                    [
                         self.weights_df.loc["mean", feature]
-                        for feature in self.weights_df.columns
-                        not in MS2PIP_FEATURES + DEEPLC_FEATURES
-                    )
-                ]
+                        for feature in self._get_se_features
+                    ]
+                )
             )
             / total_weight
             * 100
         )
 
         return feature_weights
-    
-    def plot_feature_set_weights(self, ax=None):
-        """ Plot the total weigths as percentages for the different features sets"""
 
+    def plot_feature_set_weights(self, ax=None):
+        """Plot the total weigths as percentages for the different features sets"""
+
+        
         if not ax:
             ax = plt.gca()
-        
+
         ft_weights = pd.DataFrame(self.calculate_precentage_ft_weights(), index=[0])
         ft_weights["Search engine"] = ft_weights["Search engine"] + ft_weights["MS²PIP"]
         ft_weights["DeepLC"] = ft_weights["Search engine"] + ft_weights["DeepLC"]
@@ -871,24 +880,82 @@ class PERCWEIGHT(RescoreRecord):
             data=ft_weights,
             palette=sns.color_palette(["#28ea22"]),
             ax=ax,
-            label="DeepLC"
+            label="DeepLC",
         )
         sns.barplot(
             y="Search engine",
             data=ft_weights,
             palette=sns.color_palette(["#FFCD27"]),
             ax=ax,
-            label="Search engine"
+            label="Search engine",
         )
         sns.barplot(
             y="MS²PIP",
             data=ft_weights,
             palette=sns.color_palette(["#1AA3FF"]),
             ax=ax,
-            label="ms2pip"
+            label="ms2pip",
         )
         sns.despine(left=True, right=True, top=True, ax=ax)
         ax.set_xlabel("Percolator weights (%)")
 
         return ax
 
+    def plot_individual_feature_weights(self, ax=None, absolute=True):
+        """Plot the individual feature weights"""
+
+        if not ax:
+            ax = plt.gca()
+
+        reindex_list = (
+            list(
+                self.weights_df.loc["mean", MS2PIP_FEATURES]
+                .abs()
+                .sort_values(ascending=True)
+                .index
+            )
+            + list(
+                self.weights_df.loc["mean", DEEPLC_FEATURES]
+                .abs()
+                .sort_values(ascending=True)
+                .index
+            )
+            + list(
+                self.weights_df.loc["mean", self._get_se_features]
+                .abs()
+                .sort_values(ascending=True)
+                .index
+            )
+        )
+
+        if absolute:
+            mean_row = self.weights_df.loc["mean", :].abs().reindex(reindex_list)
+        else:
+            mean_row = self.weights_df.loc["mean", :].reindex(reindex_list)
+
+        color_map = self._get_color_map()
+        feature_cmap = [color_map[ft] for ft in mean_row.index]
+
+        mean_row.plot(kind="bar", color=feature_cmap, ax=ax)
+
+        return ax
+
+    def _get_color_map(self, feature_colors: dict = None):
+        """Get color for each feature"""
+
+        if not feature_colors:
+            feature_colors = {
+                "MS²PIP": "#1AA3FF",
+                "DeepLC": "#28ea22",
+                "Search engine": "#FFCD27",
+            }
+        color_mapping = {}
+        for feature in self.weights_df.columns:
+            if feature in MS2PIP_FEATURES:
+                color_mapping[feature] = feature_colors["MS²PIP"]
+            elif feature in DEEPLC_FEATURES:
+                color_mapping[feature] = feature_colors["DeepLC"]
+            else:
+                color_mapping[feature] = feature_colors["Search engine"]
+
+        return color_mapping
