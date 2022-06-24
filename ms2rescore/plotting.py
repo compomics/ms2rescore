@@ -504,17 +504,19 @@ class RescoreRecord(ABC):
         if FDR not in cls.loss_gain_df["FDR"].unique():
             cls._separate_unique_peptides(FDR_threshold=[FDR])
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])
-
         tmp = cls.loss_gain_df[cls.loss_gain_df["FDR"] == FDR]
 
-        for sample in zip(
-            tmp["sample"].unique(), list(range(1, len(tmp["sample"].unique()) + 1))
-        ):
-            if sample[1] == len(tmp["sample"].unique()):
+        samples = tmp["sample"].unique()
+        number_samples = len(samples)
+
+        for i, sample in enumerate(samples, start=1):
+
+            if i == number_samples:
+
                 ax = fig.add_subplot(
-                    int(f"{len(tmp['sample'].unique())}1{sample[1]}"), frameon=False
+                    int(f"{number_samples}1{i}"), frameon=False
                 )
-                ax.title.set_text(f"{sample[1]}\nFDR={FDR}")
+                ax.title.set_text(f"FDR={FDR}")
                 sns.barplot(
                     y="feature",
                     x="gain",
@@ -543,7 +545,7 @@ class RescoreRecord(ABC):
                 ax.axes.set_ylabel("")
             else:
                 ax = fig.add_subplot(
-                    int(f"{len(tmp['sample'].unique())}1{sample[1]}"), frameon=False
+                    int(f"{len(samples)}1{i}"), frameon=False
                 )
                 ax.title.set_text(sample[0])
                 sns.barplot(
@@ -572,8 +574,6 @@ class RescoreRecord(ABC):
                 )
                 ax.axes.set_xlabel("")
                 ax.axes.set_ylabel("")
-        plt.grid(axis="x")
-        ax.set_axisbelow(True)
         fig.set_size_inches(12, 6)
         return ax
 
@@ -605,9 +605,10 @@ class RescoreRecord(ABC):
         plt.tight_layout()
         pdf.savefig()
 
-        cls.loss_gain_plot(FDR=0.01)
-        plt.tight_layout()
-        pdf.savefig()
+        for fdr in FDR_thresholds:
+            cls.loss_gain_plot(FDR=fdr)
+            plt.tight_layout()
+            pdf.savefig()
 
         if cls.weights:
             cls.plot_rescore_weights()
