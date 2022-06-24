@@ -10,12 +10,96 @@ import matplotlib.backends.backend_pdf
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import os
 from pyteomics.auxiliary import qvalues
 from statsmodels.distributions.empirical_distribution import ECDF
 
 
 from ms2rescore.percolator import PercolatorIn
 from ms2rescore._exceptions import MS2RescoreError
+
+
+MS2PIP_FEATURES = [
+    "spec_pearson_norm",
+    "ionb_pearson_norm",
+    "iony_pearson_norm",
+    "spec_mse_norm",
+    "ionb_mse_norm",
+    "iony_mse_norm",
+    "min_abs_diff_norm",
+    "max_abs_diff_norm",
+    "abs_diff_Q1_norm",
+    "abs_diff_Q2_norm",
+    "abs_diff_Q3_norm",
+    "mean_abs_diff_norm",
+    "std_abs_diff_norm",
+    "ionb_min_abs_diff_norm",
+    "ionb_max_abs_diff_norm",
+    "ionb_abs_diff_Q1_norm",
+    "ionb_abs_diff_Q2_norm",
+    "ionb_abs_diff_Q3_norm",
+    "ionb_mean_abs_diff_norm",
+    "ionb_std_abs_diff_norm",
+    "iony_min_abs_diff_norm",
+    "iony_max_abs_diff_norm",
+    "iony_abs_diff_Q1_norm",
+    "iony_abs_diff_Q2_norm",
+    "iony_abs_diff_Q3_norm",
+    "iony_mean_abs_diff_norm",
+    "iony_std_abs_diff_norm",
+    "dotprod_norm",
+    "dotprod_ionb_norm",
+    "dotprod_iony_norm",
+    "cos_norm",
+    "cos_ionb_norm",
+    "cos_iony_norm",
+    "spec_pearson",
+    "ionb_pearson",
+    "iony_pearson",
+    "spec_spearman",
+    "ionb_spearman",
+    "iony_spearman",
+    "spec_mse",
+    "ionb_mse",
+    "iony_mse",
+    "min_abs_diff_iontype",
+    "max_abs_diff_iontype",
+    "min_abs_diff",
+    "max_abs_diff",
+    "abs_diff_Q1",
+    "abs_diff_Q2",
+    "abs_diff_Q3",
+    "mean_abs_diff",
+    "std_abs_diff",
+    "ionb_min_abs_diff",
+    "ionb_max_abs_diff",
+    "ionb_abs_diff_Q1",
+    "ionb_abs_diff_Q2",
+    "ionb_abs_diff_Q3",
+    "ionb_mean_abs_diff",
+    "ionb_std_abs_diff",
+    "iony_min_abs_diff",
+    "iony_max_abs_diff",
+    "iony_abs_diff_Q1",
+    "iony_abs_diff_Q2",
+    "iony_abs_diff_Q3",
+    "iony_mean_abs_diff",
+    "iony_std_abs_diff",
+    "dotprod",
+    "dotprod_ionb",
+    "dotprod_iony",
+    "cos",
+    "cos_ionb",
+    "cos_iony",
+]
+DEEPLC_FEATURES = [
+    "observed_retention_time",
+    "predicted_retention_time",
+    "rt_diff",
+    "rt_diff_best",
+    "observed_retention_time_best",
+    "predicted_retention_time_best",
+]
 
 
 class RescoreRecord(ABC):
@@ -660,3 +744,151 @@ class POUT(RescoreRecord):
         pout_qvalues["is decoy"] = pout["Label"] == -1
 
         return pout_qvalues
+
+
+class PERCWEIGHT(RescoreRecord):
+    """Percolator weights file record"""
+
+    def __init__(
+        self,
+        path_to_weights_file,
+        rescoring_features,
+        sample_name,
+        normalized_weights=True,
+    ) -> None:
+        super().__init__()
+        self.type = "weights"
+        self.rescore_features = rescoring_features
+        self.name = sample_name
+        self.weights_df = self.read_weights_file(
+            path_to_weights_file, normalized_weights
+        )
+
+        """
+        Parameters
+        ----------
+        path_to_file : string
+            path to input percolator weights file
+
+        sample_name : string
+            name of the sample
+
+        rescoring_features: list[strings]
+            list of the used rescoring features
+        """
+
+    def __str__(self) -> str:
+        return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+
+    def _check_file_type(filepath):
+        """Check if file exists and is a percolator weights file"""
+
+        if os.path.exists(filepath) & filepath.endswith(".weights"):
+            return True
+
+        return False
+
+    def read_weights_file(self, filename, use_norm_weights):
+        """Read weights file to dataframe"""
+
+        if not self._check_file_type(filename):
+            raise FileNotFoundError(
+                "Not a valid filepath or not a percolator weights file (.weights)"
+            )
+
+        if use_norm_weights:
+            remove_rows = [1, 2, 4, 5, 7]
+        else:
+            remove_rows = [0, 2, 3, 5, 6]
+
+        weights_df = pd.read_table(filename, sep="\t")
+        weights_df.drop(remove_rows, axis=0, sep="\t", inplace=True)
+        weights_df.drop("m0", axis=1, sep="\t").astype(float)
+        weights_df.loc["mean"] = weights_df.mean()
+
+        return weights_df
+
+    def calculate_precentage_ft_weights(self):
+        """Return a dict with the percentage of weight for each feature set"""
+        feature_weights = {}
+
+        total_weight = sum(self.weights_df.loc["meain", :].abs())
+
+        feature_weights["MS²PIP"] = (
+            sum(
+                [
+                    abs(
+                        self.weights_df.loc["mean", feature]
+                        for feature in MS2PIP_FEATURES
+                    )
+                ]
+            )
+            / total_weight
+            * 100
+        )
+
+        feature_weights["DeepLC"] = (
+            sum(
+                [
+                    abs(
+                        self.weights_df.loc["mean", feature]
+                        for feature in DEEPLC_FEATURES
+                    )
+                ]
+            )
+            / total_weight
+            * 100
+        )
+
+        feature_weights["Search engine"] = (
+            sum(
+                [
+                    abs(
+                        self.weights_df.loc["mean", feature]
+                        for feature in self.weights_df.columns
+                        not in MS2PIP_FEATURES + DEEPLC_FEATURES
+                    )
+                ]
+            )
+            / total_weight
+            * 100
+        )
+
+        return feature_weights
+    
+    def plot_feature_set_weights(self, ax=None):
+        """ Plot the total weigths as percentages for the different features sets"""
+
+        if not ax:
+            ax = plt.gca()
+        
+        ft_weights = pd.DataFrame(self.calculate_precentage_ft_weights(), index=[0])
+        ft_weights["Search engine"] = ft_weights["Search engine"] + ft_weights["MS²PIP"]
+        ft_weights["DeepLC"] = ft_weights["Search engine"] + ft_weights["DeepLC"]
+
+        sns.barplot(
+            y="DeepLC",
+            data=ft_weights,
+            palette=sns.color_palette(["#28ea22"]),
+            ax=ax,
+            label="DeepLC"
+        )
+        sns.barplot(
+            y="Search engine",
+            data=ft_weights,
+            palette=sns.color_palette(["#FFCD27"]),
+            ax=ax,
+            label="Search engine"
+        )
+        sns.barplot(
+            y="MS²PIP",
+            data=ft_weights,
+            palette=sns.color_palette(["#1AA3FF"]),
+            ax=ax,
+            label="ms2pip"
+        )
+        sns.despine(left=True, right=True, top=True, ax=ax)
+        ax.set_xlabel("Percolator weights (%)")
+
+        return ax
+
