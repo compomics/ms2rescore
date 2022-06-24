@@ -7,6 +7,8 @@ from typing import List, Optional
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf
+from matplotlib.patches import Patch
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -617,7 +619,7 @@ class RescoreRecord(ABC):
     def plot_rescore_weights(cls):
         """Plot weights of rescoring run"""
 
-        fig = plt.figure(figsize=(12, 6))
+        fig = plt.figure(figsize=(16, 6))
 
         ax = plt.subplot2grid((1,15),(0,0), colspan=13, fig=fig)
         cls.weights.plot_individual_feature_weights(ax)
@@ -957,6 +959,18 @@ class PERCWEIGHT(RescoreRecord):
         feature_cmap = [color_map[ft] for ft in mean_row.index]
 
         mean_row.plot(kind="bar", color=feature_cmap, ax=ax)
+
+        ms2pip_l = Patch(facecolor="#1AA3FF", edgecolor="#1AA3FF")
+        deeplc_l = Patch(facecolor="#28ea22", edgecolor="#28ea22")
+        searchengine_l = Patch(facecolor="#FFCD27", edgecolor="#FFCD27")
+
+        ax.legend(
+            [ms2pip_l, deeplc_l, searchengine_l],
+            ["MS²PIP", "DeepLC", "Search engine"],
+            frameon=True, 
+            ncol=3,
+            loc=2
+        )
 
         return ax
 
