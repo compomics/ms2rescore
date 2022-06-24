@@ -18,6 +18,7 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from ms2rescore.percolator import PercolatorIn
 from ms2rescore._exceptions import MS2RescoreError
 
+sns.set_style("whitegrid")
 
 MS2PIP_FEATURES = [
     "spec_pearson_norm",
@@ -105,6 +106,7 @@ DEEPLC_FEATURES = [
 
 class RescoreRecord(ABC):
     rerecs = []
+    weights = None
     loss_gain_df = pd.DataFrame()
     unique_df = pd.DataFrame()
     count_df = pd.DataFrame()
@@ -115,6 +117,7 @@ class RescoreRecord(ABC):
     @classmethod
     def empty_rerecs(cls):
         cls.rerecs = []
+        cls.weights = None
 
     @classmethod
     def show_rerec_items(cls):
@@ -603,8 +606,26 @@ class RescoreRecord(ABC):
         cls.loss_gain_plot(FDR=0.01)
         plt.tight_layout()
         pdf.savefig()
+
+        if cls.weights:
+            cls.plot_rescore_weights()
+            pdf.savefig()
+
         pdf.close()
 
+    @classmethod
+    def plot_rescore_weights(cls):
+        """Plot weights of rescoring run"""
+
+        fig = plt.figure(figsize=(12, 6))
+
+        ax = plt.subplot2grid((1,15),(0,0), colspan=13, fig=fig)
+        cls.weights.plot_individual_feature_weights(ax)
+
+        ax1 = plt.subplot2grid((1,15),(0,13), colspan=1, fig=fig)
+        cls.weights.plot_feature_set_weights(ax1)
+
+        fig.tight_layout()
 
 class PIN(RescoreRecord):
     """PIN file record."""
@@ -764,6 +785,7 @@ class PERCWEIGHT(RescoreRecord):
         self.weights_df = self.read_weights_file(
             path_to_weights_file, normalized_weights
         )
+        RescoreRecord.weights = self
 
         """
         Parameters
@@ -867,14 +889,12 @@ class PERCWEIGHT(RescoreRecord):
     def plot_feature_set_weights(self, ax=None):
         """Plot the total weigths as percentages for the different features sets"""
 
-        
         if not ax:
             ax = plt.gca()
 
         ft_weights = pd.DataFrame(self.calculate_precentage_ft_weights(), index=[0])
         ft_weights["Search engine"] = ft_weights["Search engine"] + ft_weights["MS²PIP"]
         ft_weights["DeepLC"] = ft_weights["Search engine"] + ft_weights["DeepLC"]
-
         sns.barplot(
             y="DeepLC",
             data=ft_weights,
@@ -898,7 +918,7 @@ class PERCWEIGHT(RescoreRecord):
         )
         sns.despine(left=True, right=True, top=True, ax=ax)
         ax.set_xlabel("Percolator weights (%)")
-
+        ax.set_ylabel("")
         return ax
 
     def plot_individual_feature_weights(self, ax=None, absolute=True):
