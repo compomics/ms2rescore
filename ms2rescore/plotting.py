@@ -420,7 +420,7 @@ class RescoreRecord(ABC):
         )
 
         g.set_ylabels(y_label)
-        g.add_legend(loc=9, ncol=10)
+        g.add_legend(loc=9, ncol=6)
         g.fig.set_size_inches(12, 10)
         g.fig.tight_layout()
 
