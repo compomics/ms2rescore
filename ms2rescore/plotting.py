@@ -124,6 +124,8 @@ class RescoreRecord(ABC):
     def show_rerec_items(cls):
         for rerec in cls.rerecs:
             print(rerec)
+        if cls.weights:
+            print(cls.weights)
 
     def target_decoy_distribution(
         self,
@@ -507,7 +509,7 @@ class RescoreRecord(ABC):
 
         samples = tmp["sample"].unique()
         number_samples = len(samples)
-
+        print(tmp.head())
         for i, sample in enumerate(samples, start=1):
 
             if i == number_samples:
@@ -519,25 +521,25 @@ class RescoreRecord(ABC):
                 sns.barplot(
                     y="feature",
                     x="gain",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#2FA92D",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 sns.barplot(
                     y="feature",
                     x="shared",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#1AA3FF",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 sns.barplot(
                     y="feature",
                     x="loss",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#FF0000",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 ax.axes.set_xlabel("unique identified peptides (%)")
@@ -546,29 +548,28 @@ class RescoreRecord(ABC):
                 ax = fig.add_subplot(
                     int(f"{len(samples)}1{i}"), frameon=False
                 )
-                ax.title.set_text(sample[0])
                 sns.barplot(
                     y="feature",
                     x="gain",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#2FA92D",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 sns.barplot(
                     y="feature",
                     x="shared",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#1AA3FF",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 sns.barplot(
                     y="feature",
                     x="loss",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#FF0000",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 ax.axes.set_xlabel("")
@@ -1032,7 +1033,7 @@ def main(**kwargs):
             "MS²Rescore",
             kwargs["sample_name"],
         )
-    
+    RescoreRecord.show_rerec_items()
     RescoreRecord.save_plots_to_pdf(kwargs["output_filename"], list(kwargs["fdr"]))
 
 if __name__ == "__main__":
