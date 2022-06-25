@@ -8,15 +8,14 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf
 from matplotlib.patches import Patch
-
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import os
+import click
+
 from pyteomics.auxiliary import qvalues
 from statsmodels.distributions.empirical_distribution import ECDF
-
-
 from ms2rescore.percolator import PercolatorIn
 from ms2rescore._exceptions import MS2RescoreError
 
@@ -994,3 +993,47 @@ class PERCWEIGHT(RescoreRecord):
                 color_mapping[feature] = feature_colors["Search engine"]
 
         return color_mapping
+
+@click.command()
+@click.argument("pin_file", required=True)
+@click.option("-p","--pout", multiple=True, required=True, help=".pout MS²Rescore file, multiple space separated .pout files possible")
+@click.option("-d","--pout_dec", multiple=True, required=True, help=".pout_dec MS²Rescore file, multiple space separated .pout_dec files possible")
+@click.option("-f","--feature_sets", multiple=True, required=True, help="Features sets used for rescoring, if multiple pout files than multiple feature set names are required")
+@click.option("-s","--score_metric", required=True, help="Score metric used in the pin file")
+@click.option("-o","--output_filename", default="MS²Rescore_plots.pdf", help="output_name")
+@click.option("-w","--weights_file", default=None, help="Percolator weight file to plot feature importances")
+@click.option("-n","--sample_name", default="john doe", help="")
+@click.option("--FDR", default=[0.01], multiple=True, help="Space separated FDR values to plot PSMs")
+def main(**kwargs):
+    """
+    Plot different analysis plots for the PIN_FILE, POUT_FILE and POUT_DEC_FILE from MS²Rescore
+    """
+
+    if not (len(kwargs["pout"]) == len(kwargs["pout_dec"])) & (len(kwargs["pout"]) == len(kwargs["feature_sets"])):
+        raise MS2RescoreError("Pout, pout_dec and feature_sets should be of equal length")
+    
+
+    RescoreRecord.empty_rerecs()
+    PIN(
+        kwargs["pin_file"],
+        kwargs["sample_name"],
+        "PEAKS:peptideScore"
+    )
+    for pout, pout_dec, feature_sets in zip(kwargs["pout"], kwargs["pout_dec"], kwargs["feature_sets"]):
+        POUT(
+            pout,
+            pout_dec,
+            kwargs["sample_name"],
+            feature_sets
+        )
+    if kwargs["weights_file"]:
+        weights = PERCWEIGHT(
+            kwargs["weights_file"],
+            "MS²Rescore",
+            kwargs["sample_name"],
+        )
+    
+    RescoreRecord.save_plots_to_pdf(kwargs["output_filename"], list(kwargs["fdr"]))
+
+if __name__ == "__main__":
+    main()
