@@ -58,6 +58,7 @@ setup(
     entry_points={"console_scripts": [
         "ms2rescore=ms2rescore.__main__:main",
         "ms2rescore-gui=ms2rescore.gui:main",
+        "ms2rescore-plotting=ms2rescore.plotting:main"
     ]},
     python_requires=">=3.7",
     install_requires=[
