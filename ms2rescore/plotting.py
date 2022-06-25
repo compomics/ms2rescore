@@ -509,7 +509,7 @@ class RescoreRecord(ABC):
 
         samples = tmp["sample"].unique()
         number_samples = len(samples)
-        print(tmp.head())
+
         for i, sample in enumerate(samples, start=1):
 
             if i == number_samples:
@@ -1004,7 +1004,7 @@ class PERCWEIGHT(RescoreRecord):
 @click.option("-o","--output_filename", default="MS²Rescore_plots.pdf", help="output_name")
 @click.option("-w","--weights_file", default=None, help="Percolator weight file to plot feature importances")
 @click.option("-n","--sample_name", default="john doe", help="")
-@click.option("--FDR", default=[0.01], multiple=True, help="Space separated FDR values to plot PSMs")
+@click.option("--fdr", default="0.01", help="Comma separated FDR values to plot PSMs")
 def main(**kwargs):
     """
     Plot different analysis plots for the PIN_FILE, POUT_FILE and POUT_DEC_FILE from MS²Rescore
@@ -1013,7 +1013,8 @@ def main(**kwargs):
     if not (len(kwargs["pout"]) == len(kwargs["pout_dec"])) & (len(kwargs["pout"]) == len(kwargs["feature_sets"])):
         raise MS2RescoreError("Pout, pout_dec and feature_sets should be of equal length")
     
-
+    kwargs["fdr"] = [float(fdr) for fdr in kwargs["fdr"].split(",")]
+    
     RescoreRecord.empty_rerecs()
     PIN(
         kwargs["pin_file"],
@@ -1033,7 +1034,7 @@ def main(**kwargs):
             "MS²Rescore",
             kwargs["sample_name"],
         )
-    RescoreRecord.show_rerec_items()
+
     RescoreRecord.save_plots_to_pdf(kwargs["output_filename"], list(kwargs["fdr"]))
 
 if __name__ == "__main__":
