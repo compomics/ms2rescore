@@ -2,6 +2,7 @@
 
 from abc import ABC
 from collections import defaultdict
+from turtle import left
 from typing import List, Optional
 
 import matplotlib.axes
@@ -405,23 +406,23 @@ class RescoreRecord(ABC):
         else:
             if cls.count_df.empty:
                 cls._count_identifications()
-            y_label = "number of identified peptides"
+            y_label = "number of identified PSMs"
             count_df = cls.count_df
 
         g = sns.catplot(
-            x="sample",
+            x="FDR",
             y="count",
             data=count_df,
             hue="rescoring",
             kind="bar",
-            col="FDR",
+            # col="sample",
             legend=False,
         )
 
         g.set_ylabels(y_label)
-        g.set_xlabels("")
-        g.add_legend(loc=7)
+        g.add_legend(loc=9, ncol=10)
         g.fig.set_size_inches(12, 10)
+        g.fig.tight_layout()
 
         return g
 
