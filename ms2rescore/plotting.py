@@ -1003,7 +1003,7 @@ class PERCWEIGHT(RescoreRecord):
 @click.option("-s","--score_metric", required=True, help="Score metric used in the pin file")
 @click.option("-o","--output_filename", default="MS²Rescore_plots.pdf", help="output_name")
 @click.option("-w","--weights_file", default=None, help="Percolator weight file to plot feature importances")
-@click.option("-n","--sample_name", default="john doe", help="")
+@click.option("-n","--sample_name", default="MS²Rescore run", help="Sample name used for generating plots")
 @click.option("--fdr", default="0.01", help="Comma separated FDR values to plot PSMs")
 def main(**kwargs):
     """
@@ -1019,7 +1019,7 @@ def main(**kwargs):
     PIN(
         kwargs["pin_file"],
         kwargs["sample_name"],
-        "PEAKS:peptideScore"
+        kwargs["score_metric"]
     )
     for pout, pout_dec, feature_sets in zip(kwargs["pout"], kwargs["pout_dec"], kwargs["feature_sets"]):
         POUT(
