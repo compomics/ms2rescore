@@ -876,7 +876,6 @@ class PERCWEIGHT(RescoreRecord):
             ax = plt.gca()
 
         ft_weights = pd.DataFrame(self.calculate_precentage_ft_weights(), index=[0])
-        print(ft_weights)
         ft_weights["Search engine"] = ft_weights["Search engine"] + ft_weights["MS²PIP"]
         ft_weights["DeepLC"] = ft_weights["Search engine"] + ft_weights["DeepLC"]
         sns.barplot(
