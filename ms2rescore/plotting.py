@@ -107,6 +107,7 @@ DEEPLC_FEATURES = [
 
 
 class RescoreRecord(ABC):
+    # TODO remove support for different samples
     rerecs = []
     weights = None
     loss_gain_df = pd.DataFrame()
@@ -847,46 +848,24 @@ class PERCWEIGHT(RescoreRecord):
     def calculate_precentage_ft_weights(self):
         """Return a dict with the percentage of weight for each feature set"""
         feature_weights = {}
-
         total_weight = sum(self.weights_df.loc["mean", :].abs())
-        feature_weights["MS²PIP"] = (
-            sum(
-                np.abs(
-                    [
-                        self.weights_df.loc["mean", feature]
-                        for feature in MS2PIP_FEATURES
-                    ]
+        for name ,feature_set in zip(["MS²PIP", "DeepLC", "Search engine"], [MS2PIP_FEATURES, DEEPLC_FEATURES, self._get_se_features]):
+            try:
+                feature_weights[name] = (
+                    sum(
+                        np.abs(
+                            [
+                                self.weights_df.loc["mean", feature]
+                                for feature in feature_set
+                            ]
+                        )
+                    )
+                    / total_weight
+                    * 100
                 )
-            )
-            / total_weight
-            * 100
-        )
-
-        feature_weights["DeepLC"] = (
-            sum(
-                np.abs(
-                    [
-                        self.weights_df.loc["mean", feature]
-                        for feature in DEEPLC_FEATURES
-                    ]
-                )
-            )
-            / total_weight
-            * 100
-        )
-
-        feature_weights["Search engine"] = (
-            sum(
-                np.abs(
-                    [
-                        self.weights_df.loc["mean", feature]
-                        for feature in self._get_se_features
-                    ]
-                )
-            )
-            / total_weight
-            * 100
-        )
+            except KeyError:
+                feature_weights[name] = 0
+                continue
 
         return feature_weights
 
@@ -897,6 +876,7 @@ class PERCWEIGHT(RescoreRecord):
             ax = plt.gca()
 
         ft_weights = pd.DataFrame(self.calculate_precentage_ft_weights(), index=[0])
+        print(ft_weights)
         ft_weights["Search engine"] = ft_weights["Search engine"] + ft_weights["MS²PIP"]
         ft_weights["DeepLC"] = ft_weights["Search engine"] + ft_weights["DeepLC"]
         sns.barplot(
@@ -931,26 +911,19 @@ class PERCWEIGHT(RescoreRecord):
         if not ax:
             ax = plt.gca()
 
-        reindex_list = (
-            list(
-                self.weights_df.loc["mean", MS2PIP_FEATURES]
-                .abs()
-                .sort_values(ascending=True)
-                .index
-            )
-            + list(
-                self.weights_df.loc["mean", DEEPLC_FEATURES]
-                .abs()
-                .sort_values(ascending=True)
-                .index
-            )
-            + list(
-                self.weights_df.loc["mean", self._get_se_features]
-                .abs()
-                .sort_values(ascending=True)
-                .index
-            )
-        )
+        reindex_list = []
+        for feature_set in [MS2PIP_FEATURES, DEEPLC_FEATURES, self._get_se_features]:
+            try:
+                feature_reindex = list(
+                    self.weights_df.loc["mean", feature_set]
+                    .abs()
+                    .sort_values(ascending=True)
+                    .index
+                )
+                reindex_list.extend(feature_reindex)
+            except KeyError:
+                continue
+
 
         if absolute:
             mean_row = self.weights_df.loc["mean", :].abs().reindex(reindex_list)
