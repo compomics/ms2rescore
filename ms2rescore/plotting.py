@@ -328,9 +328,13 @@ class RescoreRecord(ABC):
         else:
             ax.set_xlabel("FDR threshold")
 
-        ax.legend()
+        ax.legend(
+            frameon=False, 
+            ncol=3,
+            loc=9
+        )
         fig.set_size_inches(12, 10)
-
+        fig.tight_layout()
         return ax
 
     @classmethod
@@ -421,7 +425,7 @@ class RescoreRecord(ABC):
         )
 
         g.set_ylabels(y_label)
-        g.add_legend(loc=9, ncol=6)
+        g.add_legend(loc=9, ncol=8)
         g.fig.set_size_inches(12, 10)
         g.fig.tight_layout()
 
