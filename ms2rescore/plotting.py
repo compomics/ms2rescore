@@ -1008,7 +1008,7 @@ def main(**kwargs):
             kwargs["sample_name"],
         )
 
-    RescoreRecord.save_plots_to_pdf(kwargs["output_filename"], list(kwargs["fdr"]))
+    RescoreRecord.save_plots_to_pdf(kwargs["output_filename"] + ".pdf", list(kwargs["fdr"]))
 
 if __name__ == "__main__":
     main()
