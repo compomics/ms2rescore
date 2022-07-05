@@ -233,7 +233,8 @@ Run `ms2rescore-plotting --help` to see all command line options.
 
 If you want to compare MS²Rescore runs with different features sets you can add multiple -p -d and -f flags as follows:
 ```
-ms2rescore-plotting <path-to-pin-file> -p <path-to-first-pout-file> -p <path-to-second-pout-file> 
+ms2rescore-plotting <path-to-pin-file> 
+-p <path-to-first-pout-file> -p <path-to-second-pout-file> 
 -d <path-to-first-pout_dec-file> -d <path-to-second-pout_dec-file> 
 -f <first-feature-sets-used> -f <second-feature-sets-used>  
 -s <pin-file-score-column-name>
