@@ -334,7 +334,7 @@ class RescoreRecord(ABC):
 
         ax.legend(
             frameon=True, 
-            ncol=3,
+            ncol=4,
             loc=9
         )
         fig.set_size_inches(12, 10)
@@ -429,7 +429,7 @@ class RescoreRecord(ABC):
         )
 
         g.set_ylabels(y_label)
-        g.add_legend(loc=9, ncol=8)
+        g.add_legend(loc=9, ncol=4)
         g.fig.set_size_inches(12, 10)
         g.fig.tight_layout()
 
