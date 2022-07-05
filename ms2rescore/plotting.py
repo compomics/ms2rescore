@@ -2,7 +2,7 @@
 
 from abc import ABC
 from collections import defaultdict
-from turtle import left
+import logging
 from typing import List, Optional
 
 import matplotlib.axes
@@ -21,6 +21,7 @@ from ms2rescore.percolator import PercolatorIn
 from ms2rescore._exceptions import MS2RescoreError
 
 sns.set_style("whitegrid")
+logger = logging.getLogger(__name__)
 
 MS2PIP_FEATURES = [
     "spec_pearson_norm",
@@ -280,6 +281,9 @@ class RescoreRecord(ABC):
 
         if not fdr_thresholds:
             fdr_thresholds = [0.01, 0.001]
+        else:
+            fdr_thresholds = list(set(fdr_thresholds + [0.01, 0.001]))
+            fdr_thresholds.sort(reverse=True)
 
         if ax is None:
             ax = plt.gca()
@@ -329,7 +333,7 @@ class RescoreRecord(ABC):
             ax.set_xlabel("FDR threshold")
 
         ax.legend(
-            frameon=False, 
+            frameon=True, 
             ncol=3,
             loc=9
         )
@@ -607,7 +611,7 @@ class RescoreRecord(ABC):
         cls.count_plot(unique=False)
         pdf.savefig()
 
-        cls.qvalue_comparison()
+        cls.qvalue_comparison(fdr_thresholds = FDR_thresholds)
         plt.tight_layout()
         pdf.savefig()
 
@@ -978,7 +982,7 @@ class PERCWEIGHT(RescoreRecord):
 @click.option("-d","--pout_dec", multiple=True, required=True, help=".pout_dec MS²Rescore file, multiple space separated .pout_dec files possible")
 @click.option("-f","--feature_sets", multiple=True, required=True, help="Features sets used for rescoring, if multiple pout files than multiple feature set names are required")
 @click.option("-s","--score_metric", required=True, help="Score metric used in the pin file")
-@click.option("-o","--output_filename", default="MS²Rescore_plots.pdf", help="output_name")
+@click.option("-o","--output_filename", default="MS²Rescore_plots", help="output_name")
 @click.option("-w","--weights_file", default=None, help="Percolator weight file to plot feature importances")
 @click.option("-n","--sample_name", default="MS²Rescore run", help="Sample name used for generating plots")
 @click.option("--fdr", default="0.01", help="Comma separated FDR values to plot PSMs")
@@ -991,7 +995,7 @@ def main(**kwargs):
         raise MS2RescoreError("Pout, pout_dec and feature_sets should be of equal length")
     
     kwargs["fdr"] = [float(fdr) for fdr in kwargs["fdr"].split(",")]
-    
+    logger.info(f"Create plots with these FDR vales: {kwargs['fdr']}")
     RescoreRecord.empty_rerecs()
     PIN(
         kwargs["pin_file"],
@@ -1011,7 +1015,7 @@ def main(**kwargs):
             "MS²Rescore",
             kwargs["sample_name"],
         )
-
+    logger.info(f"Saving plots to {kwargs['output_filename']}.pdf")
     RescoreRecord.save_plots_to_pdf(kwargs["output_filename"] + ".pdf", list(kwargs["fdr"]))
 
 if __name__ == "__main__":
