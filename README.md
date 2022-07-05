@@ -229,6 +229,7 @@ ms2rescore-plotting <path-to-pin-file>
 -f <feature-sets-used> 
 -s <pin-file-score-column-name>
 ```
+
 Run `ms2rescore-plotting --help` to see all command line options.
 
 If you want to compare MS²Rescore runs with different features sets you can add multiple -p -d and -f flags as follows:
@@ -239,9 +240,10 @@ ms2rescore-plotting <path-to-pin-file>
 -f <first-feature-sets-used> -f <second-feature-sets-used>  
 -s <pin-file-score-column-name>
 ```
-The pin files are for the same MS²Rescore files are be the same in terms of identifications so only one pin file is needed.
----
 
+The pin files are the same for the same MS²Rescore files are be the same in terms of identifications so only one pin file is needed.
+
+---
 ## Contributing
 Bugs, questions or suggestions? Feel free to post an issue in the
 [issue tracker](https://github.com/compomics/ms2rescore/issues/) or to make a pull
