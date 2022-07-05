@@ -978,8 +978,8 @@ class PERCWEIGHT(RescoreRecord):
 
 @click.command()
 @click.argument("pin_file", required=True)
-@click.option("-p","--pout", multiple=True, required=True, help=".pout MS²Rescore file, multiple space separated .pout files possible")
-@click.option("-d","--pout_dec", multiple=True, required=True, help=".pout_dec MS²Rescore file, multiple space separated .pout_dec files possible")
+@click.option("-p","--pout", multiple=True, required=True, help=".pout MS²Rescore file, multiple .pout files possible with multiple flags")
+@click.option("-d","--pout_dec", multiple=True, required=True, help=".pout_dec MS²Rescore file, multiple .pout_dec files possible with multiple flags")
 @click.option("-f","--feature_sets", multiple=True, required=True, help="Features sets used for rescoring, if multiple pout files than multiple feature set names are required")
 @click.option("-s","--score_metric", required=True, help="Score metric used in the pin file")
 @click.option("-o","--output_filename", default="MS²Rescore_plots", help="output_name")
