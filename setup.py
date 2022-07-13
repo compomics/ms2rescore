@@ -65,7 +65,7 @@ setup(
         "pandas>=0.24.0,<2",
         "scikit-learn>=0.20.0,<2",
         "scipy>=1.2.0,<2",
-        "tqdm>=4.31.0,<5",
+        "rich>=12",
         "pyteomics>=4.1.0,<5",
         "lxml>=4.5,<5",
         "ms2pip>=3.8,<4",

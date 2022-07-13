@@ -8,9 +8,9 @@ import tempfile
 from multiprocessing import cpu_count
 from typing import Dict, Optional, Union
 
-from pandas.errors import EmptyDataError
-
 from ms2pip.ms2pipC import MS2PIP
+from pandas.errors import EmptyDataError
+from rich.console import Console
 
 from ms2rescore import id_file_parser, plotting, rescore_core, setup_logging
 from ms2rescore._exceptions import MS2RescoreError
@@ -46,9 +46,18 @@ class MS2ReScore:
         self.config = parse_config(
             parse_cli_args=parse_cli_args, config_class=configuration
         )
+        self.log_level = self.config["general"]["log_level"]
 
         if set_logger:
-            setup_logging.setup_logging(self.config["general"]["log_level"])
+            self._rich_console = Console(record=True)
+            setup_logging.setup_logging(
+                self.log_level,
+                log_file=self.config["general"]["output_filename"]
+                + "_ms2rescore_log.txt",
+                rich_console=self._rich_console,
+            )
+        else:
+            self._rich_console = None
 
         if self.config["general"]["run_percolator"]:
             self._validate_cli_dependency("percolator -h")
@@ -171,7 +180,7 @@ class MS2ReScore:
             preds_filename,
             output_filename + "_ms2pipfeatures.csv",
             num_cpu,
-            show_progress_bar=False,
+            show_progress_bar=True,
         )
 
     @staticmethod
@@ -187,13 +196,20 @@ class MS2ReScore:
             output_filename + "_rtfeatures.csv",
             num_cpu=num_cpu,
             higher_psm_score_better=True,
-            calibration_set_size=250
+            calibration_set_size=250,
         )
         rt_int.run()
 
     def _run_percolator(self):
         """Run Percolator with different feature subsets."""
 
+        log_level_map = {
+            "critical": 0,
+            "error": 0,
+            "warning": 0,
+            "info": 1,
+            "debug": 2,
+        }
 
         for subset in self.config["general"]["feature_sets"]:
             subname = (
@@ -204,31 +220,34 @@ class MS2ReScore:
             )
 
             kwargs = {
-                    "results-psms": subname + ".pout",
-                    "decoy-results-psms": subname + ".pout_dec",
-                    "weights": subname + ".weights",
-                    "verbose": 0,
-                    "post-processing-tdc": True
-                    }
+                "results-psms": subname + "_target_psms.pout",
+                "decoy-results-psms": subname + "_decoy_psms.pout",
+                "results-peptides": subname + "_target_peptides.pout",
+                "decoy-results-peptides": subname + "_decoy_peptides.pout",
+                "weights": subname + ".weights",
+                "verbose": log_level_map[self.log_level],
+                "post-processing-tdc": True,
+            }
             kwargs.update(self.config["percolator"])
 
             percolator_cmd = ["percolator"]
             for key, value in kwargs.items():
 
-                if not isinstance(value,bool):
+                if not isinstance(value, bool):
                     percolator_cmd.append(f"--{key}")
                     percolator_cmd.append(str(value))
-                elif isinstance(value, bool) & value==False:
+                elif isinstance(value, bool) & value == False:
                     continue
                 else:
                     percolator_cmd.append(f"--{key}")
-            percolator_cmd.append(subname+".pin")
+            percolator_cmd.append(subname + ".pin")
+
             logger.info("Running Percolator: %s", " ".join(percolator_cmd))
             output = subprocess.run(percolator_cmd, capture_output=True, check=True)
-
-            logger.debug(output.stdout)
-            logger.info(output.stderr)
-
+            logger.info(
+                "Percolator output: \n" + output.stderr.decode(encoding="utf-8"),
+                extra={"highlighter": None},
+            )
 
     def run(self):
         """Run MS²ReScore."""
@@ -276,9 +295,7 @@ class MS2ReScore:
             if self.config["general"]["plotting"]:
                 logger.info("Generating Rescore plots")
 
-                plotting.PIN(
-                    peprec_filename, self.config["general"]["output_filename"]
-                )
+                plotting.PIN(peprec_filename, self.config["general"]["output_filename"])
 
                 for fset in self.config["general"]["feature_sets"]:
                     pout_file = (
@@ -298,16 +315,30 @@ class MS2ReScore:
                             pout_file,
                             pout_decoy_file,
                             self.config["general"]["output_filename"],
-                            " ".join(fset)
+                            " ".join(fset),
                         )
                     except EmptyDataError:
-                        logger.warn(f"Feature set: {'_'.join(fset)} returned empty pout file")
+                        logger.warn(
+                            f"Feature set: {'_'.join(fset)} returned empty pout file"
+                        )
                         continue
 
                 plotting.RescoreRecord.save_plots_to_pdf(
                     self.config["general"]["output_filename"] + "_plots.pdf",
                     FDR_thresholds=[0.01, 0.001],
                 )
-        if not self.config["general"]["run_percolator"] and self.config["general"]["plotting"]:
+        if (
+            not self.config["general"]["run_percolator"]
+            and self.config["general"]["plotting"]
+        ):
             logger.warn("To plot rescore results run_percolator should be enabled")
         logger.info("MS²ReScore finished!")
+
+    def save_log(self) -> None:
+        """Save full rich-text log to HTML."""
+        if self._rich_console:
+            self._rich_console.save_html(
+                self.config["general"]["output_filename"] + "_ms2rescore_log.html"
+            )
+        else:
+            logger.warning("Could not write logs to HTML: rich console is not defined.")

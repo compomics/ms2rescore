@@ -52,6 +52,7 @@ def main():
     conf = parse_settings(conf)
     rescore = MS2ReScore(parse_cli_args=False, configuration=conf, set_logger=True)
     rescore.run()
+    rescore.save_log()
 
 
 def _parse_arguments() -> argparse.Namespace:
