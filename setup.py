@@ -37,10 +37,10 @@ setup(
     classifiers=[
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
-        "Operating System :: POSIX :: Linux",
+        "Operating System :: OS Independent",
         "Programming Language :: Python :: 3 :: Only",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
     ],
     keywords=[
         "MS2Rescore",
@@ -55,10 +55,12 @@ setup(
     ],
     packages=["ms2rescore"],
     include_package_data=True,
-    entry_points={"console_scripts": [
-        "ms2rescore=ms2rescore.__main__:main",
-        "ms2rescore-gui=ms2rescore.gui:main",
-    ]},
+    entry_points={
+        "console_scripts": [
+            "ms2rescore=ms2rescore.__main__:main",
+            "ms2rescore-gui=ms2rescore.gui:main",
+        ]
+    },
     python_requires=">=3.7",
     install_requires=[
         "numpy>=1.16.0,<2",
@@ -69,7 +71,7 @@ setup(
         "pyteomics>=4.1.0,<5",
         "lxml>=4.5,<5",
         "ms2pip>=3.8,<4",
-        "click>=7,<8",
+        "click>=7",
         "cascade-config>=0.3.0,<2",
         "matplotlib>=3,<4",
         "seaborn>=0.11",
