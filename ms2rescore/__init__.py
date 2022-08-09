@@ -326,6 +326,18 @@ class MS2ReScore:
                         )
                         continue
 
+                weights_file = (
+                        self.config["general"]["output_filename"]
+                        + "_"
+                        + "_".join(self.config["general"]["feature_sets"][0])
+                        + "_features.weights"
+                    )
+                plotting.PERCWEIGHT(
+                    weights_file,
+                    "_".join(self.config["general"]["feature_sets"][0]),
+                    self.config["general"]["output_filename"]
+                )
+
                 plotting.RescoreRecord.save_plots_to_pdf(
                     self.config["general"]["output_filename"] + "_plots.pdf",
                     FDR_thresholds=[0.01, 0.001],

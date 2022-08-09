@@ -2,24 +2,115 @@
 
 from abc import ABC
 from collections import defaultdict
+import logging
 from typing import List, Optional
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import os
+import click
+
 from pyteomics.auxiliary import qvalues
 from statsmodels.distributions.empirical_distribution import ECDF
-
-
 from ms2rescore.percolator import PercolatorIn
 from ms2rescore._exceptions import MS2RescoreError
 
+sns.set_style("whitegrid")
+logger = logging.getLogger(__name__)
+
+MS2PIP_FEATURES = [
+    "spec_pearson_norm",
+    "ionb_pearson_norm",
+    "iony_pearson_norm",
+    "spec_mse_norm",
+    "ionb_mse_norm",
+    "iony_mse_norm",
+    "min_abs_diff_norm",
+    "max_abs_diff_norm",
+    "abs_diff_Q1_norm",
+    "abs_diff_Q2_norm",
+    "abs_diff_Q3_norm",
+    "mean_abs_diff_norm",
+    "std_abs_diff_norm",
+    "ionb_min_abs_diff_norm",
+    "ionb_max_abs_diff_norm",
+    "ionb_abs_diff_Q1_norm",
+    "ionb_abs_diff_Q2_norm",
+    "ionb_abs_diff_Q3_norm",
+    "ionb_mean_abs_diff_norm",
+    "ionb_std_abs_diff_norm",
+    "iony_min_abs_diff_norm",
+    "iony_max_abs_diff_norm",
+    "iony_abs_diff_Q1_norm",
+    "iony_abs_diff_Q2_norm",
+    "iony_abs_diff_Q3_norm",
+    "iony_mean_abs_diff_norm",
+    "iony_std_abs_diff_norm",
+    "dotprod_norm",
+    "dotprod_ionb_norm",
+    "dotprod_iony_norm",
+    "cos_norm",
+    "cos_ionb_norm",
+    "cos_iony_norm",
+    "spec_pearson",
+    "ionb_pearson",
+    "iony_pearson",
+    "spec_spearman",
+    "ionb_spearman",
+    "iony_spearman",
+    "spec_mse",
+    "ionb_mse",
+    "iony_mse",
+    "min_abs_diff_iontype",
+    "max_abs_diff_iontype",
+    "min_abs_diff",
+    "max_abs_diff",
+    "abs_diff_Q1",
+    "abs_diff_Q2",
+    "abs_diff_Q3",
+    "mean_abs_diff",
+    "std_abs_diff",
+    "ionb_min_abs_diff",
+    "ionb_max_abs_diff",
+    "ionb_abs_diff_Q1",
+    "ionb_abs_diff_Q2",
+    "ionb_abs_diff_Q3",
+    "ionb_mean_abs_diff",
+    "ionb_std_abs_diff",
+    "iony_min_abs_diff",
+    "iony_max_abs_diff",
+    "iony_abs_diff_Q1",
+    "iony_abs_diff_Q2",
+    "iony_abs_diff_Q3",
+    "iony_mean_abs_diff",
+    "iony_std_abs_diff",
+    "dotprod",
+    "dotprod_ionb",
+    "dotprod_iony",
+    "cos",
+    "cos_ionb",
+    "cos_iony",
+]
+
+DEEPLC_FEATURES = [
+    "observed_retention_time",
+    "predicted_retention_time",
+    "rt_diff",
+    "rt_diff_best",
+    "observed_retention_time_best",
+    "predicted_retention_time_best",
+]
+
 
 class RescoreRecord(ABC):
+    # TODO remove support for different samples
     rerecs = []
+    weights = None
     loss_gain_df = pd.DataFrame()
     unique_df = pd.DataFrame()
     count_df = pd.DataFrame()
@@ -30,11 +121,14 @@ class RescoreRecord(ABC):
     @classmethod
     def empty_rerecs(cls):
         cls.rerecs = []
+        cls.weights = None
 
     @classmethod
     def show_rerec_items(cls):
         for rerec in cls.rerecs:
             print(rerec)
+        if cls.weights:
+            print(cls.weights)
 
     def target_decoy_distribution(
         self,
@@ -187,6 +281,9 @@ class RescoreRecord(ABC):
 
         if not fdr_thresholds:
             fdr_thresholds = [0.01, 0.001]
+        else:
+            fdr_thresholds = list(set(fdr_thresholds + [0.01, 0.001]))
+            fdr_thresholds.sort(reverse=True)
 
         if ax is None:
             ax = plt.gca()
@@ -235,9 +332,13 @@ class RescoreRecord(ABC):
         else:
             ax.set_xlabel("FDR threshold")
 
-        ax.legend()
+        ax.legend(
+            frameon=True, 
+            ncol=4,
+            loc=9
+        )
         fig.set_size_inches(12, 10)
-
+        fig.tight_layout()
         return ax
 
     @classmethod
@@ -314,23 +415,23 @@ class RescoreRecord(ABC):
         else:
             if cls.count_df.empty:
                 cls._count_identifications()
-            y_label = "number of identified peptides"
+            y_label = "number of identified PSMs"
             count_df = cls.count_df
 
         g = sns.catplot(
-            x="sample",
+            x="FDR",
             y="count",
             data=count_df,
             hue="rescoring",
             kind="bar",
-            col="FDR",
+            # col="sample",
             legend=False,
         )
 
         g.set_ylabels(y_label)
-        g.set_xlabels("")
-        g.add_legend(loc=7)
+        g.add_legend(loc=9, ncol=4)
         g.fig.set_size_inches(12, 10)
+        g.fig.tight_layout()
 
         return g
 
@@ -414,76 +515,75 @@ class RescoreRecord(ABC):
         if FDR not in cls.loss_gain_df["FDR"].unique():
             cls._separate_unique_peptides(FDR_threshold=[FDR])
             cls.calculate_loss_gain_df(FDR_threshold=[FDR])
-
         tmp = cls.loss_gain_df[cls.loss_gain_df["FDR"] == FDR]
 
-        for sample in zip(
-            tmp["sample"].unique(), list(range(1, len(tmp["sample"].unique()) + 1))
-        ):
-            if sample[1] == len(tmp["sample"].unique()):
+        samples = tmp["sample"].unique()
+        number_samples = len(samples)
+
+        for i, sample in enumerate(samples, start=1):
+
+            if i == number_samples:
+
                 ax = fig.add_subplot(
-                    int(f"{len(tmp['sample'].unique())}1{sample[1]}"), frameon=False
+                    int(f"{number_samples}1{i}"), frameon=False
                 )
-                ax.title.set_text(f"{sample[1]}\nFDR={FDR}")
+                ax.title.set_text(f"FDR={FDR}")
                 sns.barplot(
                     y="feature",
                     x="gain",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#2FA92D",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 sns.barplot(
                     y="feature",
                     x="shared",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#1AA3FF",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 sns.barplot(
                     y="feature",
                     x="loss",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#FF0000",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 ax.axes.set_xlabel("unique identified peptides (%)")
                 ax.axes.set_ylabel("")
             else:
                 ax = fig.add_subplot(
-                    int(f"{len(tmp['sample'].unique())}1{sample[1]}"), frameon=False
+                    int(f"{len(samples)}1{i}"), frameon=False
                 )
-                ax.title.set_text(sample[0])
                 sns.barplot(
                     y="feature",
                     x="gain",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#2FA92D",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 sns.barplot(
                     y="feature",
                     x="shared",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#1AA3FF",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 sns.barplot(
                     y="feature",
                     x="loss",
-                    data=tmp[tmp["sample"] == sample[0]],
+                    data=tmp[tmp["sample"] == sample],
                     color="#FF0000",
-                    order=tmp[tmp["sample"] == sample[0]].sort_values("gain").feature,
+                    order=tmp[tmp["sample"] == sample].sort_values("gain").feature,
                     ax=ax,
                 )
                 ax.axes.set_xlabel("")
                 ax.axes.set_ylabel("")
-        plt.grid(axis="x")
-        ax.set_axisbelow(True)
         fig.set_size_inches(12, 6)
         return ax
 
@@ -511,15 +611,34 @@ class RescoreRecord(ABC):
         cls.count_plot(unique=False)
         pdf.savefig()
 
-        cls.qvalue_comparison()
+        cls.qvalue_comparison(fdr_thresholds = FDR_thresholds)
         plt.tight_layout()
         pdf.savefig()
 
-        cls.loss_gain_plot(FDR=0.01)
-        plt.tight_layout()
-        pdf.savefig()
+        for fdr in FDR_thresholds:
+            cls.loss_gain_plot(FDR=fdr)
+            plt.tight_layout()
+            pdf.savefig()
+
+        if cls.weights:
+            cls.plot_rescore_weights()
+            pdf.savefig()
+
         pdf.close()
 
+    @classmethod
+    def plot_rescore_weights(cls):
+        """Plot weights of rescoring run"""
+
+        fig = plt.figure(figsize=(16, 6))
+
+        ax = plt.subplot2grid((1,15),(0,0), colspan=13, fig=fig)
+        cls.weights.plot_individual_feature_weights(ax)
+
+        ax1 = plt.subplot2grid((1,15),(0,13), colspan=1, fig=fig)
+        cls.weights.plot_feature_set_weights(ax1)
+
+        fig.tight_layout()
 
 class PIN(RescoreRecord):
     """PIN file record."""
@@ -660,3 +779,244 @@ class POUT(RescoreRecord):
         pout_qvalues["is decoy"] = pout["Label"] == -1
 
         return pout_qvalues
+
+
+class PERCWEIGHT(RescoreRecord):
+    """Percolator weights file record"""
+
+    def __init__(
+        self,
+        path_to_weights_file,
+        rescoring_features,
+        sample_name,
+        normalized_weights=True,
+    ) -> None:
+        super().__init__()
+        self.type = "weights"
+        self.rescore_features = rescoring_features
+        self.name = sample_name
+        self.weights_df = self.read_weights_file(
+            path_to_weights_file, normalized_weights
+        )
+        RescoreRecord.weights = self
+
+        """
+        Parameters
+        ----------
+        path_to_file : string
+            path to input percolator weights file
+
+        sample_name : string
+            name of the sample
+
+        rescoring_features: list[strings]
+            list of the used rescoring features
+        """
+
+    def __str__(self) -> str:
+        return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+
+    @staticmethod
+    def _check_file_type(filepath):
+        """Check if file exists and is a percolator weights file"""
+
+        if os.path.exists(filepath) & filepath.endswith(".weights"):
+            return True
+
+        return False
+
+    @property
+    def _get_se_features(self):
+        return [
+            ft
+            for ft in self.weights_df.columns
+            if ft not in MS2PIP_FEATURES + DEEPLC_FEATURES
+        ]
+
+    def read_weights_file(self, filename, use_norm_weights: bool):
+        """Read weights file to dataframe"""
+
+        if not self._check_file_type(filename):
+            raise FileNotFoundError(
+                "Not a valid filepath or not a percolator weights file (.weights)"
+            )
+
+        if use_norm_weights:
+            remove_rows = [1, 2, 4, 5, 7]
+        else:
+            remove_rows = [0, 2, 3, 5, 6]
+
+        weights_df = pd.read_table(filename, sep="\t")
+        weights_df.drop(remove_rows, axis=0, inplace=True)
+        weights_df = weights_df.drop("m0", axis=1).astype(float)
+        weights_df.loc["mean"] = weights_df.mean()
+
+        return weights_df
+
+    def calculate_precentage_ft_weights(self):
+        """Return a dict with the percentage of weight for each feature set"""
+        feature_weights = {}
+        total_weight = sum(self.weights_df.loc["mean", :].abs())
+        for name ,feature_set in zip(["MS²PIP", "DeepLC", "Search engine"], [MS2PIP_FEATURES, DEEPLC_FEATURES, self._get_se_features]):
+            try:
+                feature_weights[name] = (
+                    sum(
+                        np.abs(
+                            [
+                                self.weights_df.loc["mean", feature]
+                                for feature in feature_set
+                            ]
+                        )
+                    )
+                    / total_weight
+                    * 100
+                )
+            except KeyError:
+                feature_weights[name] = 0
+                continue
+
+        return feature_weights
+
+    def plot_feature_set_weights(self, ax=None):
+        """Plot the total weigths as percentages for the different features sets"""
+
+        if not ax:
+            ax = plt.gca()
+
+        ft_weights = pd.DataFrame(self.calculate_precentage_ft_weights(), index=[0])
+        ft_weights["Search engine"] = ft_weights["Search engine"] + ft_weights["MS²PIP"]
+        ft_weights["DeepLC"] = ft_weights["Search engine"] + ft_weights["DeepLC"]
+        sns.barplot(
+            y="DeepLC",
+            data=ft_weights,
+            palette=sns.color_palette(["#28ea22"]),
+            ax=ax,
+            label="DeepLC",
+        )
+        sns.barplot(
+            y="Search engine",
+            data=ft_weights,
+            palette=sns.color_palette(["#FFCD27"]),
+            ax=ax,
+            label="Search engine",
+        )
+        sns.barplot(
+            y="MS²PIP",
+            data=ft_weights,
+            palette=sns.color_palette(["#1AA3FF"]),
+            ax=ax,
+            label="ms2pip",
+        )
+        sns.despine(left=True, right=True, top=True, ax=ax)
+        ax.set_xlabel("Percolator weights (%)")
+        ax.set_ylabel("")
+        return ax
+
+    def plot_individual_feature_weights(self, ax=None, absolute=True):
+        """Plot the individual feature weights"""
+
+        if not ax:
+            ax = plt.gca()
+
+        reindex_list = []
+        for feature_set in [MS2PIP_FEATURES, DEEPLC_FEATURES, self._get_se_features]:
+            try:
+                feature_reindex = list(
+                    self.weights_df.loc["mean", feature_set]
+                    .abs()
+                    .sort_values(ascending=True)
+                    .index
+                )
+                reindex_list.extend(feature_reindex)
+            except KeyError:
+                continue
+
+
+        if absolute:
+            mean_row = self.weights_df.loc["mean", :].abs().reindex(reindex_list)
+        else:
+            mean_row = self.weights_df.loc["mean", :].reindex(reindex_list)
+
+        color_map = self._get_color_map()
+        feature_cmap = [color_map[ft] for ft in mean_row.index]
+
+        mean_row.plot(kind="bar", color=feature_cmap, ax=ax)
+
+        ms2pip_l = Patch(facecolor="#1AA3FF", edgecolor="#1AA3FF")
+        deeplc_l = Patch(facecolor="#28ea22", edgecolor="#28ea22")
+        searchengine_l = Patch(facecolor="#FFCD27", edgecolor="#FFCD27")
+
+        ax.legend(
+            [ms2pip_l, deeplc_l, searchengine_l],
+            ["MS²PIP", "DeepLC", "Search engine"],
+            frameon=True, 
+            ncol=3,
+            loc=2
+        )
+
+        return ax
+
+    def _get_color_map(self, feature_colors: dict = None):
+        """Get color for each feature"""
+
+        if not feature_colors:
+            feature_colors = {
+                "MS²PIP": "#1AA3FF",
+                "DeepLC": "#28ea22",
+                "Search engine": "#FFCD27",
+            }
+        color_mapping = {}
+        for feature in self.weights_df.columns:
+            if feature in MS2PIP_FEATURES:
+                color_mapping[feature] = feature_colors["MS²PIP"]
+            elif feature in DEEPLC_FEATURES:
+                color_mapping[feature] = feature_colors["DeepLC"]
+            else:
+                color_mapping[feature] = feature_colors["Search engine"]
+
+        return color_mapping
+
+@click.command()
+@click.argument("pin_file", required=True)
+@click.option("-p","--pout", multiple=True, required=True, help=".pout MS²Rescore file, multiple .pout files possible with multiple flags")
+@click.option("-d","--pout_dec", multiple=True, required=True, help=".pout_dec MS²Rescore file, multiple .pout_dec files possible with multiple flags")
+@click.option("-f","--feature_sets", multiple=True, required=True, help="Features sets used for rescoring, if multiple pout files than multiple feature set names are required")
+@click.option("-s","--score_metric", required=True, help="Score metric used in the pin file")
+@click.option("-o","--output_filename", default="MS²Rescore_plots", help="output_name")
+@click.option("-w","--weights_file", default=None, help="Percolator weight file to plot feature importances")
+@click.option("-n","--sample_name", default="MS²Rescore run", help="Sample name used for generating plots")
+@click.option("--fdr", default="0.01", help="Comma separated FDR values to plot PSMs")
+def main(**kwargs):
+    """
+    Plot different analysis plots for the PIN_FILE, POUT_FILE and POUT_DEC_FILE from MS²Rescore
+    """
+
+    if not (len(kwargs["pout"]) == len(kwargs["pout_dec"])) & (len(kwargs["pout"]) == len(kwargs["feature_sets"])):
+        raise MS2RescoreError("Pout, pout_dec and feature_sets should be of equal length")
+    
+    kwargs["fdr"] = [float(fdr) for fdr in kwargs["fdr"].split(",")]
+    logger.info(f"Create plots with these FDR vales: {kwargs['fdr']}")
+    RescoreRecord.empty_rerecs()
+    PIN(
+        kwargs["pin_file"],
+        kwargs["sample_name"],
+        kwargs["score_metric"]
+    )
+    for pout, pout_dec, feature_sets in zip(kwargs["pout"], kwargs["pout_dec"], kwargs["feature_sets"]):
+        POUT(
+            pout,
+            pout_dec,
+            kwargs["sample_name"],
+            feature_sets
+        )
+    if kwargs["weights_file"]:
+        weights = PERCWEIGHT(
+            kwargs["weights_file"],
+            "MS²Rescore",
+            kwargs["sample_name"],
+        )
+    logger.info(f"Saving plots to {kwargs['output_filename']}.pdf")
+    RescoreRecord.save_plots_to_pdf(kwargs["output_filename"] + ".pdf", list(kwargs["fdr"]))
+
+if __name__ == "__main__":
+    main()
