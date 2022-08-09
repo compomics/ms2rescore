@@ -213,8 +213,10 @@ run, the following output files can be expected:
 
 For each feature set combination (e.g. [`rt`, `ms2pip`, `searchengine`]):
 - `<file>.pin` Percolator IN file
-- `<file>.pout` Percolator OUT file with target PSMs
-- `<file>.pout_dec` Percolator OUT file with decoy PSMs
+- `<file>_target_psms.pout` Percolator OUT file with target PSMs
+- `<file>_decoy_psms.pout` Percolator OUT file with decoy PSMs
+- `<file>_target_peptides.pout` Percolator OUT file with target peptides
+- `<file>_decoy_peptides.pout` Percolator OUT file with decoy peptides
 - `<file>.weights` Internal feature weights used by Percolator's scoring function.
 
 ### Plotting
