@@ -11,14 +11,23 @@ import sys
 import warnings
 from pathlib import Path
 
-from gooey import Gooey, GooeyParser, local_resource_path
 from ms2pip.ms2pipC import MODELS as ms2pip_models
+from rich.console import Console
 
 import ms2rescore.package_data.img as img_module
 from ms2rescore import MS2ReScore, package_data
 from ms2rescore._exceptions import MS2RescoreError
 
 logger = logging.getLogger(__name__)
+
+try:
+    from gooey import Gooey, GooeyParser, local_resource_path
+except:
+    logger.critical(
+        "The `gooey` package could not be imported. Please install MS²Rescore with the "
+        "additional `gui` dependencies: `pip install ms2rescore[gui]`."
+    )
+    sys.exit()
 
 # Get path to package_data/images
 # Workaround with parent of specific file required for Python 3.9+ support
@@ -39,6 +48,7 @@ class MS2RescoreGUIError(MS2RescoreError):
     requires_shell=False,
     default_size=(760, 720),
     target=None if getattr(sys, "frozen", False) else "ms2rescore-gui",
+    monospace_display=True,
 )
 def main():
     """Run MS²Rescore."""
@@ -49,10 +59,12 @@ def main():
 
     conf = _parse_arguments().__dict__
     conf = parse_settings(conf)
+    rich_console = Console(width=98, record=True)
     rescore = MS2ReScore(
         parse_cli_args=False,
         configuration=conf,
         set_logger=True,
+        rich_console=rich_console,
     )
     rescore.run()
     rescore.save_log()

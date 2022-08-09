@@ -41,6 +41,7 @@ class MS2ReScore:
         parse_cli_args: bool = True,
         configuration: Optional[Dict] = None,
         set_logger: bool = False,
+        rich_console: Optional[Console] = None,
     ) -> None:
         """Initialize MS2ReScore object."""
         self.config = parse_config(
@@ -48,16 +49,18 @@ class MS2ReScore:
         )
         self.log_level = self.config["general"]["log_level"]
 
-        if set_logger:
+        if rich_console:
+            self._rich_console = rich_console
+        else:
             self._rich_console = Console(record=True)
+
+        if set_logger:
             setup_logging.setup_logging(
                 self.log_level,
                 log_file=self.config["general"]["output_filename"]
                 + "_ms2rescore_log.txt",
                 rich_console=self._rich_console,
             )
-        else:
-            self._rich_console = None
 
         if self.config["general"]["run_percolator"]:
             self._validate_cli_dependency("percolator -h")
