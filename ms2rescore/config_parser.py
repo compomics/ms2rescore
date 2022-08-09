@@ -54,7 +54,7 @@ def _parse_arguments() -> argparse.Namespace:
         action="store",
         type=str,
         dest="tmp_path",
-        help="path to directory to place temporary files"
+        help="path to directory to place temporary files",
     )
     parser.add_argument(
         "-o",
@@ -70,7 +70,6 @@ def _parse_arguments() -> argparse.Namespace:
         action="store",
         type=str,
         dest="log_level",
-        default="info",
         help="logging level (default: `info`)",
     )
     parser.add_argument(
@@ -146,7 +145,9 @@ def _validate_num_cpu(config: Dict) -> Dict:
     return config
 
 
-def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = None) -> Dict:
+def parse_config(
+    parse_cli_args: bool = True, config_class: Optional[Dict] = None
+) -> Dict:
     """
     Parse and validate MS²ReScore configuration files and arguments.
 
@@ -196,7 +197,9 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
     config["general"]["pipeline"] = config["general"]["pipeline"].lower()
 
     try:
-        config["maxquant_to_rescore"]["mgf_title_pattern"] = re.compile(config["maxquant_to_rescore"]["mgf_title_pattern"])
+        config["maxquant_to_rescore"]["mgf_title_pattern"] = re.compile(
+            config["maxquant_to_rescore"]["mgf_title_pattern"]
+        )
     except re.error:
         raise MS2RescoreConfigurationError(
             "Invalid regex pattern, please provide valid regex patttern"

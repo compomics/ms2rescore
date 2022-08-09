@@ -3,9 +3,10 @@
 import logging
 import mmap
 import os.path
-import re
 import random
-from tqdm import tqdm
+import re
+
+from rich.progress import track
 
 from ms2rescore._exceptions import MS2RescoreError
 
@@ -94,8 +95,12 @@ def parse_mgf(df_in, mgf_folder, mgf_title_pattern=None, outname='scan_mgf_resul
 
     with open(outname, 'w') as out:
         count = 0
-        iterator = tqdm(runs) if show_progress_bar else runs
-        for run in iterator:
+        for run in track(
+            runs,
+            description="Parsing MGF file",
+            disable=True if not show_progress_bar else False,
+            transient=True
+        ):
             current_mgf_file = os.path.join(mgf_folder, run + file_suffix)
             spec_set = set(df_in[(df_in[filename_col] == run)][spec_title_col].values)
             # Temporary fix: replace charges in MGF with ID'ed charges

@@ -3,18 +3,18 @@ Functions necessary to run the rescore algorithm. Currently supports MSGF+ with
 concatenated searches.
 """
 
+import itertools
 import logging
 import multiprocessing
 import os
 import warnings
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
+from rich.progress import track
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import mean_squared_error as mse
-from tqdm import tqdm
-import itertools
 
 from ms2rescore._exceptions import MS2RescoreError
 
@@ -61,6 +61,7 @@ def make_ms2pip_config_dict(options: Dict):
         )
 
     return ms2pip_config
+
 
 def df_to_dict(df):
     """Create easy to access dict from pred_and_emp."""
@@ -186,12 +187,12 @@ def compute_features(df):
             prediction_y = np.array(preds["prediction"]["Y"])
             prediction_all = np.concatenate([prediction_b, prediction_y])
 
-            target_b_unlog = 2 ** target_b - 0.001
-            target_y_unlog = 2 ** target_y - 0.001
-            target_all_unlog = 2 ** target_all - 0.001
-            prediction_b_unlog = 2 ** prediction_b - 0.001
-            prediction_y_unlog = 2 ** prediction_y - 0.001
-            prediction_all_unlog = 2 ** prediction_all - 0.001
+            target_b_unlog = 2**target_b - 0.001
+            target_y_unlog = 2**target_y - 0.001
+            target_all_unlog = 2**target_all - 0.001
+            prediction_b_unlog = 2**prediction_b - 0.001
+            prediction_y_unlog = 2**prediction_y - 0.001
+            prediction_all_unlog = 2**prediction_all - 0.001
 
             # Calculate absolute differences
             abs_diff_b = np.abs(target_b - prediction_b)
@@ -361,11 +362,17 @@ def calculate_features(
             for i in range(chunk_size)
         ]
 
-        # Use imap, so we can use a tqdm progress bar
+        # Use imap, so we can use a progress bar
         with multiprocessing.Pool(int(num_cpu)) as p:
             if show_progress_bar:
                 all_results = list(
-                    tqdm(p.imap(compute_features, split_df), total=chunk_size)
+                    track(
+                        p.imap(compute_features, split_df),
+                        total=chunk_size,
+                        disable=True if not show_progress_bar else False,
+                        description="Calculating features...",
+                        transient=True,
+                    )
                 )
             else:
                 all_results = list(p.imap(compute_features, split_df))

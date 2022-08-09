@@ -11,15 +11,23 @@ import sys
 import warnings
 from pathlib import Path
 
-from gooey import Gooey, GooeyParser, local_resource_path
 from ms2pip.ms2pipC import MODELS as ms2pip_models
+from rich.console import Console
 
+import ms2rescore.package_data.img as img_module
 from ms2rescore import MS2ReScore, package_data
 from ms2rescore._exceptions import MS2RescoreError
-import ms2rescore.package_data.img as img_module
-
 
 logger = logging.getLogger(__name__)
+
+try:
+    from gooey import Gooey, GooeyParser, local_resource_path
+except:
+    logger.critical(
+        "The `gooey` package could not be imported. Please install MS²Rescore with the "
+        "additional `gui` dependencies: `pip install ms2rescore[gui]`."
+    )
+    sys.exit()
 
 # Get path to package_data/images
 # Workaround with parent of specific file required for Python 3.9+ support
@@ -39,35 +47,47 @@ class MS2RescoreGUIError(MS2RescoreError):
     tabbed_groups=True,
     requires_shell=False,
     default_size=(760, 720),
-    target=None if getattr(sys, 'frozen', False) else "ms2rescore-gui"
+    target=None if getattr(sys, "frozen", False) else "ms2rescore-gui",
+    monospace_display=True,
 )
 def main():
     """Run MS²Rescore."""
     # Disable warnings in GUI
-    warnings.filterwarnings('ignore', category=DeprecationWarning)
-    warnings.filterwarnings('ignore', category=FutureWarning)
-    warnings.filterwarnings('ignore', category=UserWarning)
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    warnings.filterwarnings("ignore", category=UserWarning)
 
     conf = _parse_arguments().__dict__
     conf = parse_settings(conf)
-    rescore = MS2ReScore(parse_cli_args=False, configuration=conf, set_logger=True)
+    rich_console = Console(width=98, record=True)
+    rescore = MS2ReScore(
+        parse_cli_args=False,
+        configuration=conf,
+        set_logger=True,
+        rich_console=rich_console,
+    )
     rescore.run()
+    rescore.save_log()
 
 
 def _parse_arguments() -> argparse.Namespace:
     """Parse GUI arguments."""
-    default_config = json.load(pkg_resources.open_text(package_data, "config_default.json"))
+    default_config = json.load(
+        pkg_resources.open_text(package_data, "config_default.json")
+    )
     ms2pip_mods = default_config["ms2pip"]["modifications"]
 
     parser = GooeyParser()
-    general = parser.add_argument_group("General configuration",gooey_options={'columns':2})
+    general = parser.add_argument_group(
+        "General configuration", gooey_options={"columns": 2}
+    )
     general.add_argument(
         "identification_file",
         metavar="Identification file (required)",
         type=str,
         help="Path to identification file (pin, mzid, msms.txt, tandem xml...)",
         widget="FileChooser",
-        gooey_options={"full_width":True}
+        gooey_options={"full_width": True},
     )
     general.add_argument(
         "-m",
@@ -120,7 +140,15 @@ def _parse_arguments() -> argparse.Namespace:
         ),
         widget="Dropdown",
         default="infer",
-        choices=["infer", "pin","maxquant", "msgfplus", "tandem", "peptideshaker", "peaks"]
+        choices=[
+            "infer",
+            "pin",
+            "maxquant",
+            "msgfplus",
+            "tandem",
+            "peptideshaker",
+            "peaks",
+        ],
     )
     general.add_argument(
         "-l",
@@ -148,8 +176,8 @@ def _parse_arguments() -> argparse.Namespace:
             "ms2pip rt",
             "searchengine",
             "ms2pip",
-            "rt"
-        ]
+            "rt",
+        ],
     )
 
     general.add_argument(
@@ -161,12 +189,8 @@ def _parse_arguments() -> argparse.Namespace:
         default=-1,
         help="Number of parallel processes to use; -1 for all available",
         widget="IntegerField",
-        gooey_options={
-            'min': -1,
-            'max': multiprocessing.cpu_count()
-        }
+        gooey_options={"min": -1, "max": multiprocessing.cpu_count()},
     )
-
 
     maxquant_settings = parser.add_argument_group(
         "MaxQuant settings",
@@ -176,7 +200,7 @@ def _parse_arguments() -> argparse.Namespace:
             "correctly parse the msms.txt file, additional modification information "
             "needs to be provided below. Make sure MaxQuant was run without "
             "PSM-level FDR filtering; i.e. the FDR Threshold set at 1."
-        )
+        ),
     )
     maxquant_settings.add_argument(
         "--regex_pattern",
@@ -186,15 +210,12 @@ def _parse_arguments() -> argparse.Namespace:
         type=str,
         default="TITLE=.*scan=([0-9]+).*$",
         widget="Textarea",
-        gooey_options={
-            "height":27,
-            "full_width":True
-            },
+        gooey_options={"height": 27, "full_width": True},
         help=(
             "Regex pattern to extract index number from MGF TITLE field. "
-            "Default: \'TITLE=.*scan=([0-9]+).*$\' (ThermoRawFileParsed MGF files)\n"
-            "Example: \'TITLE=([0-9]+).*$\' (index number immediately after TITLE field)"
-        )
+            "Default: 'TITLE=.*scan=([0-9]+).*$' (ThermoRawFileParsed MGF files)\n"
+            "Example: 'TITLE=([0-9]+).*$' (index number immediately after TITLE field)"
+        ),
     )
 
     maxquant_settings.add_argument(
@@ -210,9 +231,7 @@ def _parse_arguments() -> argparse.Namespace:
             "<full modification name>, one per line, space-separated."
         ),
         widget="Textarea",
-        gooey_options={
-            "height":120
-            }
+        gooey_options={"height": 120},
     )
     maxquant_settings.add_argument(
         "--modification_mapping",
@@ -230,14 +249,10 @@ def _parse_arguments() -> argparse.Namespace:
             "space-separated."
         ),
         widget="Textarea",
-        gooey_options={
-            "height": 120
-        },
+        gooey_options={"height": 120},
     )
 
-    ms2pip_settings = parser.add_argument_group(
-        "MS²PIP settings"
-    )
+    ms2pip_settings = parser.add_argument_group("MS²PIP settings")
     ms2pip_settings.add_argument(
         "--ms2pip_model",
         metavar="MS²PIP model",
@@ -269,25 +284,25 @@ def _parse_arguments() -> argparse.Namespace:
             "documentation for more info."
         ),
         widget="Textarea",
-        gooey_options={
-            "full_width":True,
-            "height": 240
-        },
+        gooey_options={"full_width": True, "height": 240},
     )
 
     return parser.parse_args()
 
-def parse_settings(config:dict) -> dict:
+
+def parse_settings(config: dict) -> dict:
     "Parse non-general settings into one dict"
 
     parsed_config = {
-        "general" : config,
+        "general": config,
         "maxquant_to_rescore": {},
         "ms2pip": {},
     }
 
     # general configuration
-    parsed_config["general"]["feature_sets"] = [parsed_config["general"]["feature_sets"].split(" ")]
+    parsed_config["general"]["feature_sets"] = [
+        parsed_config["general"]["feature_sets"].split(" ")
+    ]
     # MaxQuant configuration
     for conf_item in ["modification_mapping", "fixed_modifications"]:
         parsed_conf_item = parsed_config["general"].pop(conf_item)
@@ -303,7 +318,9 @@ def parse_settings(config:dict) -> dict:
                 "Invalid MaxQuant modification configuration. Make sure that the "
                 "modification configuration fields are formatted correctly."
             )
-    parsed_config["maxquant_to_rescore"]["mgf_title_pattern"] = parsed_config["general"].pop("mgf_title_pattern")
+    parsed_config["maxquant_to_rescore"]["mgf_title_pattern"] = parsed_config[
+        "general"
+    ].pop("mgf_title_pattern")
 
     # MS²PIP configuration
     parsed_config["ms2pip"] = {
@@ -312,7 +329,7 @@ def parse_settings(config:dict) -> dict:
     }
 
     try:
-        parsed_config["ms2pip"]["modifications"] =  ast.literal_eval(
+        parsed_config["ms2pip"]["modifications"] = ast.literal_eval(
             parsed_config["general"].pop("ms2pip_modifications")
         )
     except Exception:
