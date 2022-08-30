@@ -309,7 +309,7 @@ def parse_settings(config: dict) -> dict:
         try:
             if parsed_conf_item:
                 parsed_conf_item = parsed_conf_item.split("\n")
-                parsed_conf_item = dict([tuple(x.split(" ")) for x in parsed_conf_item])
+                parsed_conf_item = dict([tuple(x.rsplit(" ",1)) for x in parsed_conf_item])
             else:
                 parsed_conf_item = {}
             parsed_config["maxquant_to_rescore"][conf_item] = parsed_conf_item
