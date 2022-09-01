@@ -305,13 +305,13 @@ class MS2ReScore:
                         self.config["general"]["output_filename"]
                         + "_"
                         + "_".join(fset)
-                        + "_features.pout"
+                        + "_features_target_psms.pout"
                     )
                     pout_decoy_file = (
                         self.config["general"]["output_filename"]
                         + "_"
                         + "_".join(fset)
-                        + "_features.pout_dec"
+                        + "_features_decoy_psms.pout"
                     )
                     try:
                         plotting.POUT(
