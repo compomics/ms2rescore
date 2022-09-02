@@ -689,7 +689,7 @@ class PIN(RescoreRecord):
                 full_output=True,
             )
         )
-        return pin_qvalues[["SpecId", "is decoy", "score", "q", "Peptide"]].rename(
+        return pin_qvalues[["SpecId", "is decoy", "score", "q", "Peptide", "proteinIds"]].rename(
             columns={"SpecId": "PSMId", "Peptide": "peptide"}
         )
 
@@ -706,7 +706,7 @@ class PIN(RescoreRecord):
                 full_output=True,
             )
         )
-        return pin_qvalues[["spec_id", "is decoy", "score", "q", "peptide"]].rename(
+        return pin_qvalues[["spec_id", "is decoy", "score", "q", "peptide", "proteinIds"]].rename(
             columns={"spec_id": "PSMId"}
         )
 
@@ -773,7 +773,7 @@ class POUT(RescoreRecord):
         decoy_pout["Label"] = -1
         pout = pd.concat([target_pout, decoy_pout])
 
-        pout_qvalues = pout[["PSMId", "score", "q-value", "Label", "peptide"]].rename(
+        pout_qvalues = pout[["PSMId", "score", "q-value", "Label", "peptide", "proteinIds"]].rename(
             columns={"q-value": "q", "Label": "is decoy"}
         )
         pout_qvalues["is decoy"] = pout["Label"] == -1
