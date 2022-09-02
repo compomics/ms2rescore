@@ -689,7 +689,7 @@ class PIN(RescoreRecord):
                 full_output=True,
             )
         )
-        return pin_qvalues[["SpecId", "is decoy", "score", "q", "Peptide", "proteinIds"]].rename(
+        return pin_qvalues[["SpecId", "is decoy", "score", "q", "Peptide", "Proteins"]].rename(
             columns={"SpecId": "PSMId", "Peptide": "peptide"}
         )
 
@@ -706,7 +706,7 @@ class PIN(RescoreRecord):
                 full_output=True,
             )
         )
-        return pin_qvalues[["spec_id", "is decoy", "score", "q", "peptide", "proteinIds"]].rename(
+        return pin_qvalues[["spec_id", "is decoy", "score", "q", "peptide", "protein_list"]].rename(
             columns={"spec_id": "PSMId"}
         )
 
