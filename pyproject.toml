@@ -44,6 +44,7 @@ dependencies = [
     "seaborn>=0.11",
     "statsmodels>=0.12",
     "deeplc>=0.1.17",
+    "psm_utils",
 ]
 
 [project.optional-dependencies]
@@ -56,7 +57,16 @@ dev = [
     "pytest",
     "pytest-cov"
 ]
-doc = []
+doc = [
+    "sphinx",
+    "numpydoc>=1,<2",
+    "recommonmark",
+    "sphinx-mdinclude",
+    "toml",
+    "semver>=2",
+    "sphinx_rtd_theme",
+    "sphinx-autobuild",
+]
 
 [project.urls]
 GitHub = "https://github.com/compomics/ms2rescore"
