@@ -1,22 +1,18 @@
 """Parse configuration from command line arguments and configuration files."""
 
 import argparse
+import importlib.resources as pkg_resources
 import json
 import multiprocessing as mp
-import os
-import re
+import tempfile
+from pathlib import Path
 from typing import Dict, Optional
 
+import tomlkit
 from cascade_config import CascadeConfig
 
-from ms2rescore import package_data
-from ms2rescore._exceptions import MS2RescoreConfigurationError
-from ms2rescore._version import __version__
-
-try:
-    import importlib.resources as pkg_resources
-except ImportError:
-    import importlib_resources as pkg_resources
+from ms2rescore import __version__, package_data
+from ms2rescore.exceptions import MS2RescoreConfigurationError
 
 
 def _parse_arguments() -> argparse.Namespace:
@@ -27,110 +23,52 @@ def _parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument(
-        "identification_file",
-        type=str,
-        help="path to identification file (pin, mzid, msms.txt, tandem xml...)",
-    )
-    parser.add_argument(
-        "-m",
-        metavar="FILE",
-        action="store",
-        type=str,
-        dest="mgf_path",
-        help="path to MGF file or directory with MGF files (default: derived from\
-            identification file)",
-    )
-    parser.add_argument(
         "-c",
+        "--config-file",
         metavar="FILE",
         action="store",
         type=str,
         dest="config_file",
-        help="path to MS²ReScore configuration file (see README.md)",
-    )
-    parser.add_argument(
-        "-t",
-        metavar="PATH",
-        action="store",
-        type=str,
-        dest="tmp_path",
-        help="path to directory to place temporary files",
-    )
-    parser.add_argument(
-        "-o",
-        metavar="FILE",
-        action="store",
-        type=str,
-        dest="output_filename",
-        help="name for output files (default: derive from identification file)",
-    )
-    parser.add_argument(
-        "-l",
-        metavar="LEVEL",
-        action="store",
-        type=str,
-        dest="log_level",
-        help="logging level (default: `info`)",
-    )
-    parser.add_argument(
-        "-n",
-        metavar="VALUE",
-        action="store",
-        type=int,
-        dest="num_cpu",
-        default=None,
-        help="number of cpus available to MS²Rescore",
-    )
-    parser.add_argument(
-        "--pipeline",
-        metavar="PIPELINE",
-        action="store",
-        type=str,
-        dest="pipeline",
-        default=None,
-        help="determines which pipeline to use (default: 'infer')",
-    )
-    parser.add_argument(
-        "--percolator",
-        metavar="BOOL",
-        action="store",
-        type=bool,
-        dest="run_percolator",
-        default=None,
-        help="run percolator (default: 'True')",
-    )
-    parser.add_argument(
-        "--plotting",
-        metavar="BOOL",
-        action="store",
-        type=bool,
-        dest="plotting",
-        default=None,
-        help="write PDF with result plots",
+        help="path to MS²Rescore configuration file (see documentation).",
     )
     return parser.parse_args()
 
 
 def _validate_filenames(config: Dict) -> Dict:
     """Validate and infer input/output filenames."""
-    # identification_file should exist
-    id_file = config["general"]["identification_file"]
-    if not os.path.isfile(id_file):
+    # psm_file should be provided
+    if not config["ms2rescore"]["psm_file"]:
+        raise MS2RescoreConfigurationError("`psm_file` should be provided.")
+
+    # psm_file should exist
+    id_file = Path(config["ms2rescore"]["psm_file"])
+    if not id_file.is_file():
         raise FileNotFoundError(id_file)
+    config["ms2rescore"]["psm_file"] = str(id_file)
 
-    # MGF path should either be None, or existing path to file or dir
-    mgf_path = config["general"]["mgf_path"]
-    if mgf_path:
-        if not os.path.exists(mgf_path):
-            raise FileNotFoundError(mgf_path)
+    # spectrum_path should either be None, or existing path to file or dir
+    if config["ms2rescore"]["spectrum_path"]:
+        spectrum_path = Path(config["ms2rescore"]["spectrum_path"])
+        if not spectrum_path.exists():
+            raise FileNotFoundError(spectrum_path)
+        config["ms2rescore"]["spectrum_path"] = str(spectrum_path)
 
-    # Output filename should be None or its path should exist. If not, make path.
-    if config["general"]["output_filename"]:
-        output_path = os.path.abspath(config["general"]["output_filename"])
-        if not os.path.isdir(output_path):
-            os.makedirs(output_path, exist_ok=True)
+    # Output filename should be None or its path should exist. If not, make path
+    if config["ms2rescore"]["output_path"]:
+        output_path = Path(config["ms2rescore"]["output_path"])
+        if not output_path.is_dir():
+            output_path.mkdir(parents=True, exist_ok=True)
     else:
-        config["general"]["output_filename"] = os.path.splitext(id_file)[0]
+        output_path = Path(id_file).parent
+    config["ms2rescore"]["output_path"] = str(output_path)
+
+    # tmp_path should either be None, or path to dir. If not, make path.
+    if config["ms2rescore"]["tmp_path"]:
+        tmp_path = Path(config["ms2rescore"]["tmp_path"])
+        tmp_path.mkdir(parents=True, exist_ok=True)
+    else:
+        tmp_path = tempfile.mkdtemp()
+    config["ms2rescore"]["tmp_path"] = str(tmp_path)
 
     return config
 
@@ -138,10 +76,10 @@ def _validate_filenames(config: Dict) -> Dict:
 def _validate_num_cpu(config: Dict) -> Dict:
     """Validate requested num_cpu with available cpu count."""
     n_available = mp.cpu_count()
-    if (config["general"]["num_cpu"] == -1) or (
-        config["general"]["num_cpu"] > n_available
+    if (config["ms2rescore"]["num_cpu"] == -1) or (
+        config["ms2rescore"]["num_cpu"] > n_available
     ):
-        config["general"]["num_cpu"] = n_available
+        config["ms2rescore"]["num_cpu"] = n_available
     return config
 
 
@@ -184,9 +122,18 @@ def parse_config(
     cascade_conf = CascadeConfig(validation_schema=json.load(config_schema))
     cascade_conf.add_dict(json.load(config_default))
     if config_user:
-        cascade_conf.add_json(config_user)
+        if Path(config_user).suffix.lower() == ".json":
+            cascade_conf.add_json(config_user)
+        elif Path(config_user).suffix.lower() == ".toml":
+            with open(config_user, "rt") as toml_file:
+                cascade_conf.add_dict(tomlkit.load(toml_file))
+        else:
+            raise MS2RescoreConfigurationError(
+                "Unknown file extension for configuration file. Should be `json` or "
+                "`toml`."
+            )
     if parse_cli_args:
-        cascade_conf.add_namespace(args, subkey="general")
+        cascade_conf.add_namespace(args, subkey="ms2rescore")
     elif config_class:
         cascade_conf.add_dict(config_class)
     config = cascade_conf.parse()
@@ -194,15 +141,11 @@ def parse_config(
     config = _validate_filenames(config)
     config = _validate_num_cpu(config)
 
-    config["general"]["pipeline"] = config["general"]["pipeline"].lower()
-
-    try:
-        config["maxquant_to_rescore"]["mgf_title_pattern"] = re.compile(
-            config["maxquant_to_rescore"]["mgf_title_pattern"]
-        )
-    except re.error:
-        raise MS2RescoreConfigurationError(
-            "Invalid regex pattern, please provide valid regex patttern"
-        )
+    config["ms2rescore"]["feature_generators"] = [
+        fg.lower() for fg in config["ms2rescore"]["feature_generators"]
+    ]
+    config["ms2rescore"]["rescoring_engine"] = config["ms2rescore"][
+        "rescoring_engine"
+    ].lower()
 
     return config

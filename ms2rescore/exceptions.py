@@ -15,6 +15,9 @@ class MS2RescoreConfigurationError(MS2RescoreError):
 class IDFileParsingError(MS2RescoreError):
     """Identification file parsing error."""
 
+    pass
+
 class ModificationParsingError(IDFileParsingError):
     """Identification file parsing error."""
 
+    pass

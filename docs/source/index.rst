@@ -9,6 +9,14 @@
    Readme <self>
    contributing
 
+.. toctree ::
+   :caption: User guide
+   :hidden:
+   :includehidden:
+   :glob:
+
+   userguide/*
+
 
 .. toctree::
    :caption: Python API reference
