@@ -5,6 +5,7 @@ import tkinter as tk
 import customtkinter
 from PIL import Image
 import tkinter.messagebox
+from typing import Union, Callable
 
 from ms2pip.ms2pipC import MODELS as ms2pip_models
 
@@ -79,6 +80,7 @@ class App(customtkinter.CTk):
         config_tabview.set("Main")  # set currently visible tab
 
         self.create_main_tab(config_tabview.tab("Main"))
+        self.create_ms2pip_tab(config_tabview.tab("MS²PIP"))
 
         progess_tabview = customtkinter.CTkTabview(self.middle_frame)
         progess_tabview.grid(
@@ -186,6 +188,36 @@ class App(customtkinter.CTk):
         )
         self.file_prefix.pack(anchor="w", fill=tk.BOTH)
 
+    def create_ms2pip_tab(self, tabview_object):
+        """Configuring the UI for the main tab"""
+        
+        self.model_label = customtkinter.CTkLabel(
+            tabview_object, text="Select MS²PIP model", anchor="w"
+        )
+        self.model_label.pack(anchor=tk.W, fill=tk.BOTH)
+        logger.info(f"{ms2pip_models}")
+        self.ms2pip_models = customtkinter.CTkOptionMenu(
+            master=tabview_object,
+            values=list(ms2pip_models.keys()),
+        )
+        self.ms2pip_models.pack(anchor=tk.W, fill=tk.BOTH)
+        self.error_label = customtkinter.CTkLabel(
+            tabview_object, text="MS2 error tolerance in Da", anchor="w"
+        )
+        self.error_label.pack(anchor=tk.W, fill=tk.BOTH)
+        self.frag_error_spinbox = FloatSpinbox(tabview_object, step_size=0.01, width=110)
+        self.frag_error_spinbox.pack(padx=10, pady=10, anchor="w")
+        self.frag_error_spinbox.set(0.02)
+
+        self.modification_label = customtkinter.CTkLabel(
+            tabview_object, text="MS²PIP modifications", anchor="w"
+        )
+        self.modification_label.pack(anchor=tk.W, fill=tk.BOTH)
+        self.ms2pip_modifications = customtkinter.CTkTextbox(
+            tabview_object
+        )
+        self.ms2pip_modifications.insert("0.0", "modification,mass_shift,opt,AA\nPhosphoS,79.966331,opt,S")
+        self.ms2pip_modifications.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
 class MyHandlerText(logging.StreamHandler):
     def __init__(self, textctrl):
@@ -287,6 +319,67 @@ class OptionalInput(customtkinter.CTkFrame):
         elif self.switch_var.get() == "off":
             self.file_select.grid_remove()
             self.selected_filename = None
+
+class FloatSpinbox(customtkinter.CTkFrame):
+    def __init__(self, *args,
+                 width: int = 100,
+                 height: int = 32,
+                 step_size: Union[int, float] = 1,
+                 command: Callable = None,
+                 **kwargs):
+        super().__init__(*args, width=width, height=height, **kwargs)
+
+        self.step_size = step_size
+        self.command = command
+
+        self.configure(fg_color=("gray78", "gray28"))  # set frame color
+
+        self.grid_columnconfigure((0, 2), weight=0)  # buttons don't expand
+        self.grid_columnconfigure(1, weight=1)  # entry expands
+
+        self.subtract_button = customtkinter.CTkButton(self, text="-", width=height-6, height=height-6,
+                                                       command=self.subtract_button_callback)
+        self.subtract_button.grid(row=0, column=0, padx=(3, 0), pady=3)
+
+        self.entry = customtkinter.CTkEntry(self, width=width-(2*height), height=height-6, border_width=0)
+        self.entry.grid(row=0, column=1, columnspan=1, padx=3, pady=3, sticky="ew")
+
+        self.add_button = customtkinter.CTkButton(self, text="+", width=height-6, height=height-6,
+                                                  command=self.add_button_callback)
+        self.add_button.grid(row=0, column=2, padx=(0, 3), pady=3)
+
+        # default value
+        self.entry.insert(0, "0.0")
+
+    def add_button_callback(self):
+        if self.command is not None:
+            self.command()
+        try:
+            value = float(self.entry.get()) + self.step_size
+            self.entry.delete(0, "end")
+            self.entry.insert(0, value)
+        except ValueError:
+            return
+
+    def subtract_button_callback(self):
+        if self.command is not None:
+            self.command()
+        try:
+            value = float(self.entry.get()) - self.step_size
+            self.entry.delete(0, "end")
+            self.entry.insert(0, value)
+        except ValueError:
+            return
+
+    def get(self) -> Union[float, None]:
+        try:
+            return float(self.entry.get())
+        except ValueError:
+            return None
+
+    def set(self, value: float):
+        self.entry.delete(0, "end")
+        self.entry.insert(0, str(float(value)))
 
 
 if __name__ == "__main__":
