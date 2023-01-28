@@ -1,348 +1,294 @@
 """Graphical user interface for MS²Rescore using Gooey."""
-
-import argparse
-import ast
-import importlib.resources as pkg_resources
-import json
 import logging
-import multiprocessing
-import pprint
-import sys
-import warnings
-from pathlib import Path
+
+import tkinter as tk
+import customtkinter
+from PIL import Image
+import tkinter.messagebox
 
 from ms2pip.ms2pipC import MODELS as ms2pip_models
-from rich.console import Console
-
-import ms2rescore.package_data.img as img_module
-from ms2rescore import MS2ReScore, package_data
-from ms2rescore._exceptions import MS2RescoreError
 
 logger = logging.getLogger(__name__)
-
-try:
-    from gooey import Gooey, GooeyParser, local_resource_path
-except:
-    logger.critical(
-        "The `gooey` package could not be imported. Please install MS²Rescore with the "
-        "additional `gui` dependencies: `pip install ms2rescore[gui]`."
-    )
-    sys.exit()
-
-# Get path to package_data/images
-# Workaround with parent of specific file required for Python 3.9+ support
-with pkg_resources.path(img_module, "config_icon.png") as img_dir:
-    _IMG_DIR = Path(img_dir).parent
+logger.setLevel(logging.INFO)
 
 
-class MS2RescoreGUIError(MS2RescoreError):
+class App(customtkinter.CTk):
+    def __init__(self):
+        super().__init__()
 
-    """MS²Rescore GUI error."""
+        # App config
+        self.geometry(f"{1100}x{580}")
+        self.title("MS²Rescore GUI")
+        self.minsize(500, 300)
 
+        # create 2x2 grid system
+        self.grid_columnconfigure((0), weight=0)
+        self.grid_columnconfigure((1), weight=1)
+        self.grid_rowconfigure((0), weight=1)
 
-@Gooey(
-    program_name="MS²Rescore",
-    program_description="Sensitive PSM rescoring with MS²PIP, DeepLC, and Percolator.",
-    image_dir=local_resource_path(_IMG_DIR),
-    tabbed_groups=True,
-    requires_shell=False,
-    default_size=(760, 720),
-    target=None if getattr(sys, "frozen", False) else "ms2rescore-gui",
-    monospace_display=True,
-)
-def main():
-    """Run MS²Rescore."""
-    # Disable warnings in GUI
-    warnings.filterwarnings("ignore", category=DeprecationWarning)
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    warnings.filterwarnings("ignore", category=UserWarning)
+        # create sidebar frame with widgets
+        self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
+        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
-    conf = _parse_arguments().__dict__
-    conf = parse_settings(conf)
-    rich_console = Console(width=98, record=True)
-    rescore = MS2ReScore(
-        parse_cli_args=False,
-        configuration=conf,
-        set_logger=True,
-        rich_console=rich_console,
-    )
-    rescore.run()
-    rescore.save_log()
+        self.logo = customtkinter.CTkImage(
+            light_image=Image.open("img\ms2rescore_logo.png"),
+            dark_image=Image.open("img\ms2rescore_logo.png"),
+            size=(100, 100),
+        )
+        self.logo_label = customtkinter.CTkLabel(
+            self.sidebar_frame, text="", image=self.logo
+        )
+        self.logo_label.grid(row=0, column=0, rowspan=4, padx=0, pady=10)
 
+        self.appearance_mode_label = customtkinter.CTkLabel(
+            self.sidebar_frame, text="Appearance Mode:", anchor="w"
+        )
+        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
+        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(
+            self.sidebar_frame,
+            values=["Light", "Dark", "System"],
+            command=self.change_appearance_mode_event,
+        )
+        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
+        self.scaling_label = customtkinter.CTkLabel(
+            self.sidebar_frame, text="UI Scaling:", anchor="w"
+        )
+        self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
+        self.scaling_optionemenu = customtkinter.CTkOptionMenu(
+            self.sidebar_frame,
+            values=["80%", "90%", "100%", "110%", "120%"],
+            command=self.change_scaling_event,
+        )
+        self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
 
-def _parse_arguments() -> argparse.Namespace:
-    """Parse GUI arguments."""
-    default_config = json.load(
-        pkg_resources.open_text(package_data, "config_default.json")
-    )
-    ms2pip_mods = default_config["ms2pip"]["modifications"]
+        # Tabview config
+        self.middle_frame = customtkinter.CTkFrame(self, corner_radius=0)
+        self.middle_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.middle_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        self.middle_frame.grid_rowconfigure((0), weight=20)
+        self.middle_frame.grid_rowconfigure((1), weight=0)
 
-    parser = GooeyParser()
-    general = parser.add_argument_group(
-        "General configuration", gooey_options={"columns": 2}
-    )
-    general.add_argument(
-        "identification_file",
-        metavar="Identification file (required)",
-        type=str,
-        help="Path to identification file (pin, mzid, msms.txt, tandem xml...)",
-        widget="FileChooser",
-        gooey_options={"full_width": True},
-    )
-    general.add_argument(
-        "-m",
-        metavar="Spectrum file directory",
-        action="store",
-        type=str,
-        dest="mgf_path",
-        help=(
-            "Path to MGF file or directory with MGF files (default: derived from "
-            "identification file)"
-        ),
-        widget="DirChooser",
-    )
-    general.add_argument(
-        "-c",
-        metavar="Configuration file",
-        action="store",
-        type=str,
-        dest="config_file",
-        help="Path to MS²Rescore configuration file (see online documentation)",
-        widget="FileChooser",
-    )
-    general.add_argument(
-        "-t",
-        metavar="Temporary file directory",
-        action="store",
-        type=str,
-        dest="tmp_path",
-        help="Path to directory to place temporary files",
-        widget="DirChooser",
-    )
-    general.add_argument(
-        "-o",
-        metavar="Output filename prefix",
-        action="store",
-        type=str,
-        dest="output_filename",
-        help="Name for output files (default: derive from identification file)",
-        widget="FileSaver",
-    )
-    general.add_argument(
-        "--pipeline",
-        metavar="Select pipeline / search engine",
-        action="store",
-        type=str,
-        dest="pipeline",
-        help=(
-            "Identification file pipeline to use, depends on the search engine used. "
-            "By default, this is inferred from the input file extension."
-        ),
-        widget="Dropdown",
-        default="infer",
-        choices=[
-            "infer",
-            "pin",
-            "maxquant",
-            "msgfplus",
-            "tandem",
-            "peptideshaker",
-            "peaks",
-        ],
-    )
-    general.add_argument(
-        "-l",
-        metavar="Logging level",
-        action="store",
-        type=str,
-        dest="log_level",
-        default="info",
-        help="Controls the amount information that is logged.",
-        widget="Dropdown",
-        choices=["debug", "info", "warning", "error", "critical"],
-    )
-    general.add_argument(
-        "-f",
-        metavar="Feature sets",
-        action="store",
-        dest="feature_sets",
-        default="searchengine ms2pip rt",
-        help="Feature sets to use for rescoring, to select multiple feature set combinations use configuration file",
-        widget="Dropdown",
-        choices=[
-            "searchengine ms2pip rt",
-            "searchengine ms2pip",
-            "searchengine rt",
-            "ms2pip rt",
-            "searchengine",
-            "ms2pip",
-            "rt",
-        ],
-    )
+        config_tabview = customtkinter.CTkTabview(self.middle_frame)
+        config_tabview.grid(
+            row=0, column=0, columnspan=2, padx=10, pady=(10, 0), sticky="nsew"
+        )
+        config_tabview.add("Main")  # add tab at the end
+        config_tabview.add("MS²PIP")  # add tab at the end
+        config_tabview.add("DeepLC")  # add tab at the end
+        config_tabview.set("Main")  # set currently visible tab
 
-    general.add_argument(
-        "-n",
-        metavar="Num cpu",
-        action="store",
-        type=int,
-        dest="num_cpu",
-        default=-1,
-        help="Number of parallel processes to use; -1 for all available",
-        widget="IntegerField",
-        gooey_options={"min": -1, "max": multiprocessing.cpu_count()},
-    )
+        self.create_main_tab(config_tabview.tab("Main"))
 
-    maxquant_settings = parser.add_argument_group(
-        "MaxQuant settings",
-        (
-            "MaxQuant uses two-letter labels to denote modifications in the msms.txt "
-            "output. Additionally, fixed modifications are not listed at all. To "
-            "correctly parse the msms.txt file, additional modification information "
-            "needs to be provided below. Make sure MaxQuant was run without "
-            "PSM-level FDR filtering; i.e. the FDR Threshold set at 1."
-        ),
-    )
-    maxquant_settings.add_argument(
-        "--regex_pattern",
-        metavar="MGF TITLE field regex pattern",
-        dest="mgf_title_pattern",
-        action="store",
-        type=str,
-        default="TITLE=.*scan=([0-9]+).*$",
-        widget="Textarea",
-        gooey_options={"height": 27, "full_width": True},
-        help=(
-            "Regex pattern to extract index number from MGF TITLE field. "
-            "Default: 'TITLE=.*scan=([0-9]+).*$' (ThermoRawFileParsed MGF files)\n"
-            "Example: 'TITLE=([0-9]+).*$' (index number immediately after TITLE field)"
-        ),
-    )
+        progess_tabview = customtkinter.CTkTabview(self.middle_frame)
+        progess_tabview.grid(
+            row=0, column=2, columnspan=2, padx=10, pady=(10, 0), sticky="nsew"
+        )
 
-    maxquant_settings.add_argument(
-        "--fixed_modifications",
-        metavar="Fixed modifications",
-        action="store",
-        type=str,
-        dest="fixed_modifications",
-        default="C Carbamidomethyl",
-        help=(
-            "List all modifications set as fixed during the MaxQuant search. One "
-            "modification per line, in the form of <amino acid one-letter code> "
-            "<full modification name>, one per line, space-separated."
-        ),
-        widget="Textarea",
-        gooey_options={"height": 120},
-    )
-    maxquant_settings.add_argument(
-        "--modification_mapping",
-        metavar="Modification mapping",
-        action="store",
-        type=str,
-        dest="modification_mapping",
-        default=(
-            "cm Carbamidomethyl\nox Oxidation\nac Acetyl\ncm Carbamidomethyl\n"
-            "de Deamidated\ngl Gln->pyro-Glu"
-        ),
-        help=(
-            "List all modification labels and their full names as listed in the "
-            "MS²PIP modification definitions (see MS²PIP settings tab). One per line, "
-            "space-separated."
-        ),
-        widget="Textarea",
-        gooey_options={"height": 120},
-    )
+        progess_tabview.add("Progress")  # add tab at the end
+        progess_tabview.set("Progress")  # set currently visible tab
 
-    ms2pip_settings = parser.add_argument_group("MS²PIP settings")
-    ms2pip_settings.add_argument(
-        "--ms2pip_model",
-        metavar="MS²PIP model",
-        type=str,
-        dest="ms2pip_model",
-        default="HCD2021",
-        help="MS²PIP prediction model to use",
-        widget="Dropdown",
-        choices=ms2pip_models.keys(),
-    )
-    ms2pip_settings.add_argument(
-        "--ms2pip_frag_error",
-        metavar="MS2 error tolerance in Da",
-        type=float,
-        dest="ms2pip_frag_error",
-        default=0.02,
-        help="MS2 error tolerance in Da, for MS²PIP spectrum annotation",
-        widget="DecimalField",
-    )
-    ms2pip_settings.add_argument(
-        "--ms2pip_modifications",
-        metavar="Modification definitions",
-        action="store",
-        type=str,
-        dest="ms2pip_modifications",
-        default=pprint.pformat(ms2pip_mods, compact=True, width=200),
-        help=(
-            "List of modification definition dictionaries for MS²PIP. See online "
-            "documentation for more info."
-        ),
-        widget="Textarea",
-        gooey_options={"full_width": True, "height": 240},
-    )
+        # Text box for logger output
+        self.textbox = customtkinter.CTkTextbox(progess_tabview.tab("Progress"))
+        self.textbox.pack(expand=True, fill=tk.BOTH)
+        self.textbox.configure(state="disabled")
 
-    return parser.parse_args()
+        self.loggin_label = customtkinter.CTkLabel(
+            self.middle_frame, text="Logging Level:", anchor="w"
+        )
+        self.loggin_label.grid(row=1, column=0, padx=10, pady=10)
+        self.logging_var = customtkinter.StringVar(value="INFO")
+        self.combobox = customtkinter.CTkComboBox(
+            master=self.middle_frame,
+            values=["INFO", "DEBUG", "WARN", "ERROR", "CRITICAL"],
+            variable=self.logging_var,
+        )
+        self.combobox.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
+
+        self.start_button = customtkinter.CTkButton(
+            master=self.middle_frame, command=self.button_callback, text="Start"
+        )
+        self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
+
+        # Text entry with submit button (allows user to send text to logger)
+        # self.combobox = customtkinter.CTkComboBox(master=self, values=["Sample text 1", "Text 2"])
+        # self.combobox.grid(row=0, column=1, padx=20, pady=20, sticky="ew")
+
+        # Setup loggers (both textbox and CLI are configured)
+        logger.addHandler(logging.StreamHandler())
+        logger.addHandler(MyHandlerText(self.textbox))
+
+        # Test logger from code
+        logger.info("Hello world!")
+
+    def button_callback(self):
+        """On button click, write to logger."""
+        logger.info("starting pipeline")
+
+        self.start_button.grid_forget()
+        self.stop_button = customtkinter.CTkButton(
+            master=self.middle_frame, text="Stop"
+        )  # TODO add stop function callback
+        self.stop_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
+
+        self.progressbar = customtkinter.CTkProgressBar(self.middle_frame)
+        self.progressbar.grid(row=1, column=2, padx=10, pady=10, sticky="e")
+        self.progressbar.configure(mode="indeterminnate")
+        self.progressbar.start()
+
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        """Change the appearance"""
+        customtkinter.set_appearance_mode(new_appearance_mode)
+
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        customtkinter.set_widget_scaling(new_scaling_float)
+
+    def create_main_tab(self, tabview_object):
+        """Configuring the UI for the main tab"""
+
+        self.id_file_label = customtkinter.CTkLabel(
+            tabview_object, text="Select identification file:", anchor="w"
+        )
+        self.id_file_label.pack(anchor=tk.W)
+        self.id_file = FileSelect(tabview_object, fileoption="openfile")
+        self.id_file.pack(fill=tk.BOTH)
+
+        self.mgf_dir_label = customtkinter.CTkLabel(
+            tabview_object, text="Select MGF file directory:", anchor="w"
+        )
+        self.mgf_dir_label.pack(anchor=tk.W)
+        self.mgf_dir = FileSelect(tabview_object, fileoption="directory")
+        self.mgf_dir.pack(fill=tk.BOTH)
+
+        self.pipeline_label = customtkinter.CTkLabel(
+            tabview_object, text="Select pipeline:", anchor="w"
+        )
+        self.pipeline_label.pack(anchor=tk.W)
+        self.pipeline_combobox = customtkinter.CTkOptionMenu(
+            master=tabview_object,
+            values=["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker"],
+        ) # TODO still those pipelines? 
+        self.pipeline_combobox.pack(fill=tk.BOTH)
+
+        self.opt_label = customtkinter.CTkLabel(
+            tabview_object, text="Optional paramaters:", anchor="w"
+        )
+        self.opt_label.pack(anchor=tk.W)
+
+        self.tmp_dir = OptionalInput(
+            tabview_object, text="temp directory", fileoption="directory"
+        )
+        self.tmp_dir.pack(anchor="w", fill=tk.BOTH)
+
+        self.file_prefix = OptionalInput(
+            tabview_object, text="output file prefix", fileoption="savefile"
+        )
+        self.file_prefix.pack(anchor="w", fill=tk.BOTH)
 
 
-def parse_settings(config: dict) -> dict:
-    "Parse non-general settings into one dict"
+class MyHandlerText(logging.StreamHandler):
+    def __init__(self, textctrl):
+        logging.StreamHandler.__init__(self)
+        self.textctrl = textctrl
 
-    parsed_config = {
-        "general": config,
-        "maxquant_to_rescore": {},
-        "ms2pip": {},
-    }
+    def emit(self, record):
+        """Write logs to text control."""
+        msg = self.format(record)
+        self.textctrl.configure(state="normal")  # Enable text control to allow insert
+        self.textctrl.insert("end", msg + "\n")
+        self.flush()
+        self.textctrl.configure(
+            state="disabled"
+        )  # Disable text control to prevent user input
 
-    # general configuration
-    parsed_config["general"]["feature_sets"] = [
-        parsed_config["general"]["feature_sets"].split(" ")
-    ]
-    # MaxQuant configuration
-    for conf_item in ["modification_mapping", "fixed_modifications"]:
-        parsed_conf_item = parsed_config["general"].pop(conf_item)
-        try:
-            if parsed_conf_item:
-                parsed_conf_item = parsed_conf_item.split("\n")
-                parsed_conf_item = dict([tuple(x.rsplit(" ",1)) for x in parsed_conf_item])
-            else:
-                parsed_conf_item = {}
-            parsed_config["maxquant_to_rescore"][conf_item] = parsed_conf_item
-        except Exception:
-            raise MS2RescoreGUIError(
-                "Invalid MaxQuant modification configuration. Make sure that the "
-                "modification configuration fields are formatted correctly."
+
+class FileSelect(customtkinter.CTkFrame):
+    def __init__(
+        self, *args, width: int = 100, height: int = 32, fileoption="openfile", **kwargs
+    ):
+        super().__init__(*args, width=width, height=height, **kwargs)
+        self.selected_filename = None
+        fileoption = fileoption
+        # Subwidgets
+        self.entry = customtkinter.CTkEntry(self, placeholder_text="Select a file...",)
+        if fileoption == "directory":
+            self.button = customtkinter.CTkButton(
+                self, text="Browse directories", command=self.pick_dir
             )
-    parsed_config["maxquant_to_rescore"]["mgf_title_pattern"] = parsed_config[
-        "general"
-    ].pop("mgf_title_pattern")
 
-    # MS²PIP configuration
-    parsed_config["ms2pip"] = {
-        "model": parsed_config["general"].pop("ms2pip_model"),
-        "frag_error": parsed_config["general"].pop("ms2pip_frag_error"),
-    }
+        elif fileoption == "openfile":
+            self.button = customtkinter.CTkButton(
+                self, text="Browse files", command=self.pick_file
+            )
 
-    try:
-        parsed_config["ms2pip"]["modifications"] = ast.literal_eval(
-            parsed_config["general"].pop("ms2pip_modifications")
+        elif fileoption == "savefile":
+            self.button = customtkinter.CTkButton(
+                self, text="Output filename prefix", command=self.save_file
+            )
+
+        # Configure layout
+        self.grid_columnconfigure(0, weight=1)
+        self.entry.grid(row=0, column=0, padx=20, pady=10, stick="ew")
+        self.button.grid(row=0, column=1, padx=20, pady=10)
+
+    def pick_file(self):
+        self.selected_filename = tkinter.filedialog.askopenfilename()
+        self.entry.delete(0, "end")
+        self.entry.insert("end", self.selected_filename)
+
+    def pick_dir(self):
+        self.selected_filename = tkinter.filedialog.askdirectory()
+        self.entry.delete(0, "end")
+        self.entry.insert("end", self.selected_filename)
+
+    def save_file(self):
+        self.selected_filename = tkinter.filedialog.asksaveasfilename()
+        self.entry.delete(0, "end")
+        self.entry.insert("end", self.selected_filename)
+
+
+class OptionalInput(customtkinter.CTkFrame):
+    def __init__(
+        self,
+        *args,
+        text,
+        width: int = 100,
+        height: int = 32,
+        fileoption="openfile",
+        **kwargs,
+    ):
+        super().__init__(*args, width=width, height=height, **kwargs)
+        self.selected_filename = None
+        self.switch_var = customtkinter.StringVar(value="off")
+        self.fileoption = fileoption
+
+        # Subwidget
+        self.switch = customtkinter.CTkSwitch(
+            master=self,
+            text=text,
+            command=self.switch_event,
+            variable=self.switch_var,
+            onvalue="on",
+            offvalue="off",
         )
-    except Exception:
-        raise MS2RescoreGUIError(
-            "Invalid MS²PIP modification configuration. Make sure that the "
-            "modification configuration field is formatted correctly."
-        )
 
-    return parsed_config
+        # Configure layout
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.switch.grid(row=0, column=0, padx=20, pady=10, sticky="ew")
+
+    def switch_event(self):
+        if self.switch_var.get() == "on":
+            self.file_select = FileSelect(self, fileoption=self.fileoption)
+            self.file_select.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+            self.selected_filename = self.file_select.selected_filename
+
+        elif self.switch_var.get() == "off":
+            self.file_select.grid_remove()
+            self.selected_filename = None
 
 
 if __name__ == "__main__":
-    # Required for PyInstalller package (https://github.com/pyinstaller/pyinstaller/wiki/Recipe-Multiprocessing)
-    # Avoids opening new windows upon multiprocessing
-    multiprocessing.freeze_support()
-    main()
+    app = App()
+    app.mainloop()
