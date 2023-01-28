@@ -213,9 +213,9 @@ class App(customtkinter.CTk):
             tabview_object, text="Select MS²PIP model", anchor="w"
         )
         self.model_label.pack(anchor=tk.W, fill=tk.BOTH)
-        logger.info(f"{ms2pip_models}")
         self.ms2pip_models = customtkinter.CTkOptionMenu(
-            master=tabview_object, values=list(ms2pip_models.keys()),
+            master=tabview_object, 
+            values=["HCD2021"] + [model for model in ms2pip_models.keys() if model != "HCD2021"],
         )
         self.ms2pip_models.pack(anchor=tk.W, fill=tk.BOTH)
         self.error_label = customtkinter.CTkLabel(
