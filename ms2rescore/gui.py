@@ -6,6 +6,7 @@ import customtkinter
 from PIL import Image
 import tkinter.messagebox
 from typing import Union, Callable
+import webbrowser
 
 from ms2pip.ms2pipC import MODELS as ms2pip_models
 
@@ -22,7 +23,7 @@ class App(customtkinter.CTk):
         self.title("MS²Rescore GUI")
         self.minsize(500, 300)
 
-        # create 2x2 grid system
+        # create 1x2 grid system
         self.grid_columnconfigure((0), weight=0)
         self.grid_columnconfigure((1), weight=1)
         self.grid_rowconfigure((0), weight=1)
@@ -33,9 +34,7 @@ class App(customtkinter.CTk):
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
         self.logo = customtkinter.CTkImage(
-            light_image=Image.open("img\ms2rescore_logo.png"),
-            dark_image=Image.open("img\ms2rescore_logo.png"),
-            size=(100, 100),
+            light_image=Image.open("img\ms2rescore_logo.png"), size=(130, 130),
         )
         self.logo_label = customtkinter.CTkLabel(
             self.sidebar_frame, text="", image=self.logo
@@ -48,7 +47,7 @@ class App(customtkinter.CTk):
         self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(
             self.sidebar_frame,
-            values=["Light", "Dark", "System"],
+            values=["System", "Light", "Dark"],
             command=self.change_appearance_mode_event,
         )
         self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
@@ -62,6 +61,25 @@ class App(customtkinter.CTk):
             command=self.change_scaling_event,
         )
         self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
+
+        self.github_logo = customtkinter.CTkImage(
+            dark_image=Image.open("img\github-mark-white.png"),
+            light_image=Image.open("img\github-mark.png"),
+            size=(25, 25),
+        )
+        self.github_button = customtkinter.CTkButton(
+            self.sidebar_frame,
+            text="compomics/ms2rescore",
+            anchor="w",
+            fg_color="transparent",
+            text_color=("#000000", "#fefdff"),
+            image=self.github_logo,
+        )
+        self.github_button.bind(
+            "<Button-1>",
+            lambda e: self.callback("https://github.com/compomics/ms2rescore"),
+        )
+        self.github_button.grid(row=9, column=0, padx=20, pady=(10, 10))
 
         # Tabview config
         self.middle_frame = customtkinter.CTkFrame(self, corner_radius=0)
@@ -170,7 +188,7 @@ class App(customtkinter.CTk):
         self.pipeline_combobox = customtkinter.CTkOptionMenu(
             master=tabview_object,
             values=["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker"],
-        ) # TODO still those pipelines? 
+        )  # TODO still those pipelines?
         self.pipeline_combobox.pack(fill=tk.BOTH)
 
         self.opt_label = customtkinter.CTkLabel(
@@ -190,22 +208,23 @@ class App(customtkinter.CTk):
 
     def create_ms2pip_tab(self, tabview_object):
         """Configuring the UI for the main tab"""
-        
+
         self.model_label = customtkinter.CTkLabel(
             tabview_object, text="Select MS²PIP model", anchor="w"
         )
         self.model_label.pack(anchor=tk.W, fill=tk.BOTH)
         logger.info(f"{ms2pip_models}")
         self.ms2pip_models = customtkinter.CTkOptionMenu(
-            master=tabview_object,
-            values=list(ms2pip_models.keys()),
+            master=tabview_object, values=list(ms2pip_models.keys()),
         )
         self.ms2pip_models.pack(anchor=tk.W, fill=tk.BOTH)
         self.error_label = customtkinter.CTkLabel(
             tabview_object, text="MS2 error tolerance in Da", anchor="w"
         )
         self.error_label.pack(anchor=tk.W, fill=tk.BOTH)
-        self.frag_error_spinbox = FloatSpinbox(tabview_object, step_size=0.01, width=110)
+        self.frag_error_spinbox = FloatSpinbox(
+            tabview_object, step_size=0.01, width=110
+        )
         self.frag_error_spinbox.pack(padx=10, pady=10, anchor="w")
         self.frag_error_spinbox.set(0.02)
 
@@ -213,11 +232,15 @@ class App(customtkinter.CTk):
             tabview_object, text="MS²PIP modifications", anchor="w"
         )
         self.modification_label.pack(anchor=tk.W, fill=tk.BOTH)
-        self.ms2pip_modifications = customtkinter.CTkTextbox(
-            tabview_object
+        self.ms2pip_modifications = customtkinter.CTkTextbox(tabview_object)
+        self.ms2pip_modifications.insert(
+            "0.0", "modification,mass_shift,opt,AA\nPhosphoS,79.966331,opt,S"
         )
-        self.ms2pip_modifications.insert("0.0", "modification,mass_shift,opt,AA\nPhosphoS,79.966331,opt,S")
         self.ms2pip_modifications.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+    def callback(self, url):
+        webbrowser.open_new(url)
+
 
 class MyHandlerText(logging.StreamHandler):
     def __init__(self, textctrl):
@@ -320,13 +343,17 @@ class OptionalInput(customtkinter.CTkFrame):
             self.file_select.grid_remove()
             self.selected_filename = None
 
+
 class FloatSpinbox(customtkinter.CTkFrame):
-    def __init__(self, *args,
-                 width: int = 100,
-                 height: int = 32,
-                 step_size: Union[int, float] = 1,
-                 command: Callable = None,
-                 **kwargs):
+    def __init__(
+        self,
+        *args,
+        width: int = 100,
+        height: int = 32,
+        step_size: Union[int, float] = 1,
+        command: Callable = None,
+        **kwargs,
+    ):
         super().__init__(*args, width=width, height=height, **kwargs)
 
         self.step_size = step_size
@@ -337,15 +364,27 @@ class FloatSpinbox(customtkinter.CTkFrame):
         self.grid_columnconfigure((0, 2), weight=0)  # buttons don't expand
         self.grid_columnconfigure(1, weight=1)  # entry expands
 
-        self.subtract_button = customtkinter.CTkButton(self, text="-", width=height-6, height=height-6,
-                                                       command=self.subtract_button_callback)
+        self.subtract_button = customtkinter.CTkButton(
+            self,
+            text="-",
+            width=height - 6,
+            height=height - 6,
+            command=self.subtract_button_callback,
+        )
         self.subtract_button.grid(row=0, column=0, padx=(3, 0), pady=3)
 
-        self.entry = customtkinter.CTkEntry(self, width=width-(2*height), height=height-6, border_width=0)
+        self.entry = customtkinter.CTkEntry(
+            self, width=width - (2 * height), height=height - 6, border_width=0
+        )
         self.entry.grid(row=0, column=1, columnspan=1, padx=3, pady=3, sticky="ew")
 
-        self.add_button = customtkinter.CTkButton(self, text="+", width=height-6, height=height-6,
-                                                  command=self.add_button_callback)
+        self.add_button = customtkinter.CTkButton(
+            self,
+            text="+",
+            width=height - 6,
+            height=height - 6,
+            command=self.add_button_callback,
+        )
         self.add_button.grid(row=0, column=2, padx=(0, 3), pady=3)
 
         # default value
@@ -384,4 +423,5 @@ class FloatSpinbox(customtkinter.CTkFrame):
 
 if __name__ == "__main__":
     app = App()
+    app.wm_iconbitmap("img\ms2rescore.ico")
     app.mainloop()
