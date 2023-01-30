@@ -8,7 +8,9 @@ import tkinter.messagebox
 from typing import Union, Callable
 import webbrowser
 
+from ms2rescore.ms2rescore_main import MS2Rescore
 from ms2pip.ms2pipC import MODELS as ms2pip_models
+import multiprocessing
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -77,7 +79,7 @@ class App(customtkinter.CTk):
         )
         self.github_button.bind(
             "<Button-1>",
-            lambda e: self.callback("https://github.com/compomics/ms2rescore"),
+            lambda e: self.web_callback("https://github.com/compomics/ms2rescore"),
         )
         self.github_button.grid(row=9, column=0, padx=20, pady=(10, 10))
 
@@ -120,13 +122,13 @@ class App(customtkinter.CTk):
         self.logging_var = customtkinter.StringVar(value="INFO")
         self.combobox = customtkinter.CTkComboBox(
             master=self.middle_frame,
-            values=["INFO", "DEBUG", "WARN", "ERROR", "CRITICAL"],
+            values=["info", "debug", "warning", "error", "critical"],
             variable=self.logging_var,
         )
         self.combobox.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
 
         self.start_button = customtkinter.CTkButton(
-            master=self.middle_frame, command=self.button_callback, text="Start"
+            master=self.middle_frame, command=self.start_button_callback, text="Start"
         )
         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
 
@@ -141,13 +143,12 @@ class App(customtkinter.CTk):
         # Test logger from code
         logger.info("Hello world!")
 
-    def button_callback(self):
-        """On button click, write to logger."""
-        logger.info("starting pipeline")
+    def start_button_callback(self):
+        """Start button callback"""
 
         self.start_button.grid_forget()
         self.stop_button = customtkinter.CTkButton(
-            master=self.middle_frame, text="Stop"
+            master=self.middle_frame, text="Stop", command=self.stop_button_callback
         )  # TODO add stop function callback
         self.stop_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
 
@@ -155,6 +156,19 @@ class App(customtkinter.CTk):
         self.progressbar.grid(row=1, column=2, padx=10, pady=10, sticky="e")
         self.progressbar.configure(mode="indeterminnate")
         self.progressbar.start()
+
+        logger.info("Configuring config file")
+
+        self.create_config()
+        self.run_MS2Rescore()
+
+    
+    def stop_button_callback(self):
+        """Stop button callback"""
+
+        self.stop_button.grid_forget()
+        self.progressbar.grid_remove()
+        self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         """Change the appearance"""
@@ -181,20 +195,34 @@ class App(customtkinter.CTk):
         self.mgf_dir = FileSelect(tabview_object, fileoption="directory")
         self.mgf_dir.pack(fill=tk.BOTH)
 
+        self.pipeline_var = customtkinter.StringVar(value="infer")
         self.pipeline_label = customtkinter.CTkLabel(
-            tabview_object, text="Select pipeline:", anchor="w"
+            tabview_object, text="PSM file type:", anchor="w"
         )
-        self.pipeline_label.pack(anchor=tk.W)
+        self.pipeline_label.pack(anchor="w")
         self.pipeline_combobox = customtkinter.CTkOptionMenu(
             master=tabview_object,
             values=["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker"],
-        )  # TODO still those pipelines?
+            variable=self.pipeline_var
+        )  # TODO still those pipelines? import from psm_utils
         self.pipeline_combobox.pack(fill=tk.BOTH)
+
+        self.num_cpu_var = customtkinter.StringVar(value="-1")
+        self.num_cpu_label = customtkinter.CTkLabel(
+            tabview_object, text="Num CPU:", anchor="w"
+        )
+        self.num_cpu_label.pack(anchor="w")
+        self.num_cpu = customtkinter.CTkOptionMenu(
+            master=tabview_object,
+            values=[str(x) for x in list(range(-1,  multiprocessing.cpu_count()+ 1) )],
+            variable=self.num_cpu_var
+        )
+        self.num_cpu.pack(fill=tk.BOTH)
 
         self.opt_label = customtkinter.CTkLabel(
             tabview_object, text="Optional paramaters:", anchor="w"
         )
-        self.opt_label.pack(anchor=tk.W)
+        self.opt_label.pack(anchor="w", fill=tk.BOTH)
 
         self.tmp_dir = OptionalInput(
             tabview_object, text="temp directory", fileoption="directory"
@@ -206,6 +234,11 @@ class App(customtkinter.CTk):
         )
         self.file_prefix.pack(anchor="w", fill=tk.BOTH)
 
+        self.config_filepath = OptionalInput(
+            tabview_object, text="config file", fileoption="openfile"
+        )
+        self.config_filepath.pack(anchor="w", fill=tk.BOTH)
+
     def create_ms2pip_tab(self, tabview_object):
         """Configuring the UI for the main tab"""
 
@@ -213,9 +246,11 @@ class App(customtkinter.CTk):
             tabview_object, text="Select MS²PIP model", anchor="w"
         )
         self.model_label.pack(anchor=tk.W, fill=tk.BOTH)
+        self.selected_ms2pip_model = customtkinter.StringVar(value="HCD2021")
         self.ms2pip_models = customtkinter.CTkOptionMenu(
-            master=tabview_object, 
-            values=["HCD2021"] + [model for model in ms2pip_models.keys() if model != "HCD2021"],
+            master=tabview_object,
+            values=list(ms2pip_models.keys()),
+            variable=self.selected_ms2pip_model
         )
         self.ms2pip_models.pack(anchor=tk.W, fill=tk.BOTH)
         self.error_label = customtkinter.CTkLabel(
@@ -238,8 +273,71 @@ class App(customtkinter.CTk):
         )
         self.ms2pip_modifications.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-    def callback(self, url):
+    def web_callback(self, url):
         webbrowser.open_new(url)
+    
+    def create_config(self):
+        """Create MS²Rescore config file"""
+
+        feature_generators = ["ms2pip", "deeplc", "percolator"]
+        if self.pipeline_var.get() == "maxquant":
+            feature_generators = feature_generators + ["maxquant"]
+
+        ms2rescore_config = {
+            "feature_generators": feature_generators,
+            # "rescoring_engine": "percolator",
+            "config_file": self.config_filepath.selected_filename,
+            "psm_file": self.id_file.selected_filename,
+            "psm_file_type": self.pipeline_var.get(),
+            "tmp_path": self.tmp_dir.selected_filename,
+            "spectrum_path": self.mgf_dir.selected_filename,
+            "output_path": self.file_prefix.selected_filename,
+            "log_level": self.logging_var.get(),
+            "num_cpu": int(self.num_cpu_var.get())
+            # "id_decoy_pattern": None,
+            # "psm_id_pattern": None,
+            # "spectrum_id_pattern": None,
+        }
+        ms2pip_config = {
+            "model": self.selected_ms2pip_model.get(),
+            "frag_error" : float(self.frag_error_spinbox.get()),
+            "modifications": self.parse_ms2pip_modifications(self.ms2pip_modifications.get("0.0", "end"))
+        }
+
+        self.config = {
+            "ms2rescore": ms2rescore_config,
+            "ms2pip": ms2pip_config
+        }
+        logger.info(f"{self.config}")
+
+    @staticmethod
+    def parse_ms2pip_modifications(modifications_txt):
+        """Parse text input ms2pip modifications"""
+
+        modification_list = modifications_txt.split("\n")
+        if modifications_txt[0].startswith("modification"):
+            modification_list.pop(0)
+        
+        return modification_list
+    
+    def run_MS2Rescore(self):
+        """Run MS²Rescore"""
+        
+        rescore = None
+        try:
+            rescore = MS2Rescore(parse_cli_args=False, configuration=self.config, set_logger=True)
+            rescore.run()
+        except Exception:
+            logger.exception("Critical error occurred in MS²Rescore")
+
+        finally:
+            self.stop_button.grid_forget()
+            self.progressbar.grid_remove()
+            self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
+            if rescore:
+                rescore.save_log()
+
+
 
 
 class MyHandlerText(logging.StreamHandler):
