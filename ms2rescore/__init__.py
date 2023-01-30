@@ -2,4 +2,4 @@
 
 __version__ = "v3.0.0-dev0"
 
-from ms2rescore.ms2rescore import MS2Rescore
+from ms2rescore.ms2rescore_main import MS2Rescore

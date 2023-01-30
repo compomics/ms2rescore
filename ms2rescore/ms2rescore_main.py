@@ -13,7 +13,7 @@ import psm_utils.io
 from pandas.errors import EmptyDataError
 from rich.console import Console
 
-from ms2rescore import plotting, setup_logging
+from ms2rescore import setup_logging
 from ms2rescore.config_parser import parse_config
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
 from ms2rescore.feature_generators.ms2pip import MS2PIPFeatureGenerator
@@ -110,8 +110,8 @@ class MS2Rescore:
             new_ids = [_match_ids(old_id) for old_id in psm_list["spectrum_id"]]
             psm_list["spectrum_id"] = new_ids
 
-        fgen = MS2PIPFeatureGenerator(config=self.config)
-        fgen.add_features(psm_list)
+        # fgen = MS2PIPFeatureGenerator(config=self.config)
+        # fgen.add_features(psm_list)
 
         psm_utils.io.write_file(
             psm_list,
