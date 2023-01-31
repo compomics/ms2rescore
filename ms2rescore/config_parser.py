@@ -113,7 +113,7 @@ def parse_config(
             )
     elif config_class:
         args = None
-        config_user = config_class["general"]["config_file"]
+        config_user = config_class["ms2rescore"]["config_file"]
     else:
         raise MS2RescoreConfigurationError(
             "If `parse_cli_args` is False, `config_class` arguments are required."
