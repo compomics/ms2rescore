@@ -11,6 +11,7 @@ import webbrowser
 from ms2rescore.ms2rescore_main import MS2Rescore
 from ms2pip.ms2pipC import MODELS as ms2pip_models
 import multiprocessing
+import threading
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -119,7 +120,7 @@ class App(customtkinter.CTk):
             self.middle_frame, text="Logging Level:", anchor="w"
         )
         self.loggin_label.grid(row=1, column=0, padx=10, pady=10)
-        self.logging_var = customtkinter.StringVar(value="INFO")
+        self.logging_var = customtkinter.StringVar(value="info")
         self.combobox = customtkinter.CTkComboBox(
             master=self.middle_frame,
             values=["info", "debug", "warning", "error", "critical"],
@@ -132,11 +133,7 @@ class App(customtkinter.CTk):
         )
         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
 
-        # Text entry with submit button (allows user to send text to logger)
-        # self.combobox = customtkinter.CTkComboBox(master=self, values=["Sample text 1", "Text 2"])
-        # self.combobox.grid(row=0, column=1, padx=20, pady=20, sticky="ew")
-
-        # Setup loggers (both textbox and CLI are configured)
+        Setup loggers (both textbox and CLI are configured)
         logger.addHandler(logging.StreamHandler())
         logger.addHandler(MyHandlerText(self.textbox))
 
@@ -157,10 +154,12 @@ class App(customtkinter.CTk):
         self.progressbar.configure(mode="indeterminnate")
         self.progressbar.start()
 
-        logger.info("Configuring config file")
+        # logger.info("Configuring config file")
 
         self.create_config()
-        self.run_MS2Rescore()
+        ms2rescore_run = MS2Rescore_threading(self.config)
+        ms2rescore_run.start()
+        # self.monitor(ms2rescore_run)
 
     
     def stop_button_callback(self):
@@ -301,7 +300,7 @@ class App(customtkinter.CTk):
         ms2pip_config = {
             "model": self.selected_ms2pip_model.get(),
             "frag_error" : float(self.frag_error_spinbox.get()),
-            "modifications": self.parse_ms2pip_modifications(self.ms2pip_modifications.get("0.0", "end"))
+            #"modifications": self.parse_ms2pip_modifications(self.ms2pip_modifications.get("0.0", "end"))
         }
 
         self.config = {
@@ -320,25 +319,53 @@ class App(customtkinter.CTk):
         
         return modification_list
     
-    def run_MS2Rescore(self):
-        """Run MS²Rescore"""
+    # def monitor(self, ms2rescore_thread):
+    #     """ Monitor the download thread """
+    #     if ms2rescore_thread.is_alive():
+    #         self.after(100, lambda: self.monitor(ms2rescore_thread))
         
+    
+    # def run_MS2Rescore(self):
+    #     """Run MS²Rescore"""
+        
+    #     rescore = None
+    #     try:
+    #         rescore = MS2Rescore(parse_cli_args=False, configuration=self.config, set_logger=False)
+    #         rescore.run()
+    #     except Exception:
+    #         logger.exception("Critical error occurred in MS²Rescore")
+
+    #     finally:
+    #         self.stop_button.grid_forget()
+    #         self.progressbar.grid_remove()
+    #         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
+    #         if rescore:
+    #             rescore.save_log()
+
+    # def threading(self):
+    #     """Threading MS²Rescore run """
+
+    #     tp = threading.Thread(target=self.run_MS2Rescore)
+    #     tp.start()
+
+class MS2Rescore_threading(threading.Thread):
+    """MS²Rescore threading class"""
+    def __init__(self, config) -> None:
+        super().__init__()
+        self.config = config.copy()
+
+    def run(self):
         rescore = None
         try:
-            rescore = MS2Rescore(parse_cli_args=False, configuration=self.config, set_logger=True)
+            rescore = MS2Rescore(parse_cli_args=False, configuration=self.config, set_logger=False)
             rescore.run()
         except Exception:
-            logger.exception("Critical error occurred in MS²Rescore")
+            # logger.exception("Critical error occurred in MS²Rescore")
+            pass
 
         finally:
-            self.stop_button.grid_forget()
-            self.progressbar.grid_remove()
-            self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
             if rescore:
                 rescore.save_log()
-
-
-
 
 class MyHandlerText(logging.StreamHandler):
     def __init__(self, textctrl):
