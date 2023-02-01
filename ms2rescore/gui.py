@@ -1,5 +1,6 @@
 """Graphical user interface for MS²Rescore using Gooey."""
 import logging
+import os
 
 import tkinter as tk
 import customtkinter
@@ -11,7 +12,6 @@ import webbrowser
 from ms2rescore.ms2rescore_main import MS2Rescore
 from ms2pip.ms2pipC import MODELS as ms2pip_models
 import multiprocessing
-import threading
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -37,7 +37,7 @@ class App(customtkinter.CTk):
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
         self.logo = customtkinter.CTkImage(
-            light_image=Image.open("img\ms2rescore_logo.png"), size=(130, 130),
+            light_image=Image.open(os.path.normpath("img/ms2rescore_logo.png")), size=(130, 130),
         )
         self.logo_label = customtkinter.CTkLabel(
             self.sidebar_frame, text="", image=self.logo
@@ -66,8 +66,8 @@ class App(customtkinter.CTk):
         self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
 
         self.github_logo = customtkinter.CTkImage(
-            dark_image=Image.open("img\github-mark-white.png"),
-            light_image=Image.open("img\github-mark.png"),
+            dark_image=Image.open(os.path.normpath("img/github-mark-white.png")),
+            light_image=Image.open(os.path.normpath("img/github-mark.png")),
             size=(25, 25),
         )
         self.github_button = customtkinter.CTkButton(
@@ -133,7 +133,7 @@ class App(customtkinter.CTk):
         )
         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
 
-        Setup loggers (both textbox and CLI are configured)
+        # Setup loggers (both textbox and CLI are configured)
         logger.addHandler(logging.StreamHandler())
         logger.addHandler(MyHandlerText(self.textbox))
 
@@ -154,12 +154,12 @@ class App(customtkinter.CTk):
         self.progressbar.configure(mode="indeterminnate")
         self.progressbar.start()
 
-        # logger.info("Configuring config file")
+        logger.info("Configuring config file")
 
         self.create_config()
-        ms2rescore_run = MS2Rescore_threading(self.config)
+        ms2rescore_run = MS2RescoreProcess(self.config)
         ms2rescore_run.start()
-        # self.monitor(ms2rescore_run)
+        self.monitor(ms2rescore_run)
 
     
     def stop_button_callback(self):
@@ -319,10 +319,10 @@ class App(customtkinter.CTk):
         
         return modification_list
     
-    # def monitor(self, ms2rescore_thread):
-    #     """ Monitor the download thread """
-    #     if ms2rescore_thread.is_alive():
-    #         self.after(100, lambda: self.monitor(ms2rescore_thread))
+    def monitor(self, ms2rescore_process):
+        """ Monitor the download thread """
+        if ms2rescore_process.is_alive():
+            self.after(100, lambda: self.monitor(ms2rescore_process))
         
     
     # def run_MS2Rescore(self):
@@ -348,7 +348,8 @@ class App(customtkinter.CTk):
     #     tp = threading.Thread(target=self.run_MS2Rescore)
     #     tp.start()
 
-class MS2Rescore_threading(threading.Thread):
+
+class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""
     def __init__(self, config) -> None:
         super().__init__()
@@ -360,8 +361,7 @@ class MS2Rescore_threading(threading.Thread):
             rescore = MS2Rescore(parse_cli_args=False, configuration=self.config, set_logger=False)
             rescore.run()
         except Exception:
-            # logger.exception("Critical error occurred in MS²Rescore")
-            pass
+            logger.exception("Critical error occurred in MS²Rescore")
 
         finally:
             if rescore:
@@ -548,5 +548,6 @@ class FloatSpinbox(customtkinter.CTkFrame):
 
 if __name__ == "__main__":
     app = App()
-    app.wm_iconbitmap("img\ms2rescore.ico")
+    # TODO: a bitmap is expected (on Linux), but the ico is in PNG format
+    # app.wm_iconbitmap(os.path.normpath("img/ms2rescore.ico"))
     app.mainloop()
