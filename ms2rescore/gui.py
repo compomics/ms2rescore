@@ -1,6 +1,7 @@
 """Graphical user interface for MS²Rescore using Gooey."""
 import logging
 import os
+import sys
 
 import tkinter as tk
 import customtkinter
@@ -8,14 +9,16 @@ from PIL import Image
 import tkinter.messagebox
 from typing import Union, Callable
 import webbrowser
+import multiprocessing
+
+from ms2pip.ms2pipC import MODELS as ms2pip_models
+from psm_utils.io import FILETYPES
 
 from ms2rescore.ms2rescore_main import MS2Rescore
-from ms2pip.ms2pipC import MODELS as ms2pip_models
-import multiprocessing
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
 
 class App(customtkinter.CTk):
     def __init__(self):
@@ -37,7 +40,8 @@ class App(customtkinter.CTk):
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
         self.logo = customtkinter.CTkImage(
-            light_image=Image.open(os.path.normpath("img/ms2rescore_logo.png")), size=(130, 130),
+            light_image=Image.open(os.path.normpath("img/ms2rescore_logo.png")),
+            size=(130, 130),
         )
         self.logo_label = customtkinter.CTkLabel(
             self.sidebar_frame, text="", image=self.logo
@@ -134,12 +138,13 @@ class App(customtkinter.CTk):
         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
 
         # Setup loggers (both textbox and CLI are configured)
-        logger.addHandler(logging.StreamHandler())
+        # logger.addHandler(logging.StreamHandler())
         logger.addHandler(MyHandlerText(self.textbox))
+        logger.addHandler(logging.StreamHandler(sys.stdout))
 
         # Test logger from code
         logger.info("Hello world!")
-
+    
     def start_button_callback(self):
         """Start button callback"""
 
@@ -154,14 +159,11 @@ class App(customtkinter.CTk):
         self.progressbar.configure(mode="indeterminnate")
         self.progressbar.start()
 
-        logger.info("Configuring config file")
-
         self.create_config()
         ms2rescore_run = MS2RescoreProcess(self.config)
         ms2rescore_run.start()
         self.monitor(ms2rescore_run)
 
-    
     def stop_button_callback(self):
         """Stop button callback"""
 
@@ -201,9 +203,9 @@ class App(customtkinter.CTk):
         self.pipeline_label.pack(anchor="w")
         self.pipeline_combobox = customtkinter.CTkOptionMenu(
             master=tabview_object,
-            values=["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker"],
-            variable=self.pipeline_var
-        )  # TODO still those pipelines? import from psm_utils
+            values=list(FILETYPES.keys()),
+            variable=self.pipeline_var,
+        )  # TODO import from psm_utils
         self.pipeline_combobox.pack(fill=tk.BOTH)
 
         self.num_cpu_var = customtkinter.StringVar(value="-1")
@@ -213,8 +215,8 @@ class App(customtkinter.CTk):
         self.num_cpu_label.pack(anchor="w")
         self.num_cpu = customtkinter.CTkOptionMenu(
             master=tabview_object,
-            values=[str(x) for x in list(range(-1,  multiprocessing.cpu_count()+ 1) )],
-            variable=self.num_cpu_var
+            values=[str(x) for x in list(range(-1, multiprocessing.cpu_count() + 1))],
+            variable=self.num_cpu_var,
         )
         self.num_cpu.pack(fill=tk.BOTH)
 
@@ -249,7 +251,7 @@ class App(customtkinter.CTk):
         self.ms2pip_models = customtkinter.CTkOptionMenu(
             master=tabview_object,
             values=list(ms2pip_models.keys()),
-            variable=self.selected_ms2pip_model
+            variable=self.selected_ms2pip_model,
         )
         self.ms2pip_models.pack(anchor=tk.W, fill=tk.BOTH)
         self.error_label = customtkinter.CTkLabel(
@@ -262,19 +264,19 @@ class App(customtkinter.CTk):
         self.frag_error_spinbox.pack(padx=10, pady=10, anchor="w")
         self.frag_error_spinbox.set(0.02)
 
-        self.modification_label = customtkinter.CTkLabel(
-            tabview_object, text="MS²PIP modifications", anchor="w"
-        )
-        self.modification_label.pack(anchor=tk.W, fill=tk.BOTH)
-        self.ms2pip_modifications = customtkinter.CTkTextbox(tabview_object)
-        self.ms2pip_modifications.insert(
-            "0.0", "modification,mass_shift,opt,AA\nPhosphoS,79.966331,opt,S"
-        )
-        self.ms2pip_modifications.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        # self.modification_label = customtkinter.CTkLabel(
+        #     tabview_object, text="MS²PIP modifications", anchor="w"
+        # )
+        # self.modification_label.pack(anchor=tk.W, fill=tk.BOTH)
+        # self.ms2pip_modifications = customtkinter.CTkTextbox(tabview_object)
+        # self.ms2pip_modifications.insert(
+        #     "0.0", "modification,mass_shift,opt,AA\nPhosphoS,79.966331,opt,S"
+        # )
+        # self.ms2pip_modifications.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
     def web_callback(self, url):
         webbrowser.open_new(url)
-    
+
     def create_config(self):
         """Create MS²Rescore config file"""
 
@@ -299,15 +301,11 @@ class App(customtkinter.CTk):
         }
         ms2pip_config = {
             "model": self.selected_ms2pip_model.get(),
-            "frag_error" : float(self.frag_error_spinbox.get()),
-            #"modifications": self.parse_ms2pip_modifications(self.ms2pip_modifications.get("0.0", "end"))
+            "frag_error": float(self.frag_error_spinbox.get()),
+            # "modifications": self.parse_ms2pip_modifications(self.ms2pip_modifications.get("0.0", "end"))
         }
 
-        self.config = {
-            "ms2rescore": ms2rescore_config,
-            "ms2pip": ms2pip_config
-        }
-        logger.info(f"{self.config}")
+        self.config = {"ms2rescore": ms2rescore_config, "ms2pip": ms2pip_config}
 
     @staticmethod
     def parse_ms2pip_modifications(modifications_txt):
@@ -316,56 +314,39 @@ class App(customtkinter.CTk):
         modification_list = modifications_txt.split("\n")
         if modifications_txt[0].startswith("modification"):
             modification_list.pop(0)
-        
+
         return modification_list
-    
+
     def monitor(self, ms2rescore_process):
-        """ Monitor the download thread """
-        if ms2rescore_process.is_alive():
+        """ Monitor the ms2rescore thread """
+        if ms2rescore_process.is_alive(): # while loop? 
             self.after(100, lambda: self.monitor(ms2rescore_process))
-        
-    
-    # def run_MS2Rescore(self):
-    #     """Run MS²Rescore"""
-        
-    #     rescore = None
-    #     try:
-    #         rescore = MS2Rescore(parse_cli_args=False, configuration=self.config, set_logger=False)
-    #         rescore.run()
-    #     except Exception:
-    #         logger.exception("Critical error occurred in MS²Rescore")
-
-    #     finally:
-    #         self.stop_button.grid_forget()
-    #         self.progressbar.grid_remove()
-    #         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
-    #         if rescore:
-    #             rescore.save_log()
-
-    # def threading(self):
-    #     """Threading MS²Rescore run """
-
-    #     tp = threading.Thread(target=self.run_MS2Rescore)
-    #     tp.start()
+        else:
+            self.stop_button_callback()
 
 
 class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""
+
     def __init__(self, config) -> None:
         super().__init__()
         self.config = config.copy()
 
     def run(self):
+        logger.info("starting MS²Rescore")
         rescore = None
         try:
-            rescore = MS2Rescore(parse_cli_args=False, configuration=self.config, set_logger=False)
+            rescore = MS2Rescore(
+                parse_cli_args=False, configuration=self.config, set_logger=True
+            )
             rescore.run()
         except Exception:
-            logger.exception("Critical error occurred in MS²Rescore")
+            logger.exception("Critical error occurred in M²Rescore")
 
         finally:
             if rescore:
                 rescore.save_log()
+
 
 class MyHandlerText(logging.StreamHandler):
     def __init__(self, textctrl):
