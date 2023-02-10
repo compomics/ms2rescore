@@ -17,6 +17,8 @@ from ms2rescore import setup_logging
 from ms2rescore.config_parser import parse_config
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
 from ms2rescore.feature_generators.ms2pip import MS2PIPFeatureGenerator
+from ms2rescore.feature_generators.maxquant import MaxquantFeatureGenerator
+from ms2rescore.rescoring_engines.percolator import PercolatorRescoring
 
 logger = logging.getLogger(__name__)
 
@@ -113,13 +115,15 @@ class MS2Rescore:
         # fgen = MS2PIPFeatureGenerator(config=self.config)
         # fgen.add_features(psm_list)
 
-        psm_utils.io.write_file(
-            psm_list,
-            filename="test.pin",
-            filetype="percolator",
-            style="pin",
-            feature_names=psm_list[0].rescoring_features.keys(),
-        )
+        MaxquantFeatureGenerator().add_features(psm_list)
+        logging.debug(f"Writing {self.output_file_root}.pin file")
+
+        if self.config["MS²Rescore"]["rescoring_engine"] == "percolator":
+            rescoring = PercolatorRescoring(
+                psm_list,
+                self.config
+            )
+            rescoring.run()
 
     @staticmethod
     def _validate_cli_dependency(command):
