@@ -118,12 +118,12 @@ class MS2Rescore:
         MaxquantFeatureGenerator().add_features(psm_list)
         logging.debug(f"Writing {self.output_file_root}.pin file")
 
-        if self.config["MS²Rescore"]["rescoring_engine"] == "percolator":
-            rescoring = PercolatorRescoring(
+        if self.config["ms2rescore"]["rescoring_engine"] == "percolator":
+            percolator = PercolatorRescoring(
                 psm_list,
                 self.config
             )
-            rescoring.run()
+            percolator.rescore()
 
     @staticmethod
     def _validate_cli_dependency(command):
