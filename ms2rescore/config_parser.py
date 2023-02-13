@@ -23,15 +23,70 @@ def _parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument(
+        "identification_file",
+        type=str,
+        help="path to identification file (pin, mzid, msms.txt, tandem xml...)",
+    )
+    parser.add_argument(
+        "-m",
+        metavar="FILE",
+        action="store",
+        type=str,
+        dest="mgf_path",
+        help="path to MGF file or directory with MGF files (default: derived from\
+            identification file)",
+    )
+    parser.add_argument(
         "-c",
-        "--config-file",
         metavar="FILE",
         action="store",
         type=str,
         dest="config_file",
-        help="path to MS²Rescore configuration file (see documentation).",
+        help="path to MS²ReScore configuration file (see README.md)",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "-t",
+        metavar="PATH",
+        action="store",
+        type=str,
+        dest="tmp_path",
+        help="path to directory to place temporary files",
+    )
+    parser.add_argument(
+        "-o",
+        metavar="FILE",
+        action="store",
+        type=str,
+        dest="output_filename",
+        help="name for output files (default: derive from identification file)",
+    )
+    parser.add_argument(
+        "-l",
+        metavar="LEVEL",
+        action="store",
+        type=str,
+        dest="log_level",
+        help="logging level (default: `info`)",
+    )
+    parser.add_argument(
+        "-n",
+        metavar="VALUE",
+        action="store",
+        type=int,
+        dest="num_cpu",
+        default=None,
+        help="number of cpus available to MS²Rescore",
+    )
+    parser.add_argument(
+        "--psm_file_type",
+        metavar="PSM_FILE_TYPE",
+        action="store",
+        type=str,
+        dest="psm_file_type",
+        default=None,
+        help="determines psm parser to use from PSM_utils (default: 'infer')",
+    )
+
 
 
 def _validate_filenames(config: Dict) -> Dict:
