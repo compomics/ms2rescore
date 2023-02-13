@@ -1,22 +1,18 @@
-import json
 import logging
-import os
 import re
 import subprocess
-import tempfile
-from glob import glob
 from multiprocessing import cpu_count
 from pathlib import Path
 from typing import Dict, Optional, Union
 
 import psm_utils.io
-from pandas.errors import EmptyDataError
 from rich.console import Console
 
 from ms2rescore import plotting, setup_logging
 from ms2rescore.config_parser import parse_config
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
 from ms2rescore.feature_generators.ms2pip import MS2PIPFeatureGenerator
+from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +80,9 @@ class MS2Rescore:
             show_progressbar=True,
         )
 
-        logger.debug("Parsing modifications...")
         psm_list.set_ranks(lower_score_better=False)  # TODO make config option
         psm_list = psm_list.get_rank1_psms()
+        logger.debug("Parsing modifications...")
         psm_list.rename_modifications(self.config["ms2rescore"]["modification_mapping"])
         psm_list.add_fixed_modifications(
             self.config["ms2rescore"]["fixed_modifications"]
@@ -112,6 +108,11 @@ class MS2Rescore:
 
         fgen = MS2PIPFeatureGenerator(config=self.config)
         fgen.add_features(psm_list)
+
+        exit()
+
+        # fgen = DeepLCFeatureGenerator(config=self.config)
+        # fgen.add_features(psm_list)
 
         psm_utils.io.write_file(
             psm_list,

@@ -82,7 +82,8 @@
                 "fixed_modifications": {
                     "description": "Mapping of amino acids with fixed modifications to the modification name.",
                     "type": "object",
-                    "default": {}
+                    "default": {},
+                    "additionalProperties": true
                 },
                 "num_cpu": {
                     "description": "Number of parallel processes to use; -1 for all available",
