@@ -3,8 +3,7 @@
 import logging
 import mmap
 import os.path
-import random
-import re
+from typing import Union, Tuple, Dict
 
 from rich.progress import track
 
@@ -20,7 +19,7 @@ class ParseMGFError(MS2RescoreError):
 
 def parse_mgf_title_rt(
     path_to_mgf: Union[str, os.PathLike]
-) -> Tuple[Dict[int, str], Dict[int, float]]:
+) -> Dict[str, float]:
     """Parse MGF file to extract title and retention time fields, by spectrum index."""
     title = None
     retention_times = dict()
