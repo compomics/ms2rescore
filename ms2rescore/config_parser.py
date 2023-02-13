@@ -32,7 +32,7 @@ def _parse_arguments() -> argparse.Namespace:
         metavar="FILE",
         action="store",
         type=str,
-        dest="mgf_path",
+        dest="spectrum_path",
         help="path to MGF file or directory with MGF files (default: derived from\
             identification file)",
     )
@@ -57,7 +57,7 @@ def _parse_arguments() -> argparse.Namespace:
         metavar="FILE",
         action="store",
         type=str,
-        dest="output_filename",
+        dest="output_path",
         help="name for output files (default: derive from identification file)",
     )
     parser.add_argument(
