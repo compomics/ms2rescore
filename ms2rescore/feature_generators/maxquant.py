@@ -77,7 +77,7 @@ class MaxquantFeatureGenerator(FeatureGenerator):
           peaks with the highest intensities
         """
         if intensities == "" or mass_errors == "":
-            return np.nan, np.nan, np.nan
+            return 0, 0, 0 # Return zeroes instead of np.nan
 
         else:
             intensities = [float(i) for i in intensities.split(";")]
@@ -108,7 +108,7 @@ class MaxquantFeatureGenerator(FeatureGenerator):
         """
         pseudo_count = 0.00001
         if intensities == "":
-            return np.nan, np.nan, np.nan, np.nan
+            return 0, 0, 0, 0 # Return zeroes instead of np.nan
         else:
 
             ln_explained_ion_current = float(intensity_coverage) + pseudo_count

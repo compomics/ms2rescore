@@ -5,7 +5,7 @@ from pathlib import Path
 import psm_utils
 
 from ms2rescore.rescoring_engines import Rescoringengine
-
+from ms2rescore.exceptions import MS2RescoreError
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +25,7 @@ class PercolatorRescoring(Rescoringengine):
         self.psm_list = psm_list
         self.config = config
         self.output_file_root = str(
-            Path(self.output_path) / Path(self.config["ms2rescore"]["psm_file"]).stem
+            Path(self.config["ms2rescore"]["output_path"]) / Path(self.config["ms2rescore"]["psm_file"]).stem
         ) # TODO add feature generators to the name? 
         self.kwargs ={
                 "results-psms": self.output_file_root + "_target_psms.pout",
@@ -38,18 +38,22 @@ class PercolatorRescoring(Rescoringengine):
             }
         
     
-    def run(self):
+    def rescore(self):
         """Run Percolator"""
         self.write_pin_file()
-        output = subprocess.run(
-            self.parse_percolator_command(),
-            capture_output=True, 
-            check=True)
+        try:
+            output = subprocess.run(
+                self.parse_percolator_command(),
+                capture_output=True, 
+                )
+        except subprocess.CalledProcessError:
+            logger.warn(f"Percolator was not run properly:\n {output.stdout}")
+            raise MS2RescoreError("Percolator error")
         logger.info(
                 "Percolator output: \n" + output.stderr.decode(encoding="utf-8"),
                 extra={"highlighter": None},
             )
-
+        
 
     def write_pin_file(self):
         """Write pin file for rescoring"""
