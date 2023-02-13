@@ -5,13 +5,11 @@ import multiprocessing
 import warnings
 from itertools import chain
 from pathlib import Path
-from typing import Dict, Optional, Union
 
 import numpy as np
-import pandas as pd
 from ms2pip.ms2pipC import MS2PIP
 from psm_utils import PSMList
-from psm_utils.io import write_file
+from psm_utils.io import peptide_record
 from rich.progress import track
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import mean_squared_error as mse
@@ -129,21 +127,20 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 psm_list_run = PSMList(
                     psm_list=list(chain.from_iterable(psms.values()))
                 )
-                peprec_filename = (
-                    "-".join([self.tmp_file_root, str(collection), str(run)])
-                    + ".peprec"
-                )
-                write_file(psm_list_run, peprec_filename, "peprec")
+                peprec_df = peptide_record.to_dataframe(psm_list_run)
 
-                # Prepare spectrum file
+                # Prepare spectrum filenames
                 spectrum_filename = infer_spectrum_path(
                     self.config["ms2rescore"]["spectrum_path"], run
+                )
+                output_filename = "-".join(
+                    [self.tmp_file_root, str(collection), str(run)]
                 )
 
                 # Run MS²PIP
                 logger.debug("Running MS²PIP...")
                 ms2pip = MS2PIP(
-                    peprec_filename,
+                    peprec_df,
                     spec_file=spectrum_filename,
                     spectrum_id_pattern=self.config["ms2rescore"][
                         "spectrum_id_pattern"
@@ -167,7 +164,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 for spectrum_id, features in features.items():
                     psm_entries = psm_dict[collection][run][spectrum_id]
                     if len(psm_entries) > 1:
-                        raise ValueError(
+                        raise MS2RescoreError(
                             "Multiple PSMs per spectrum currently not supported."
                         )
                     if psm_entries[0]["rescoring_features"]:
