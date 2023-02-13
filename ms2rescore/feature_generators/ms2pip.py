@@ -135,7 +135,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 )
                 output_filename = "-".join(
                     [self.tmp_file_root, str(collection), str(run)]
-                )
+                ) # TODO use this if files have to be written
 
                 # Run MS²PIP
                 logger.debug("Running MS²PIP...")
@@ -167,10 +167,10 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                         raise MS2RescoreError(
                             "Multiple PSMs per spectrum currently not supported."
                         )
-                    if psm_entries[0]["rescoring_features"]:
-                        psm_entries[0]["rescoring_features"].update(features)
-                    else:
-                        psm_entries[0]["rescoring_features"] = features
+
+                    psm_entries[0]["rescoring_features"].update(features)
+
+
 
     @staticmethod
     def _get_modification_config(psm_list):
