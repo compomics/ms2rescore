@@ -16,7 +16,6 @@ from ms2rescore.feature_generators import FeatureGenerator
 from ms2rescore.utils import infer_spectrum_path
 from ms2rescore.parse_mgf import parse_mgf_title_rt
 from ms2rescore.exceptions import MS2RescoreError
-import click
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
@@ -111,7 +110,8 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                     cnn_model=True,
                     verbose=False,
                     path_model=self.selected_model,
-                    pygam_calibration=True
+                    pygam_calibration=True,
+                    deeplc_retrain=True
                 )
                 self.deeplc_predictor.calibrate_preds(
                     seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)

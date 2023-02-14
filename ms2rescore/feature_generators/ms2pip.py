@@ -167,7 +167,6 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                         raise MS2RescoreError(
                             "Multiple PSMs per spectrum currently not supported."
                         )
-
                     psm_entries[0]["rescoring_features"].update(features)
 
 
@@ -367,7 +366,8 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                         * np.linalg.norm(prediction_y_unlog, 2)
                     ),  # Cos similarity y ions
                 ]
-                features[spec_id] = dict(zip(self.feature_names, feature_values))
+                
+                features[spec_id] = dict(zip(self.feature_names, [0.0 if ft is np.nan else ft for ft in feature_values]))
 
         return features
 
