@@ -81,7 +81,7 @@ class MS2Rescore:
             filetype=self.config["ms2rescore"]["psm_file_type"],
             show_progressbar=True,
         )
-
+    
         psm_list.set_ranks(lower_score_better=False)  # TODO make config option
         psm_list = psm_list.get_rank1_psms()
         logger.debug("Parsing modifications...")
@@ -108,8 +108,10 @@ class MS2Rescore:
             new_ids = [_match_ids(old_id) for old_id in psm_list["spectrum_id"]]
             psm_list["spectrum_id"] = new_ids
 
-        # fgen = MS2PIPFeatureGenerator(config=self.config)
-        # fgen.add_features(psm_list)
+        fgen = MS2PIPFeatureGenerator(config=self.config)
+        fgen.add_features(psm_list)
+
+        DeepLCFeatureGenerator(self.config).add_features(psm_list)
 
         MaxquantFeatureGenerator().add_features(psm_list)
         logging.debug(f"Writing {self.output_file_root}.pin file")
