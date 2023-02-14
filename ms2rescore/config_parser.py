@@ -23,9 +23,9 @@ def _parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument(
-        "identification_file",
+        "psm_file",
         type=str,
-        help="path to identification file (pin, mzid, msms.txt, tandem xml...)",
+        help="path to psm file (pin, mzid, msms.txt, tandem xml...)",
     )
     parser.add_argument(
         "-m",
@@ -79,13 +79,15 @@ def _parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--psm_file_type",
-        metavar="PSM_FILE_TYPE",
+        metavar="FILE",
         action="store",
         type=str,
         dest="psm_file_type",
         default=None,
         help="determines psm parser to use from PSM_utils (default: 'infer')",
     )
+
+    return parser.parse_args()
 
 
 
