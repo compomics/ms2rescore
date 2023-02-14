@@ -15,6 +15,7 @@ from ms2pip.ms2pipC import MODELS as ms2pip_models
 from psm_utils.io import FILETYPES
 
 from ms2rescore.ms2rescore_main import MS2Rescore
+from ms2rescore.exceptions import MS2RescoreConfigurationError
 
 
 logger = logging.getLogger(__name__)
@@ -264,15 +265,26 @@ class App(customtkinter.CTk):
         self.frag_error_spinbox.pack(padx=10, pady=10, anchor="w")
         self.frag_error_spinbox.set(0.02)
 
-        # self.modification_label = customtkinter.CTkLabel(
-        #     tabview_object, text="MS²PIP modifications", anchor="w"
-        # )
-        # self.modification_label.pack(anchor=tk.W, fill=tk.BOTH)
-        # self.ms2pip_modifications = customtkinter.CTkTextbox(tabview_object)
-        # self.ms2pip_modifications.insert(
-        #     "0.0", "modification,mass_shift,opt,AA\nPhosphoS,79.966331,opt,S"
-        # )
-        # self.ms2pip_modifications.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        self.modification_mapping_label = customtkinter.CTkLabel(
+            tabview_object, text="Modification mapping", anchor="w"
+        )
+        self.modification_mapping_label.pack(anchor=tk.W, fill=tk.BOTH)
+        self.modification_mapping_box = customtkinter.CTkTextbox(tabview_object)
+        self.modification_mapping_box.insert(
+            "0.0", "Modification label: unimod modification"
+        )
+        self.modification_mapping_box.pack(padx=10, pady=10, fill=tk.X)
+
+        self.fixed_modification_label = customtkinter.CTkLabel(
+            tabview_object, text="Fixed modifications", anchor="w"
+        )
+        self.fixed_modification_label.pack(anchor=tk.W, fill=tk.BOTH)
+        self.fixed_modifications_box = customtkinter.CTkTextbox(tabview_object)
+        self.fixed_modifications_box.insert(
+            "0.0", "Unimod modification: aa,aa"
+        )
+        self.fixed_modifications_box.pack(padx=10, pady=10, fill=tk.X)
+
 
     def web_callback(self, url):
         webbrowser.open_new(url)
@@ -281,7 +293,7 @@ class App(customtkinter.CTk):
         """Create MS²Rescore config file"""
 
         feature_generators = ["ms2pip", "deeplc", "percolator"]
-        if self.pipeline_var.get() == "maxquant":
+        if self.pipeline_var.get() == "msms":
             feature_generators = feature_generators + ["maxquant"]
 
         ms2rescore_config = {
@@ -294,7 +306,9 @@ class App(customtkinter.CTk):
             "spectrum_path": self.mgf_dir.selected_filename,
             "output_path": self.file_prefix.selected_filename,
             "log_level": self.logging_var.get(),
-            "num_cpu": int(self.num_cpu_var.get())
+            "num_cpu": int(self.num_cpu_var.get()),
+            "modification_mapping": self.parse_modification_mapping(self.modification_mapping_box.get("0.0", "end")),
+            "fixed_modifications": self.parse_fixed_modifications(self.fixed_modifications_box.get("0.0", "end"))
             # "id_decoy_pattern": None,
             # "psm_id_pattern": None,
             # "spectrum_id_pattern": None,
@@ -302,20 +316,46 @@ class App(customtkinter.CTk):
         ms2pip_config = {
             "model": self.selected_ms2pip_model.get(),
             "frag_error": float(self.frag_error_spinbox.get()),
-            # "modifications": self.parse_ms2pip_modifications(self.ms2pip_modifications.get("0.0", "end"))
         }
-
         self.config = {"ms2rescore": ms2rescore_config, "ms2pip": ms2pip_config}
 
     @staticmethod
-    def parse_ms2pip_modifications(modifications_txt):
-        """Parse text input ms2pip modifications"""
+    def parse_modification_mapping(modifications_txt):
+        """Parse text input modifications mapping"""
 
-        modification_list = modifications_txt.split("\n")
-        if modifications_txt[0].startswith("modification"):
-            modification_list.pop(0)
+        modification_list = modifications_txt.rstrip().split("\n")
+        modification_map = {}
+        for mod in modification_list:
+            if len(mod.split(":")) != 2:
+                raise MS2RescoreConfigurationError(f"Error parsing {mod}\nMake sure modification name and unimod name are separated by ':'")
 
-        return modification_list
+            modification_label, unimod_label = mod.split(":")[0], mod.split(":")[1]            
+            if (modification_label == "") or (modification_label == "Modification label"):
+                continue
+            else:
+                modification_map[modification_label] = unimod_label.lstrip(" ")
+
+        return modification_map
+
+    @staticmethod
+    def parse_fixed_modifications(modifications_txt):
+        """Parse text input fixed modifications"""
+
+        modification_list = modifications_txt.rstrip().split("\n")
+        fixed_modification_dict = {}
+        for mod in modification_list:
+            if len(mod.split(":")) != 2:
+                raise MS2RescoreConfigurationError(f"Error parsing {mod}\nMake sure modification name and amino acids are separated by ':'\nMake sure multiple amino acids are separated by ','")
+            
+            unimod_label, amino_acids = mod.split(":")[0], mod.split(":")[1] 
+            amino_acids = [aa.upper() for aa in amino_acids.lstrip(" ").split(",")]
+            
+            if (unimod_label == "") or (unimod_label == "Unimod modification"):
+                continue
+            else:
+                fixed_modification_dict[unimod_label] = amino_acids
+
+        return fixed_modification_dict
 
     def monitor(self, ms2rescore_process):
         """ Monitor the ms2rescore thread """
