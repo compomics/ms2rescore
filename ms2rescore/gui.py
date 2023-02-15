@@ -1,5 +1,6 @@
 """Graphical user interface for MS²Rescore using Gooey."""
 import logging
+import logging.handlers
 import os
 import sys
 
@@ -24,6 +25,8 @@ logger.setLevel(logging.INFO)
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
+
+        self.queue = multiprocessing.Queue(-1)
 
         # App config
         self.geometry(f"{1100}x{580}")
@@ -140,12 +143,13 @@ class App(customtkinter.CTk):
 
         # Setup loggers (both textbox and CLI are configured)
         # logger.addHandler(logging.StreamHandler())
-        logger.addHandler(MyHandlerText(self.textbox))
         logger.addHandler(logging.StreamHandler(sys.stdout))
+        self.queue_listener = logging.handlers.QueueListener(self.queue, MyHandlerText(self.textbox))
+        self.queue_listener.start()
 
         # Test logger from code
         logger.info("Hello world!")
-    
+
     def start_button_callback(self):
         """Start button callback"""
 
@@ -161,7 +165,7 @@ class App(customtkinter.CTk):
         self.progressbar.start()
 
         self.create_config()
-        ms2rescore_run = MS2RescoreProcess(self.config)
+        ms2rescore_run = MS2RescoreProcess(self.config, self.queue)
         ms2rescore_run.start()
         self.monitor(ms2rescore_run)
 
@@ -368,16 +372,21 @@ class App(customtkinter.CTk):
 class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""
 
-    def __init__(self, config) -> None:
+    def __init__(self, config, queue) -> None:
         super().__init__()
         self.config = config.copy()
+        self.queue = queue
 
     def run(self):
-        logger.info("starting MS²Rescore")
+        rootLogger = logging.getLogger()
+        rootLogger.setLevel(logging.INFO)
+        rootLogger.addHandler(logging.handlers.QueueHandler(self.queue))
+        rootLogger.info("starting MS²Rescore")
+
         rescore = None
         try:
             rescore = MS2Rescore(
-                parse_cli_args=False, configuration=self.config, set_logger=True
+                parse_cli_args=False, configuration=self.config,
             )
             rescore.run()
         except Exception:
