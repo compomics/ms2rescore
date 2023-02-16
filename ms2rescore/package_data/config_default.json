@@ -1,7 +1,7 @@
 {
     "$schema": "./config_schema.json",
     "ms2rescore":{
-        "feature_generators": ["ms2pip", "deeplc", "maxquant", "percolator"],
+        "feature_generators": ["ms2pip", "deeplc"],
         "rescoring_engine": "percolator",
         "config_file":null,
         "psm_file": null,
@@ -13,6 +13,7 @@
         "id_decoy_pattern": null,
         "psm_id_pattern": null,
         "spectrum_id_pattern": null,
+        "lower_score_is_better": false,
         "modification_mapping": {},
         "fixed_modifications": {},
         "num_cpu": -1

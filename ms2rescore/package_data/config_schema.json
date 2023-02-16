@@ -15,11 +15,11 @@
                     "type": "array",
                     "items": {
                         "type": "string",
-                        "enum": ["ms2pip", "deeplc", "maxquant", "percolator"]
+                        "enum": ["ms2pip", "deeplc"]
                     },
                     "minItems": 1,
                     "uniqueItems": true,
-                    "default": ["ms2pip", "deeplc", "maxquant", "percolator"]
+                    "default": ["ms2pip", "deeplc", "maxquant"]
                 },
                 "rescoring_engine": {
                     "description": "Rescoring engine to use.",
@@ -73,6 +73,11 @@
                     "oneOf": [{"type": "string"}, {"type": "null"}],
                     "default": "(.*)",
                     "format": "regex"
+                },
+                "lower_score_is_better": {
+                    "description": "Bool indicating if lower score is better",
+                    "type": "boolean",
+                    "default": false
                 },
                 "modification_mapping": {
                     "description": "Mapping of modification labels to each replacement label.",
