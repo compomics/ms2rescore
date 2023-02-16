@@ -11,6 +11,7 @@ import tkinter.messagebox
 from typing import Union, Callable
 import webbrowser
 import multiprocessing
+from rich.logging import RichHandler
 
 from ms2pip.ms2pipC import MODELS as ms2pip_models
 from psm_utils.io import FILETYPES
@@ -104,11 +105,13 @@ class App(customtkinter.CTk):
             row=0, column=0, columnspan=2, padx=10, pady=(10, 0), sticky="nsew"
         )
         config_tabview.add("Main")  # add tab at the end
+        config_tabview.add("Advanced")  # add tab at the end
         config_tabview.add("MS²PIP")  # add tab at the end
-        config_tabview.add("DeepLC")  # add tab at the end
+        # config_tabview.add("DeepLC")  # add tab at the end
         config_tabview.set("Main")  # set currently visible tab
 
         self.create_main_tab(config_tabview.tab("Main"))
+        self.create_advanced_tab(config_tabview.tab("Advanced"))
         self.create_ms2pip_tab(config_tabview.tab("MS²PIP"))
 
         progess_tabview = customtkinter.CTkTabview(self.middle_frame)
@@ -210,7 +213,7 @@ class App(customtkinter.CTk):
             master=tabview_object,
             values=list(FILETYPES.keys()),
             variable=self.pipeline_var,
-        )  # TODO import from psm_utils
+        )
         self.pipeline_combobox.pack(fill=tk.BOTH)
 
         self.num_cpu_var = customtkinter.StringVar(value="-1")
@@ -225,10 +228,64 @@ class App(customtkinter.CTk):
         )
         self.num_cpu.pack(fill=tk.BOTH)
 
-        self.opt_label = customtkinter.CTkLabel(
-            tabview_object, text="Optional paramaters:", anchor="w"
+        self.modification_mapping_label = customtkinter.CTkLabel(
+            tabview_object, text="Modification mapping", anchor="w"
         )
-        self.opt_label.pack(anchor="w", fill=tk.BOTH)
+        self.modification_mapping_label.pack(anchor=tk.W)
+        self.modification_mapping_box = customtkinter.CTkTextbox(tabview_object, height=50)
+        self.modification_mapping_box.insert(
+            "0.0", "Modification label: unimod modification"
+        )
+        self.modification_mapping_box.pack(padx=10, pady=10, fill=tk.BOTH,expand=True)
+
+        self.fixed_modification_label = customtkinter.CTkLabel(
+            tabview_object, text="Fixed modifications", anchor="w"
+        )
+        self.fixed_modification_label.pack(anchor=tk.W)
+        self.fixed_modifications_box = customtkinter.CTkTextbox(tabview_object, height=50)
+        self.fixed_modifications_box.insert(
+            "0.0", "Unimod modification: aa,aa"
+        )
+        self.fixed_modifications_box.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+    
+    def create_advanced_tab(self, tabview_object):
+        """Configuring the UI for the advanced tab"""
+
+        self.lower_score_label = customtkinter.CTkLabel(
+            tabview_object, text="Lower score is better", anchor="w"
+        )
+        self.lower_score_label.pack(anchor=tk.W)
+        self.lower_score_var = customtkinter.StringVar(value="off")
+        self.lower_score_tickbox = customtkinter.CTkSwitch(
+            master=tabview_object,
+            text="",
+            variable=self.lower_score_var,
+            onvalue="true",
+            offvalue="false",
+        )
+        self.lower_score_tickbox.pack(anchor=tk.W, fill=tk.BOTH)
+
+        # Regex patterns
+        self.id_decoy_pattern_label = customtkinter.CTkLabel(
+            tabview_object, text="Specify decoy pattern:", anchor="w"
+        )
+        self.id_decoy_pattern_label.pack(anchor=tk.W)
+        self.id_decoy_pattern = customtkinter.CTkEntry(master=tabview_object, placeholder_text="decoy pattern regex")
+        self.id_decoy_pattern.pack(padx=10, pady=10, fill=tk.BOTH)
+
+        self.psm_id_pattern_label = customtkinter.CTkLabel(
+            tabview_object, text="Specify psm id pattern:", anchor="w"
+        )
+        self.psm_id_pattern_label.pack(anchor=tk.W)
+        self.psm_id_pattern = customtkinter.CTkEntry(master=tabview_object, placeholder_text="psm id pattern regex")
+        self.psm_id_pattern.pack(padx=10, pady=10, fill=tk.BOTH)
+
+        self.spectrum_id_pattern_label = customtkinter.CTkLabel(
+            tabview_object, text="Specify spectrum id pattern:", anchor="w"
+        )
+        self.spectrum_id_pattern_label.pack(anchor=tk.W)
+        self.spectrum_id_pattern = customtkinter.CTkEntry(master=tabview_object, placeholder_text="spectrum id pattern regex")
+        self.spectrum_id_pattern.pack(padx=10, pady=10, fill=tk.BOTH)
 
         self.tmp_dir = OptionalInput(
             tabview_object, text="temp directory", fileoption="directory"
@@ -244,6 +301,7 @@ class App(customtkinter.CTk):
             tabview_object, text="config file", fileoption="openfile"
         )
         self.config_filepath.pack(anchor="w", fill=tk.BOTH)
+
 
     def create_ms2pip_tab(self, tabview_object):
         """Configuring the UI for the main tab"""
@@ -269,26 +327,6 @@ class App(customtkinter.CTk):
         self.frag_error_spinbox.pack(padx=10, pady=10, anchor="w")
         self.frag_error_spinbox.set(0.02)
 
-        self.modification_mapping_label = customtkinter.CTkLabel(
-            tabview_object, text="Modification mapping", anchor="w"
-        )
-        self.modification_mapping_label.pack(anchor=tk.W, fill=tk.BOTH)
-        self.modification_mapping_box = customtkinter.CTkTextbox(tabview_object)
-        self.modification_mapping_box.insert(
-            "0.0", "Modification label: unimod modification"
-        )
-        self.modification_mapping_box.pack(padx=10, pady=10, fill=tk.X)
-
-        self.fixed_modification_label = customtkinter.CTkLabel(
-            tabview_object, text="Fixed modifications", anchor="w"
-        )
-        self.fixed_modification_label.pack(anchor=tk.W, fill=tk.BOTH)
-        self.fixed_modifications_box = customtkinter.CTkTextbox(tabview_object)
-        self.fixed_modifications_box.insert(
-            "0.0", "Unimod modification: aa,aa"
-        )
-        self.fixed_modifications_box.pack(padx=10, pady=10, fill=tk.X)
-
 
     def web_callback(self, url):
         webbrowser.open_new(url)
@@ -296,13 +334,13 @@ class App(customtkinter.CTk):
     def create_config(self):
         """Create MS²Rescore config file"""
 
-        feature_generators = ["ms2pip", "deeplc", "percolator"]
+        feature_generators = ["ms2pip", "deeplc"]
         if self.pipeline_var.get() == "msms":
             feature_generators = feature_generators + ["maxquant"]
 
         ms2rescore_config = {
             "feature_generators": feature_generators,
-            # "rescoring_engine": "percolator",
+            #"rescoring_engine": "percolator",
             "config_file": self.config_filepath.selected_filename,
             "psm_file": self.id_file.selected_filename,
             "psm_file_type": self.pipeline_var.get(),
@@ -312,15 +350,17 @@ class App(customtkinter.CTk):
             "log_level": self.logging_var.get(),
             "num_cpu": int(self.num_cpu_var.get()),
             "modification_mapping": self.parse_modification_mapping(self.modification_mapping_box.get("0.0", "end")),
-            "fixed_modifications": self.parse_fixed_modifications(self.fixed_modifications_box.get("0.0", "end"))
-            # "id_decoy_pattern": None,
-            # "psm_id_pattern": None,
-            # "spectrum_id_pattern": None,
+            "fixed_modifications": self.parse_fixed_modifications(self.fixed_modifications_box.get("0.0", "end")),
+            "id_decoy_pattern": self.id_decoy_pattern.get(),
+            "psm_id_pattern": self.psm_id_pattern.get(),
+            "spectrum_id_pattern": self.spectrum_id_pattern.get(),
+            "lower_score_is_better": True if self.lower_score_var == "true" else False
         }
         ms2pip_config = {
             "model": self.selected_ms2pip_model.get(),
             "frag_error": float(self.frag_error_spinbox.get()),
         }
+        # TODO add percolator config 
         self.config = {"ms2rescore": ms2rescore_config, "ms2pip": ms2pip_config}
 
     @staticmethod
@@ -367,7 +407,6 @@ class App(customtkinter.CTk):
             self.after(100, lambda: self.monitor(ms2rescore_process))
         else:
             self.stop_button_callback()
-
 
 class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""

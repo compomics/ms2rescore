@@ -82,7 +82,7 @@ class MS2Rescore:
             show_progressbar=True,
         )
     
-        psm_list.set_ranks(lower_score_better=False)  # TODO make config option
+        psm_list.set_ranks(lower_score_better=self.config["ms2rescore"]["lower_score_is_better"])  
         psm_list = psm_list.get_rank1_psms()
         logger.debug("Parsing modifications...")
         psm_list.rename_modifications(self.config["ms2rescore"]["modification_mapping"])
