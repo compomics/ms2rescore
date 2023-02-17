@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 id_file_parser = None
 
+FEATURE_GENERATORS = {
+    "ms2pip": MS2PIPFeatureGenerator,
+    "deeplc": DeepLCFeatureGenerator,
+    "maxquant": MaxquantFeatureGenerator 
+}
 
 class MS2Rescore:
     """
@@ -108,12 +113,10 @@ class MS2Rescore:
             new_ids = [_match_ids(old_id) for old_id in psm_list["spectrum_id"]]
             psm_list["spectrum_id"] = new_ids
 
-        fgen = MS2PIPFeatureGenerator(config=self.config)
-        fgen.add_features(psm_list)
+        psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
+        for feature_generator in self.config["ms2rescore"]["feature_generators"]:
+            FEATURE_GENERATORS[feature_generator](config=self.config).add_features(psm_list)
 
-        DeepLCFeatureGenerator(self.config).add_features(psm_list)
-
-        MaxquantFeatureGenerator().add_features(psm_list)
         logging.debug(f"Writing {self.output_file_root}.pin file")
 
         if self.config["ms2rescore"]["rescoring_engine"] == "percolator":
