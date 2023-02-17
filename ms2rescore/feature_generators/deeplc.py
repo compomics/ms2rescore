@@ -73,10 +73,11 @@ class DeepLCFeatureGenerator(FeatureGenerator):
     def add_features(self, psm_list: PSMList) -> None:
         """Add DeepLC-derived features to PSMs."""
         from deeplc import DeepLC
+        logger.info("Adding DeepLC-derived features to PSMs.")
 
         # Get easy-access nested version of PSMList
         psm_dict = psm_list.get_psm_dict()
-        peptide_rt_diff_dict = defaultdict(lambda: {"observed_retention_time_best": np.Inf, "predicted_retention_time_best": np.Inf, "rt_diff_best": np.Inf})  # TODO per run or per dataset??
+        peptide_rt_diff_dict = defaultdict(lambda: {"observed_retention_time_best": np.Inf, "predicted_retention_time_best": np.Inf, "rt_diff_best": np.Inf}) 
 
         if not all(psm_list["retention_time"]):
             retention_times = psm_list["retention_time"]
@@ -95,7 +96,7 @@ class DeepLCFeatureGenerator(FeatureGenerator):
             self.deeplc_predictor = None
             self.selected_model = None
             for run, psms in runs.items():
-                logger.debug(f"Processing {run}")
+                logger.info(f"Processing {run}")
                 # Prepare PSM file
                 psm_list_run = PSMList(
                     psm_list=list(chain.from_iterable(psms.values()))
