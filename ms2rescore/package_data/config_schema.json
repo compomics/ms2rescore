@@ -15,11 +15,11 @@
                     "type": "array",
                     "items": {
                         "type": "string",
-                        "enum": ["ms2pip", "deeplc"]
+                        "enum": ["ms2pip", "deeplc", "maxquant"]
                     },
                     "minItems": 1,
                     "uniqueItems": true,
-                    "default": ["ms2pip", "deeplc", "maxquant"]
+                    "default": ["ms2pip", "deeplc"]
                 },
                 "rescoring_engine": {
                     "description": "Rescoring engine to use.",
