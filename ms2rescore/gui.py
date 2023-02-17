@@ -16,6 +16,7 @@ from rich.logging import RichHandler
 from ms2pip.ms2pipC import MODELS as ms2pip_models
 from psm_utils.io import FILETYPES
 
+import ms2rescore
 from ms2rescore.ms2rescore_main import MS2Rescore
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 
@@ -44,54 +45,7 @@ class App(customtkinter.CTk):
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
-        self.logo = customtkinter.CTkImage(
-            light_image=Image.open(os.path.normpath("img/ms2rescore_logo.png")),
-            size=(130, 130),
-        )
-        self.logo_label = customtkinter.CTkLabel(
-            self.sidebar_frame, text="", image=self.logo
-        )
-        self.logo_label.grid(row=0, column=0, rowspan=4, padx=0, pady=10)
-
-        self.appearance_mode_label = customtkinter.CTkLabel(
-            self.sidebar_frame, text="Appearance Mode:", anchor="w"
-        )
-        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
-        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(
-            self.sidebar_frame,
-            values=["System", "Light", "Dark"],
-            command=self.change_appearance_mode_event,
-        )
-        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
-        self.scaling_label = customtkinter.CTkLabel(
-            self.sidebar_frame, text="UI Scaling:", anchor="w"
-        )
-        self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
-        self.scaling_optionemenu = customtkinter.CTkOptionMenu(
-            self.sidebar_frame,
-            values=["80%", "90%", "100%", "110%", "120%"],
-            command=self.change_scaling_event,
-        )
-        self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
-
-        self.github_logo = customtkinter.CTkImage(
-            dark_image=Image.open(os.path.normpath("img/github-mark-white.png")),
-            light_image=Image.open(os.path.normpath("img/github-mark.png")),
-            size=(25, 25),
-        )
-        self.github_button = customtkinter.CTkButton(
-            self.sidebar_frame,
-            text="compomics/ms2rescore",
-            anchor="w",
-            fg_color="transparent",
-            text_color=("#000000", "#fefdff"),
-            image=self.github_logo,
-        )
-        self.github_button.bind(
-            "<Button-1>",
-            lambda e: self.web_callback("https://github.com/compomics/ms2rescore"),
-        )
-        self.github_button.grid(row=9, column=0, padx=20, pady=(10, 10))
+        self.create_sidebar_frame(self.sidebar_frame)
 
         # Tabview config
         self.middle_frame = customtkinter.CTkFrame(self, corner_radius=0)
@@ -104,12 +58,14 @@ class App(customtkinter.CTk):
         config_tabview.grid(
             row=0, column=0, columnspan=2, padx=10, pady=(10, 0), sticky="nsew"
         )
+
         config_tabview.add("Main")  # add tab at the end
         config_tabview.add("Advanced")  # add tab at the end
         config_tabview.add("MS²PIP")  # add tab at the end
         # config_tabview.add("DeepLC")  # add tab at the end
         config_tabview.set("Main")  # set currently visible tab
 
+        # Create tabs
         self.create_main_tab(config_tabview.tab("Main"))
         self.create_advanced_tab(config_tabview.tab("Advanced"))
         self.create_ms2pip_tab(config_tabview.tab("MS²PIP"))
@@ -150,22 +106,21 @@ class App(customtkinter.CTk):
         self.queue_listener = logging.handlers.QueueListener(self.queue, MyHandlerText(self.textbox))
         self.queue_listener.start()
 
-        # Test logger from code
-        logger.info("Hello world!")
-
     def start_button_callback(self):
         """Start button callback"""
 
         self.start_button.grid_forget()
         self.stop_button = customtkinter.CTkButton(
             master=self.middle_frame, text="Stop", command=self.stop_button_callback
-        )  # TODO add stop function callback
+        )  
         self.stop_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
 
         self.progressbar = customtkinter.CTkProgressBar(self.middle_frame)
         self.progressbar.grid(row=1, column=2, padx=10, pady=10, sticky="e")
         self.progressbar.configure(mode="indeterminnate")
         self.progressbar.start()
+
+        self.textbox.delete("0.0", "end")
 
         self.create_config()
         ms2rescore_run = MS2RescoreProcess(self.config, self.queue)
@@ -186,6 +141,102 @@ class App(customtkinter.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
+    
+    def create_sidebar_frame(self, tkinter_frame):
+        """Create the UI sidebar"""
+
+        self.logo = customtkinter.CTkImage(
+            light_image=Image.open(os.path.normpath("img/ms2rescore_logo.png")),
+            size=(130, 130),
+        )
+        self.logo_label = customtkinter.CTkLabel(
+            tkinter_frame, text="", image=self.logo
+        )
+        self.logo_label.grid(row=0, column=0, rowspan=4, padx=0, pady=10)
+
+        self.ref_label1 = customtkinter.CTkButton(
+            tkinter_frame,
+            text="Declercq et al. 2022 MCP",
+            text_color=("#000000", "#fefdff"),
+            fg_color="transparent",
+            anchor="w",
+        )
+        self.ref_label1.bind(
+            "<Button-2>",
+            lambda e: self.web_callback("https://doi.org/10.1016/j.mcpro.2022.100266"),
+        )
+        self.ref_label1.grid(row=6, column=0, padx=0, pady=(5, 5), sticky="sw")
+
+        self.ref_label2 = customtkinter.CTkButton(
+            tkinter_frame,
+            text="Gabriels et al. 2019 NAR",
+            text_color=("#000000", "#fefdff"),
+            fg_color="transparent",
+            anchor="w",
+        )
+        self.ref_label2.bind(
+            "<Button-3>",
+            lambda e: self.web_callback("https://doi.org/10.1093%2Fnar%2Fgkz299"),
+        )
+        self.ref_label2.grid(row=4, column=0, padx=0, pady=(5, 5), sticky="sw")
+
+        self.ref_label3 = customtkinter.CTkButton(
+            tkinter_frame,
+            text="Bouwmeester et al. 2021 Nat Methods",
+            text_color=("#000000", "#fefdff"),
+            fg_color="transparent",
+            anchor="w",
+        )
+        self.ref_label3.bind(
+            "<Button-4>",
+            lambda e: self.web_callback("https://doi.org/10.1038/s41592-021-01301-5"),
+        )
+        self.ref_label3.grid(row=5, column=0, padx=0, pady=(5, 5), sticky="sw")
+
+
+        self.appearance_mode_label = customtkinter.CTkLabel(
+            tkinter_frame, text="Appearance Mode:", anchor="w"
+        )
+        self.appearance_mode_label.grid(row=8, column=0, padx=20, pady=(15, 0))
+        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(
+            tkinter_frame,
+            values=["System", "Light", "Dark"],
+            command=self.change_appearance_mode_event,
+        )
+        self.appearance_mode_optionemenu.grid(row=9, column=0, padx=20, pady=(10, 10))
+        self.scaling_label = customtkinter.CTkLabel(
+            tkinter_frame, text="UI Scaling:", anchor="w"
+        )
+        self.scaling_label.grid(row=10, column=0, padx=20, pady=(10, 0))
+        self.scaling_optionemenu = customtkinter.CTkOptionMenu(
+            tkinter_frame,
+            values=["80%", "90%", "100%", "110%", "120%"],
+            command=self.change_scaling_event,
+        )
+        self.scaling_optionemenu.set("100%")  # set initial value
+        self.scaling_optionemenu.grid(row=11, column=0, padx=20, pady=(10, 20))
+
+        self.github_logo = customtkinter.CTkImage(
+            dark_image=Image.open(os.path.normpath("img/github-mark-white.png")),
+            light_image=Image.open(os.path.normpath("img/github-mark.png")),
+            size=(25, 25),
+        )
+        self.github_button = customtkinter.CTkButton(
+            tkinter_frame,
+            text="compomics/ms2rescore",
+            anchor="w",
+            fg_color="transparent",
+            text_color=("#000000", "#fefdff"),
+            image=self.github_logo,
+        )
+        self.github_button.bind(
+            "<Button-1>",
+            lambda e: self.web_callback("https://github.com/compomics/ms2rescore"),
+        )
+        self.github_button.grid(row=12, column=0, padx=20, pady=(10, 10))
+
+        self.version_label = customtkinter.CTkLabel(tkinter_frame, text=ms2rescore.__version__)
+        self.version_label.grid(row=13, column=0, padx=20, pady=(10, 10))
 
     def create_main_tab(self, tabview_object):
         """Configuring the UI for the main tab"""
