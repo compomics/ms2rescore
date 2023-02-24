@@ -11,7 +11,9 @@ import tkinter.messagebox
 from typing import Union, Callable
 import webbrowser
 import multiprocessing
-from rich.logging import RichHandler
+from ms2rescore.setup_logging import LOG_MAPPING
+import importlib.resources
+from pathlib import Path
 
 from ms2pip.ms2pipC import MODELS as ms2pip_models
 from psm_utils.io import FILETYPES
@@ -19,7 +21,10 @@ from psm_utils.io import FILETYPES
 import ms2rescore
 from ms2rescore.ms2rescore_main import MS2Rescore
 from ms2rescore.exceptions import MS2RescoreConfigurationError
+import ms2rescore.package_data.img as img_module
 
+with importlib.resources.path(img_module, 'config_icon.png') as resource:
+    _IMG_DIR = Path(resource).parent
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -120,10 +125,10 @@ class App(customtkinter.CTk):
         self.progressbar.configure(mode="indeterminnate")
         self.progressbar.start()
 
-        self.textbox.delete("0.0", "end")
+        self.textbox.delete("1.0", "end")
 
         self.create_config()
-        ms2rescore_run = MS2RescoreProcess(self.config, self.queue)
+        ms2rescore_run = MS2RescoreProcess(self.config, self.queue, self.logging_var.get())
         ms2rescore_run.start()
         self.monitor(ms2rescore_run)
 
@@ -144,9 +149,8 @@ class App(customtkinter.CTk):
     
     def create_sidebar_frame(self, tkinter_frame):
         """Create the UI sidebar"""
-
         self.logo = customtkinter.CTkImage(
-            light_image=Image.open(os.path.normpath("img/ms2rescore_logo.png")),
+            light_image=Image.open(os.path.join(str(_IMG_DIR), "ms2rescore_logo.png")),
             size=(130, 130),
         )
         self.logo_label = customtkinter.CTkLabel(
@@ -154,18 +158,24 @@ class App(customtkinter.CTk):
         )
         self.logo_label.grid(row=0, column=0, rowspan=4, padx=0, pady=10)
 
+        self.citing_label = customtkinter.CTkLabel(
+            tkinter_frame, text="Upon use please cite:", font = ("Bold", 14)
+        )
+        self.citing_label.grid(row=4, column=0, padx=1, pady=2, sticky="sw")
         self.ref_label1 = customtkinter.CTkButton(
             tkinter_frame,
             text="Declercq et al. 2022 MCP",
             text_color=("#000000", "#fefdff"),
             fg_color="transparent",
             anchor="w",
+            height=8,
+            font = ("normal", 12)
         )
         self.ref_label1.bind(
-            "<Button-2>",
+            "<Button-1>",
             lambda e: self.web_callback("https://doi.org/10.1016/j.mcpro.2022.100266"),
         )
-        self.ref_label1.grid(row=6, column=0, padx=0, pady=(5, 5), sticky="sw")
+        self.ref_label1.grid(row=7, column=0, padx=3, pady=0, sticky="ew")
 
         self.ref_label2 = customtkinter.CTkButton(
             tkinter_frame,
@@ -173,12 +183,14 @@ class App(customtkinter.CTk):
             text_color=("#000000", "#fefdff"),
             fg_color="transparent",
             anchor="w",
+            height=8,
+            font = ("normal", 12)
         )
         self.ref_label2.bind(
-            "<Button-3>",
+            "<Button-1>",
             lambda e: self.web_callback("https://doi.org/10.1093%2Fnar%2Fgkz299"),
         )
-        self.ref_label2.grid(row=4, column=0, padx=0, pady=(5, 5), sticky="sw")
+        self.ref_label2.grid(row=5, column=0, padx=3, pady=0, sticky="sew")
 
         self.ref_label3 = customtkinter.CTkButton(
             tkinter_frame,
@@ -186,39 +198,41 @@ class App(customtkinter.CTk):
             text_color=("#000000", "#fefdff"),
             fg_color="transparent",
             anchor="w",
+            height=8,
+            font = ("normal", 12)
         )
         self.ref_label3.bind(
-            "<Button-4>",
+            "<Button-1>",
             lambda e: self.web_callback("https://doi.org/10.1038/s41592-021-01301-5"),
         )
-        self.ref_label3.grid(row=5, column=0, padx=0, pady=(5, 5), sticky="sw")
+        self.ref_label3.grid(row=6, column=0, padx=3, pady=0, sticky="ew")
 
 
         self.appearance_mode_label = customtkinter.CTkLabel(
             tkinter_frame, text="Appearance Mode:", anchor="w"
         )
-        self.appearance_mode_label.grid(row=8, column=0, padx=20, pady=(15, 0))
+        self.appearance_mode_label.grid(row=9, column=0, padx=20, pady=(15, 0))
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(
             tkinter_frame,
             values=["System", "Light", "Dark"],
             command=self.change_appearance_mode_event,
         )
-        self.appearance_mode_optionemenu.grid(row=9, column=0, padx=20, pady=(10, 10))
+        self.appearance_mode_optionemenu.grid(row=10, column=0, padx=20, pady=(10, 10))
         self.scaling_label = customtkinter.CTkLabel(
             tkinter_frame, text="UI Scaling:", anchor="w"
         )
-        self.scaling_label.grid(row=10, column=0, padx=20, pady=(10, 0))
+        self.scaling_label.grid(row=11, column=0, padx=20, pady=(10, 0))
         self.scaling_optionemenu = customtkinter.CTkOptionMenu(
             tkinter_frame,
             values=["80%", "90%", "100%", "110%", "120%"],
             command=self.change_scaling_event,
         )
         self.scaling_optionemenu.set("100%")  # set initial value
-        self.scaling_optionemenu.grid(row=11, column=0, padx=20, pady=(10, 20))
+        self.scaling_optionemenu.grid(row=12, column=0, padx=20, pady=(10, 20))
 
         self.github_logo = customtkinter.CTkImage(
-            dark_image=Image.open(os.path.normpath("img/github-mark-white.png")),
-            light_image=Image.open(os.path.normpath("img/github-mark.png")),
+            dark_image=Image.open(os.path.join(str(_IMG_DIR),"github-mark-white.png")),
+            light_image=Image.open(os.path.join(str(_IMG_DIR),"github-mark.png")),
             size=(25, 25),
         )
         self.github_button = customtkinter.CTkButton(
@@ -233,10 +247,10 @@ class App(customtkinter.CTk):
             "<Button-1>",
             lambda e: self.web_callback("https://github.com/compomics/ms2rescore"),
         )
-        self.github_button.grid(row=12, column=0, padx=20, pady=(10, 10))
+        self.github_button.grid(row=13, column=0, padx=20, pady=(10, 10))
 
         self.version_label = customtkinter.CTkLabel(tkinter_frame, text=ms2rescore.__version__)
-        self.version_label.grid(row=13, column=0, padx=20, pady=(10, 10))
+        self.version_label.grid(row=14, column=0, padx=20, pady=(10, 10))
 
     def create_main_tab(self, tabview_object):
         """Configuring the UI for the main tab"""
@@ -462,14 +476,16 @@ class App(customtkinter.CTk):
 class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""
 
-    def __init__(self, config, queue) -> None:
+    def __init__(self, config, queue, log_level) -> None:
         super().__init__()
         self.config = config.copy()
         self.queue = queue
+        self.log_level = log_level
 
     def run(self):
+        
         rootLogger = logging.getLogger()
-        rootLogger.setLevel(logging.INFO)
+        rootLogger.setLevel(LOG_MAPPING[self.log_level])
         rootLogger.addHandler(logging.handlers.QueueHandler(self.queue))
         rootLogger.info("starting MS²Rescore")
 
@@ -667,7 +683,8 @@ class FloatSpinbox(customtkinter.CTkFrame):
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     app = App()
     # TODO: a bitmap is expected (on Linux), but the ico is in PNG format
-    # app.wm_iconbitmap(os.path.normpath("img/ms2rescore.ico"))
+    app.wm_iconbitmap(os.path.join(str(_IMG_DIR), "program_icon.ico"))
     app.mainloop()

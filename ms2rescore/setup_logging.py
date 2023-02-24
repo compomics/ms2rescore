@@ -6,11 +6,7 @@ from typing import Union
 from rich.console import Console
 from rich.logging import RichHandler
 
-
-def setup_logging(
-    passed_level: str, log_file: Union[str, Path], rich_console: Console = None
-):
-    log_mapping = {
+LOG_MAPPING = {
         "critical": logging.CRITICAL,
         "error": logging.ERROR,
         "warning": logging.WARNING,
@@ -18,10 +14,15 @@ def setup_logging(
         "debug": logging.DEBUG,
     }
 
-    if passed_level not in log_mapping:
+def setup_logging(
+    passed_level: str, log_file: Union[str, Path], rich_console: Console = None
+):
+    
+
+    if passed_level not in LOG_MAPPING:
         print(
             "Invalid log level. Should be one of the following: ",
-            ", ".join(log_mapping.keys()),
+            ", ".join(LOG_MAPPING.keys()),
         )
         exit(1)
 
@@ -31,7 +32,7 @@ def setup_logging(
     logging.basicConfig(
         format="%(name)s // %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        level=log_mapping[passed_level],
+        level=LOG_MAPPING[passed_level],
         handlers=[
             FileHandler(log_file, mode="w"),
             RichHandler(rich_tracebacks=True, console=rich_console, show_path=False),
