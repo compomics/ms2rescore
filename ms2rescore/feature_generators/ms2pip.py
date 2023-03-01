@@ -127,7 +127,10 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 psm_list_run = PSMList(
                     psm_list=list(chain.from_iterable(psms.values()))
                 )
+                psm_id_mapper = {i: psm for i, psm in enumerate(psm_list_run)}
                 peprec_df = peptide_record.to_dataframe(psm_list_run)
+                peprec_df.reset_index()
+                peprec_df.rename({"index": "psm_id"}, axis=1, inplace=True)
 
                 # Prepare spectrum filenames
                 spectrum_filename = infer_spectrum_path(
@@ -161,15 +164,8 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 )
 
                 # Add features to PSMs
-                for spectrum_id, features in features.items():
-                    psm_entries = psm_dict[collection][run][spectrum_id]
-                    if len(psm_entries) > 1:
-                        raise MS2RescoreError(
-                            "Multiple PSMs per spectrum currently not supported."
-                        )
-                    psm_entries[0]["rescoring_features"].update(features)
-
-
+                for psm_id, psm in psm_id_mapper.items():
+                    psm["rescoring_features"].update(features[psm_id])
 
     @staticmethod
     def _get_modification_config(psm_list):
@@ -205,20 +201,20 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
         """Create easy to access dict from MS²PIP pred_and_emp file."""
         preds_dict = {}
         preds_list = df[
-            ["spec_id", "charge", "ion", "target", "prediction"]
+            ["psm_id", "charge", "ion", "target", "prediction"]
         ].values.tolist()
 
         for row in preds_list:
-            spec_id = row[0]
-            if spec_id in preds_dict.keys():
-                if row[2] in preds_dict[spec_id]["target"]:
-                    preds_dict[spec_id]["target"][row[2]].append(row[3])
-                    preds_dict[spec_id]["prediction"][row[2]].append(row[4])
+            psm_id = row[0]
+            if psm_id in preds_dict.keys():
+                if row[2] in preds_dict[psm_id]["target"]:
+                    preds_dict[psm_id]["target"][row[2]].append(row[3])
+                    preds_dict[psm_id]["prediction"][row[2]].append(row[4])
                 else:
-                    preds_dict[spec_id]["target"][row[2]] = [row[3]]
-                    preds_dict[spec_id]["prediction"][row[2]] = [row[4]]
+                    preds_dict[psm_id]["target"][row[2]] = [row[3]]
+                    preds_dict[psm_id]["prediction"][row[2]] = [row[4]]
             else:
-                preds_dict[spec_id] = {
+                preds_dict[psm_id] = {
                     "charge": row[1],
                     "target": {row[2]: [row[3]]},
                     "prediction": {row[2]: [row[4]]},
