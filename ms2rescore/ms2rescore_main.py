@@ -88,7 +88,16 @@ class MS2Rescore:
         )
     
         psm_list.set_ranks(lower_score_better=self.config["ms2rescore"]["lower_score_is_better"])  
-        psm_list = psm_list.get_rank1_psms()
+        # psm_list = psm_list.get_rank1_psms() # only keep rank 1 PSMs, can be removed?
+        if self.config["ms2rescore"]["id_decoy_pattern"]:
+            psm_list = psm_list.get_decoys(self.config["ms2rescore"]["id_decoy_pattern"])
+        
+        logger.debug(f"{sum(psm_list['is_decoy'])} decoy PSMs found.")
+        if not any(psm_list["is_decoy"]):
+            raise MS2RescoreConfigurationError(
+                "No decoy PSMs found. Please check if decoys are present."
+            )
+
         logger.debug("Parsing modifications...")
         psm_list.rename_modifications(self.config["ms2rescore"]["modification_mapping"])
         psm_list.add_fixed_modifications(

@@ -13,6 +13,7 @@ from psm_utils.io import peptide_record
 from rich.progress import track
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import mean_squared_error as mse
+from collections import defaultdict
 
 from ms2rescore.exceptions import MS2RescoreError
 from ms2rescore.feature_generators import FeatureGenerator
@@ -119,7 +120,11 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
 
         # Get easy-access nested version of PSMList
         psm_dict = psm_list.get_psm_dict()
-
+        ms2pip = MS2PIP(
+                    params=self.config,
+                    num_cpu=self.config["ms2rescore"]["num_cpu"],
+                    return_results=True,
+                )
         # Run MS²PIP for each spectrum file
         for collection, runs in psm_dict.items():
             for run, psms in runs.items():
@@ -127,11 +132,10 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 psm_list_run = PSMList(
                     psm_list=list(chain.from_iterable(psms.values()))
                 )
-                psm_id_mapper = {i: psm for i, psm in enumerate(psm_list_run)}
+                psm_id_mapper = {str(i): psm for i, psm in enumerate(psm_list_run)}
                 peprec_df = peptide_record.to_dataframe(psm_list_run)
-                peprec_df.reset_index()
+                peprec_df.reset_index(inplace=True)
                 peprec_df.rename({"index": "psm_id"}, axis=1, inplace=True)
-
                 # Prepare spectrum filenames
                 spectrum_filename = infer_spectrum_path(
                     self.config["ms2rescore"]["spectrum_path"], run
@@ -142,17 +146,13 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
 
                 # Run MS²PIP
                 logger.debug("Running MS²PIP...")
-                ms2pip = MS2PIP(
-                    peprec_df,
-                    spec_file=spectrum_filename,
-                    spectrum_id_pattern=self.config["ms2rescore"][
-                        "spectrum_id_pattern"
-                    ],
-                    params=self.config,
-                    return_results=True,
-                    num_cpu=self.config["ms2rescore"]["num_cpu"],
+                pred_and_emp, _ = ms2pip.correlate(
+                    peptides=peprec_df,
+                    spectrum_file=spectrum_filename,
+                    spectrum_id_pattern=self.config["ms2rescore"]["spectrum_id_pattern"],
                 )
-                pred_and_emp = ms2pip.run()
+                pred_and_emp[pred_and_emp["psm_id"] == "0"]
+                pred_and_emp[pred_and_emp["psm_id"] == 0]
                 ms2pip.cleanup()
 
                 # Calculate features
@@ -162,10 +162,10 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                     self.config["ms2rescore"]["num_cpu"],
                     show_progress_bar=True,
                 )
-
                 # Add features to PSMs
                 for psm_id, psm in psm_id_mapper.items():
                     psm["rescoring_features"].update(features[psm_id])
+
 
     @staticmethod
     def _get_modification_config(psm_list):
@@ -407,5 +407,4 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                     transient=True,
                 )
                 all_features = {k: v for d in result_list for k, v in d.items()}
-
         return all_features
