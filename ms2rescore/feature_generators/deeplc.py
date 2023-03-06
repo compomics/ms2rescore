@@ -78,18 +78,7 @@ class DeepLCFeatureGenerator(FeatureGenerator):
         # Get easy-access nested version of PSMList
         psm_dict = psm_list.get_psm_dict()
         peptide_rt_diff_dict = defaultdict(lambda: {"observed_retention_time_best": np.Inf, "predicted_retention_time_best": np.Inf, "rt_diff_best": np.Inf}) 
-
-        if not all(psm_list["retention_time"]):
-            retention_times = psm_list["retention_time"]
-            spec_ids = psm_list["retention_time"]
-            retention_time_dict = self.read_rt_from_spectrum_file(run)
-
-            try:
-                psm_list["retention_time"] = [rt if rt else retention_time_dict[spec_ids[i]] for i, rt in enumerate(retention_times)] 
-                # psm_list["retention_time"] = [retention_time_dict[psm_id] for psm_id in psm_list["spectrum_id"]] # Probably faster to replace all
-            except KeyError:
-                raise MS2RescoreError("Could not find all map spectrum ids to retention times")
-
+        
         # Run MS²PIP for each spectrum file
         for collection, runs in psm_dict.items():
             # Reset DeepLC predictor for each collection of runs
@@ -98,9 +87,21 @@ class DeepLCFeatureGenerator(FeatureGenerator):
             for run, psms in runs.items():
                 logger.info(f"Processing {run}")
                 # Prepare PSM file
+
                 psm_list_run = PSMList(
                     psm_list=list(chain.from_iterable(psms.values()))
                 )
+
+                if not all(psm_list["retention_time"]):
+                    retention_times = psm_list_run["retention_time"]
+                    spec_ids = psm_list_run["retention_time"]
+                    retention_time_dict = self.read_rt_from_spectrum_file(run)
+
+                    try:
+                        # psm_list["retention_time"] = [rt if rt else retention_time_dict[spec_ids[i]] for i, rt in enumerate(retention_times)] 
+                        psm_list_run["retention_time"] = [retention_time_dict[psm_id] for psm_id in psm_list_run["spectrum_id"]] # Probably faster to replace all
+                    except KeyError:
+                        raise MS2RescoreError("Could not find all map spectrum ids to retention times")
 
                 psm_list_calibration = self.get_calibration_psms(psm_list_run)
 
@@ -112,7 +113,7 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                     verbose=False,
                     path_model=self.selected_model,
                     pygam_calibration=True,
-                    deeplc_retrain=True
+                    deeplc_retrain=True,
                 )
                 self.deeplc_predictor.calibrate_preds(
                     seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
