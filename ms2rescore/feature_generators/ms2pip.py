@@ -136,6 +136,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 peprec_df = peptide_record.to_dataframe(psm_list_run)
                 peprec_df.reset_index(inplace=True)
                 peprec_df.rename({"index": "psm_id"}, axis=1, inplace=True)
+                peprec_df["psm_id"] = peprec_df["psm_id"].astype(str)
                 # Prepare spectrum filenames
                 spectrum_filename = infer_spectrum_path(
                     self.config["ms2rescore"]["spectrum_path"], run
@@ -151,8 +152,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                     spectrum_file=spectrum_filename,
                     spectrum_id_pattern=self.config["ms2rescore"]["spectrum_id_pattern"],
                 )
-                pred_and_emp[pred_and_emp["psm_id"] == "0"]
-                pred_and_emp[pred_and_emp["psm_id"] == 0]
+
                 ms2pip.cleanup()
 
                 # Calculate features
