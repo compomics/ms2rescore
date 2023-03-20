@@ -11,11 +11,13 @@ import tkinter.messagebox
 from typing import Union, Callable
 import webbrowser
 import multiprocessing
+import traceback
 from ms2rescore.setup_logging import LOG_MAPPING
 import importlib.resources
 from pathlib import Path
+import matplotlib.pyplot as plt
 
-from ms2pip.ms2pipC import MODELS as ms2pip_models
+from ms2pip.constants import MODELS as ms2pip_models
 from psm_utils.io import FILETYPES
 
 import ms2rescore
@@ -29,12 +31,14 @@ with importlib.resources.path(img_module, 'config_icon.png') as resource:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+plt.set_loglevel("warning")
+
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
         self.queue = multiprocessing.Queue(-1)
-
+        self.popupwindow = None
         # App config
         self.geometry(f"{1100}x{580}")
         self.title("MS²Rescore GUI")
@@ -125,20 +129,28 @@ class App(customtkinter.CTk):
         self.progressbar.configure(mode="indeterminnate")
         self.progressbar.start()
 
-        self.textbox.delete("1.0", "end")
-
+        self.textbox.configure(state="normal")
+        self.textbox.delete("1.0","end")
+        self.textbox.configure(state="disabled")
+        
         self.create_config()
-        ms2rescore_run = MS2RescoreProcess(self.config, self.queue, self.logging_var.get())
-        ms2rescore_run.start()
-        self.monitor(ms2rescore_run)
+        self.ms2rescore_run = MS2RescoreProcess(self.config, self.queue, self.logging_var.get())
+        self.ms2rescore_run.start()
+        self.monitor(self.ms2rescore_run)
 
     def stop_button_callback(self):
         """Stop button callback"""
 
         self.stop_button.grid_forget()
-        self.progressbar.grid_remove()
+        self.progressbar.grid_forget()
         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
-
+        if self.ms2rescore_run.exception is not None:
+            self.popupwindow = PopupWindow("error occured")
+        else:
+            self.popupwindow = PopupWindow("MS²Rescore finished succesfully") 
+        self.popupwindow.focus()        
+        self.ms2rescore_run.terminate()
+        
     def change_appearance_mode_event(self, new_appearance_mode: str):
         """Change the appearance"""
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -158,10 +170,10 @@ class App(customtkinter.CTk):
         )
         self.logo_label.grid(row=0, column=0, rowspan=4, padx=0, pady=10)
 
-        self.citing_label = customtkinter.CTkLabel(
-            tkinter_frame, text="Upon use please cite:", font = ("Bold", 14)
-        )
-        self.citing_label.grid(row=4, column=0, padx=1, pady=2, sticky="sw")
+        # self.citing_label = customtkinter.CTkLabel(
+        #     tkinter_frame, text="Upon use please cite:", font = ("Bold", 14)
+        # )
+        # self.citing_label.grid(row=4, column=0, padx=1, pady=2, sticky="sw")
         self.ref_label1 = customtkinter.CTkButton(
             tkinter_frame,
             text="Declercq et al. 2022 MCP",
@@ -471,7 +483,7 @@ class App(customtkinter.CTk):
         if ms2rescore_process.is_alive(): # while loop? 
             self.after(100, lambda: self.monitor(ms2rescore_process))
         else:
-            self.stop_button_callback()
+            self.stop_button_callback()  
 
 class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""
@@ -481,6 +493,8 @@ class MS2RescoreProcess(multiprocessing.Process):
         self.config = config.copy()
         self.queue = queue
         self.log_level = log_level
+        self._pconn, self._cconn = multiprocessing.Pipe()
+        self._exception = None
 
     def run(self):
         
@@ -494,14 +508,21 @@ class MS2RescoreProcess(multiprocessing.Process):
             rescore = MS2Rescore(
                 parse_cli_args=False, configuration=self.config,
             )
-            rescore.run()
-        except Exception:
+            # rescore.run()
+            logger.info("M²Rescore finished successfully")
+        except Exception as err:
             logger.exception("Critical error occurred in M²Rescore")
-
+            tb = traceback.format_exc()
+            self._cconn.send((err, tb))
         finally:
             if rescore:
                 rescore.save_log()
 
+    @property
+    def exception(self):
+        if self._pconn.poll():
+            self._exception = self._pconn.recv()
+        return self._exception
 
 class MyHandlerText(logging.StreamHandler):
     def __init__(self, textctrl):
@@ -681,6 +702,21 @@ class FloatSpinbox(customtkinter.CTkFrame):
         self.entry.delete(0, "end")
         self.entry.insert(0, str(float(value)))
 
+class PopupWindow(customtkinter.CTkToplevel):
+    def __init__(self, txt, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        window_width = 250
+        window_height = 150
+        x = int(int(self.winfo_screenwidth()/2) - int(window_width/2))
+        y = int(int(self.winfo_screenheight()/2) - int(window_height/2))
+        self.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        self.label = customtkinter.CTkLabel(self, text=txt, font=("Bold", 16))
+        self.label.pack(padx=20, pady=20)
+
+        self.close_button = customtkinter.CTkButton(self, text="Close", command=self.destroy)
+        self.close_button.pack(padx=20, pady=20)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
