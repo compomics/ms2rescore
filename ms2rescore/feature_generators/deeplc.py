@@ -26,7 +26,7 @@ class DeepLCFeatureGenerator(FeatureGenerator):
         self,
         config,
         higher_psm_score_better: bool = True,
-        calibration_set_size: Optional[Union[int, float]] = 0.20,
+        calibration_set_size: Optional[Union[int, float]] = 0.15,
         num_cpu: int = 1,
         *args, **kwargs
     ) -> None:
