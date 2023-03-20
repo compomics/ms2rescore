@@ -508,7 +508,7 @@ class MS2RescoreProcess(multiprocessing.Process):
             rescore = MS2Rescore(
                 parse_cli_args=False, configuration=self.config,
             )
-            # rescore.run()
+            rescore.run()
             logger.info("M²Rescore finished successfully")
         except Exception as err:
             logger.exception("Critical error occurred in M²Rescore")
