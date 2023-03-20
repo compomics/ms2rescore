@@ -7,6 +7,7 @@ from typing import Dict, Optional, Union
 
 import psm_utils.io
 from rich.console import Console
+import matplotlib.pyplot as plt
 
 from ms2rescore import setup_logging
 from ms2rescore.config_parser import parse_config
@@ -18,6 +19,7 @@ from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
+plt.set_loglevel("warning")
 id_file_parser = None
 
 FEATURE_GENERATORS = {
@@ -90,7 +92,7 @@ class MS2Rescore:
         psm_list.set_ranks(lower_score_better=self.config["ms2rescore"]["lower_score_is_better"])  
         # psm_list = psm_list.get_rank1_psms() # only keep rank 1 PSMs, can be removed?
         if self.config["ms2rescore"]["id_decoy_pattern"]:
-            psm_list = psm_list.get_decoys(self.config["ms2rescore"]["id_decoy_pattern"])
+            psm_list.find_decoys(self.config["ms2rescore"]["id_decoy_pattern"])
         
         logger.debug(f"{sum(psm_list['is_decoy'])} decoy PSMs found.")
         if not any(psm_list["is_decoy"]):
@@ -125,6 +127,7 @@ class MS2Rescore:
         psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
         for feature_generator in self.config["ms2rescore"]["feature_generators"]:
             FEATURE_GENERATORS[feature_generator](config=self.config).add_features(psm_list)
+            psm_list = psm_list[psm_list["rescoring_features"] != None]
 
         logging.debug(f"Writing {self.output_file_root}.pin file")
 
