@@ -334,10 +334,12 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
     def _calculate_features(self, processing_results, num_cpu=1, show_progress_bar=True):
         """Calculate MS²PIP-based features in parallelized fashion."""
         logger.debug("Computing features")
+        psm_ids = [str(result.psm_id) for result in processing_results]
 
         # Do not use multiprocessing for small amount of features
         if len(processing_results) < 10000:
             feature_result_list = [self._compute_features(result) for result in processing_results]
+            all_features = {psm_id: features for psm_id, features in zip(psm_ids, feature_result_list)}
         else:
             # Split up df into list of chunk_size df's (will be divided over num_cpu)
             # Use imap, so we can use a progress bar
@@ -349,7 +351,5 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                     description="Calculating features...",
                     transient=True,
                 )
-        
-        psm_ids = [str(result.psm_id) for result in processing_results]
-        all_features = {psm_id: features for psm_id, features in zip(psm_ids, feature_result_list)}
+                all_features = {psm_id: features for psm_id, features in zip(psm_ids, feature_result_list)}
         return all_features

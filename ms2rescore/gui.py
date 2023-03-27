@@ -121,7 +121,8 @@ class App(customtkinter.CTk):
         self.start_button.grid_forget()
         self.stop_button = customtkinter.CTkButton(
             master=self.middle_frame, text="Stop", command=self.stop_button_callback
-        )  
+        )
+        self.stop_button_pressed = False 
         self.stop_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
 
         self.progressbar = customtkinter.CTkProgressBar(self.middle_frame)
@@ -140,17 +141,28 @@ class App(customtkinter.CTk):
 
     def stop_button_callback(self):
         """Stop button callback"""
+        
+        self.stop_button_pressed = True
+        self.stop_button.configure(state="disabled")
+        self.progressbar.grid_forget()
+        self.ms2rescore_run.terminate()
+
+    def finish_callback(self):
+        """Stop button callback"""
 
         self.stop_button.grid_forget()
         self.progressbar.grid_forget()
         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
-        if self.ms2rescore_run.exception is not None:
+        if self.stop_button_pressed:
+            self.stop_button_pressed = False
+        elif self.ms2rescore_run.exception is not None or self.ms2rescore_run.exitcode != 0:
             self.popupwindow = PopupWindow("error occured")
+            self.popupwindow.focus()
         else:
-            self.popupwindow = PopupWindow("MS²Rescore finished succesfully") 
-        self.popupwindow.focus()        
-        self.ms2rescore_run.terminate()
-        
+            self.popupwindow = PopupWindow("MS²Rescore finished succesfully")             
+            self.popupwindow.focus()
+
+    
     def change_appearance_mode_event(self, new_appearance_mode: str):
         """Change the appearance"""
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -483,7 +495,7 @@ class App(customtkinter.CTk):
         if ms2rescore_process.is_alive(): # while loop? 
             self.after(100, lambda: self.monitor(ms2rescore_process))
         else:
-            self.stop_button_callback()  
+            self.finish_callback()  
 
 class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""
