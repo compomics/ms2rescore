@@ -6,7 +6,7 @@ import os.path
 from typing import Union, Tuple, Dict
 
 from rich.progress import track
-from pyteomics.mgf import Mgf
+from pyteomics.mgf import MGF
 
 from ms2rescore.exceptions import MS2RescoreError
 
@@ -23,7 +23,7 @@ def parse_mgf_title_rt(
 ) -> Dict[str, float]:
     """Parse MGF file to extract title and retention time fields, by spectrum index."""
     logger.debug("Parsing MGF file to extract retention times.")
-    mgf_reader = Mgf(path_to_mgf, read_charges=False, read_ions=False)
+    mgf_reader = MGF(path_to_mgf, read_charges=False, read_ions=False)
     retention_times = {}
     for spectrum in mgf_reader:
         try:
@@ -36,10 +36,11 @@ def parse_mgf_title_rt(
             rt = None
         retention_times[title] = rt
 
-        if any(list(retention_times.values())):
-            return retention_times
-        else:
-            raise ParseMGFError("MGF file missing rtinseconds field.")
+    print(retention_times)
+    if any(list(retention_times.values())):
+        return retention_times
+    else:
+        raise ParseMGFError("MGF file missing rtinseconds field.")
 
 def get_num_lines(file_path):
     fp = open(file_path, "r+")
