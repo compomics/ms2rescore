@@ -354,6 +354,20 @@ class App(customtkinter.CTk):
         )
         self.lower_score_tickbox.pack(anchor=tk.W, fill=tk.BOTH)
 
+        self.usi_label = customtkinter.CTkLabel(
+            tabview_object, text="Universal Spectrum Identifier", anchor="w"
+        )
+        self.usi_label.pack(anchor=tk.W)
+        self.usi_var = customtkinter.StringVar(value="off")
+        self.usi_tickbox = customtkinter.CTkSwitch(
+            master=tabview_object,
+            text="",
+            variable=self.usi_var,
+            onvalue="true",
+            offvalue="false",
+        )
+        self.usi_tickbox.pack(anchor=tk.W, fill=tk.BOTH)
+
         # Regex patterns
         self.id_decoy_pattern_label = customtkinter.CTkLabel(
             tabview_object, text="Specify decoy pattern:", anchor="w"
@@ -443,7 +457,8 @@ class App(customtkinter.CTk):
             "id_decoy_pattern": self.id_decoy_pattern.get(),
             "psm_id_pattern": self.psm_id_pattern.get(),
             "spectrum_id_pattern": self.spectrum_id_pattern.get(),
-            "lower_score_is_better": True if self.lower_score_var == "true" else False
+            "lower_score_is_better": True if self.lower_score_var.get() == "true" else False,
+            "USI": True if self.usi_var.get() == "true" else False
         }
         ms2pip_config = {
             "model": self.selected_ms2pip_model.get(),
@@ -718,7 +733,7 @@ class PopupWindow(customtkinter.CTkToplevel):
     def __init__(self, txt, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        window_width = 250
+        window_width = 275
         window_height = 150
         x = int(int(self.winfo_screenwidth()/2) - int(window_width/2))
         y = int(int(self.winfo_screenheight()/2) - int(window_height/2))

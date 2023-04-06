@@ -2,6 +2,8 @@
 
 import logging
 import os
+import contextlib
+import sys
 from typing import Union, Optional
 from pathlib import Path
 from itertools import chain
@@ -82,67 +84,68 @@ class DeepLCFeatureGenerator(FeatureGenerator):
         # Run MS²PIP for each spectrum file
         for collection, runs in psm_dict.items():
             # Reset DeepLC predictor for each collection of runs
+
             self.deeplc_predictor = None
             self.selected_model = None
             for run, psms in runs.items():
                 logger.info(f"Processing {run}")
                 # Prepare PSM file
-
-                psm_list_run = PSMList(
-                    psm_list=list(chain.from_iterable(psms.values()))
-                )
-
-                if not all(psm_list["retention_time"]):
-                    retention_times = psm_list_run["retention_time"]
-                    spec_ids = psm_list_run["retention_time"]
-                    retention_time_dict = self.read_rt_from_spectrum_file(run)
-
-                    try:
-                        # psm_list["retention_time"] = [rt if rt else retention_time_dict[spec_ids[i]] for i, rt in enumerate(retention_times)] 
-                        psm_list_run["retention_time"] = [retention_time_dict[psm_id] for psm_id in psm_list_run["spectrum_id"]] # Probably faster to replace all
-                    except KeyError:
-                        raise MS2RescoreError("Could not find all map spectrum ids to retention times")
-
-                psm_list_calibration = self.get_calibration_psms(psm_list_run)
-
-                logger.debug("Calibrating DeepLC")
-                self.deeplc_predictor = DeepLC(
-                    split_cal=10,
-                    n_jobs=self.num_cpu,
-                    cnn_model=True,
-                    verbose=False,
-                    path_model=self.selected_model,
-                    pygam_calibration=True,
-                    deeplc_retrain=True,
-                )
-                self.deeplc_predictor.calibrate_preds(
-                    seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
-                )
-                # Still calibrate for each run, but do not try out all model options.
-                # Just use model that was selected based on first run
-                if not self.selected_model:
-                    self.selected_model = list(self.deeplc_predictor.model.keys())
-                    logger.debug(
-                        f"Selected DeepLC model {self.selected_model} based on "
-                        "calibration of first run. Using this model (after new "
-                        "calibrations) for the remaining runs."
+                with contextlib.redirect_stdout(open(os.devnull, "w")):
+                    psm_list_run = PSMList(
+                        psm_list=list(chain.from_iterable(psms.values()))
                     )
 
-                predictions = np.array(self.deeplc_predictor.make_preds(
-                    seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
-                ))
-                observations = psm_list_run["retention_time"]
-                rt_diffs_run = np.abs(predictions - observations)
-                
-                for i, psm in enumerate(psm_list_run):
-                    psm["rescoring_features"].update(
-                        {"observed_retention_time": observations[i],
-                        "predicted_retention_time": predictions[i],
-                        "rt_diff": rt_diffs_run[i]
-                    })
-                    peptide = psm.peptidoform.proforma.split("\\")[0] # remove charge
-                    if peptide_rt_diff_dict[peptide]["rt_diff_best"] > rt_diffs_run[i]:
-                        peptide_rt_diff_dict[peptide] = {"observed_retention_time_best": observations[i], "predicted_retention_time_best": predictions[i], "rt_diff_best": rt_diffs_run[i]}
+                    if not all(psm_list["retention_time"]):
+                        retention_times = psm_list_run["retention_time"]
+                        spec_ids = psm_list_run["retention_time"]
+                        retention_time_dict = self.read_rt_from_spectrum_file(run)
+
+                        try:
+                            # psm_list["retention_time"] = [rt if rt else retention_time_dict[spec_ids[i]] for i, rt in enumerate(retention_times)] 
+                            psm_list_run["retention_time"] = [retention_time_dict[psm_id] for psm_id in psm_list_run["spectrum_id"]] # Probably faster to replace all
+                        except KeyError:
+                            raise MS2RescoreError("Could not find all map spectrum ids to retention times")
+
+                    psm_list_calibration = self.get_calibration_psms(psm_list_run)
+
+                    logger.debug("Calibrating DeepLC")
+                    self.deeplc_predictor = DeepLC(
+                        split_cal=10,
+                        n_jobs=self.num_cpu,
+                        cnn_model=True,
+                        verbose=False,
+                        path_model=self.selected_model,
+                        pygam_calibration=True,
+                        deeplc_retrain=True,
+                    )
+                    self.deeplc_predictor.calibrate_preds(
+                        seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
+                    )
+                    # Still calibrate for each run, but do not try out all model options.
+                    # Just use model that was selected based on first run
+                    if not self.selected_model:
+                        self.selected_model = list(self.deeplc_predictor.model.keys())
+                        logger.debug(
+                            f"Selected DeepLC model {self.selected_model} based on "
+                            "calibration of first run. Using this model (after new "
+                            "calibrations) for the remaining runs."
+                        )
+
+                    predictions = np.array(self.deeplc_predictor.make_preds(
+                        seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
+                    ))
+                    observations = psm_list_run["retention_time"]
+                    rt_diffs_run = np.abs(predictions - observations)
+                    
+                    for i, psm in enumerate(psm_list_run):
+                        psm["rescoring_features"].update(
+                            {"observed_retention_time": observations[i],
+                            "predicted_retention_time": predictions[i],
+                            "rt_diff": rt_diffs_run[i]
+                        })
+                        peptide = psm.peptidoform.proforma.split("\\")[0] # remove charge
+                        if peptide_rt_diff_dict[peptide]["rt_diff_best"] > rt_diffs_run[i]:
+                            peptide_rt_diff_dict[peptide] = {"observed_retention_time_best": observations[i], "predicted_retention_time_best": predictions[i], "rt_diff_best": rt_diffs_run[i]}
 
         for psm in psm_list:
             psm["rescoring_features"].update(peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]])

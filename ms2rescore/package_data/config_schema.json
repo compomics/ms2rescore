@@ -96,6 +96,10 @@
                     "multipleOf": 1,
                     "minimum": -1,
                     "default": -1
+                },
+                "USI": {
+                    "description": "Use universal spectrum identifier (USI)",
+                    "type": "boolean"
                 }
             }
         },

@@ -129,8 +129,11 @@ class MS2Rescore:
             FEATURE_GENERATORS[feature_generator](config=self.config).add_features(psm_list)
             psm_list = psm_list[psm_list["rescoring_features"] != None]
 
-        logging.debug(f"Writing {self.output_file_root}.pin file")
+        if self.config["ms2rescore"]["USI"]:
+            logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
+            psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
 
+        logging.debug(f"Writing {self.output_file_root}.pin file")
         if self.config["ms2rescore"]["rescoring_engine"] == "percolator":
             percolator = PercolatorRescoring(
                 psm_list,

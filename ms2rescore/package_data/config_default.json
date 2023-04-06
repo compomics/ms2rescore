@@ -16,7 +16,8 @@
         "lower_score_is_better": false,
         "modification_mapping": {},
         "fixed_modifications": {},
-        "num_cpu": -1
+        "num_cpu": -1,
+        "USI": false
     },
     "ms2pip": {
         "model": "HCD",
