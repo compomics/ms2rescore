@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from ms2rescore import setup_logging
 from ms2rescore.config_parser import parse_config
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
-from ms2rescore.feature_generators.ms2pip import MS2PIPFeatureGenerator
+from ms2rescore.feature_generators.intensity import MS2PIPFeatureGenerator
 from ms2rescore.feature_generators.maxquant import MaxquantFeatureGenerator
 from ms2rescore.rescoring_engines.percolator import PercolatorRescoring
 from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
