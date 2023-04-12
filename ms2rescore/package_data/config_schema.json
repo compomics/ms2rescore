@@ -122,9 +122,28 @@
             }
         },
         "deeplc": {
-            "description": "DeepLC settings",
+            "description": "DeepLC key word arguments",
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": true,
+            "properties": {
+                "calibration_set_size": {
+                    "description": "Calibration set size",
+                    "oneOf": [{"type": "integer"}, {"type": "number"}],
+                    "default": 0.15
+                }
+            }
+        },
+        "percolator": {
+            "description": "Percolator settings",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "init-weights": {
+                    "description": "Weights file for scoring function",
+                    "oneOf": [{"type": "string"}, {"type": "null"}],
+                    "default": "null"
+                }
         }
     }
+}
 }

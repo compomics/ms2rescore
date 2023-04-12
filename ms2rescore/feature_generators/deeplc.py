@@ -27,10 +27,8 @@ class DeepLCFeatureGenerator(FeatureGenerator):
     def __init__(
         self,
         config,
-        higher_psm_score_better: bool = True,
-        calibration_set_size: Optional[Union[int, float]] = 0.15,
-        num_cpu: int = 1,
-        *args, **kwargs
+        *args,
+        **kwargs,
     ) -> None:
         """
         Generate DeepLC-based features for rescoring.
@@ -56,9 +54,17 @@ class DeepLCFeatureGenerator(FeatureGenerator):
             / Path(self.config["ms2rescore"]["psm_file"]).stem
         )
         self.feature_names = []
-        self.higher_psm_score_better = higher_psm_score_better
-        self.calibration_set_size = calibration_set_size
-        self.num_cpu = num_cpu
+        self.higher_psm_score_better = self.config["ms2rescore"][
+            "lower_score_is_better"
+        ]
+        try:
+            self.calibration_set_size = self.config["deeplc"]["calibration_set_size"]
+        except KeyError:
+            self.calibration_set_size = 0.15
+        self.num_cpu = self.config["ms2rescore"]["num_cpu"]
+
+        if "deeplc_retrain" not in self.config["deeplc"]:
+            self.config["deeplc"]["deeplc_retrain"] = True
 
         self.deeplc_predictor = None
         self.selected_model = None
@@ -75,12 +81,19 @@ class DeepLCFeatureGenerator(FeatureGenerator):
     def add_features(self, psm_list: PSMList) -> None:
         """Add DeepLC-derived features to PSMs."""
         from deeplc import DeepLC
+
         logger.info("Adding DeepLC-derived features to PSMs.")
 
         # Get easy-access nested version of PSMList
         psm_dict = psm_list.get_psm_dict()
-        peptide_rt_diff_dict = defaultdict(lambda: {"observed_retention_time_best": np.Inf, "predicted_retention_time_best": np.Inf, "rt_diff_best": np.Inf}) 
-        
+        peptide_rt_diff_dict = defaultdict(
+            lambda: {
+                "observed_retention_time_best": np.Inf,
+                "predicted_retention_time_best": np.Inf,
+                "rt_diff_best": np.Inf,
+            }
+        )
+
         # Run MS²PIP for each spectrum file
         for collection, runs in psm_dict.items():
             # Reset DeepLC predictor for each collection of runs
@@ -101,22 +114,24 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                         retention_time_dict = self.read_rt_from_spectrum_file(run)
 
                         try:
-                            # psm_list["retention_time"] = [rt if rt else retention_time_dict[spec_ids[i]] for i, rt in enumerate(retention_times)] 
-                            psm_list_run["retention_time"] = [retention_time_dict[psm_id] for psm_id in psm_list_run["spectrum_id"]] # Probably faster to replace all
+                            # psm_list["retention_time"] = [rt if rt else retention_time_dict[spec_ids[i]] for i, rt in enumerate(retention_times)]
+                            psm_list_run["retention_time"] = [
+                                retention_time_dict[psm_id]
+                                for psm_id in psm_list_run["spectrum_id"]
+                            ]  # Probably faster to replace all
                         except KeyError:
-                            raise MS2RescoreError("Could not find all map spectrum ids to retention times")
+                            raise MS2RescoreError(
+                                "Could not find all map spectrum ids to retention times"
+                            )
 
                     psm_list_calibration = self.get_calibration_psms(psm_list_run)
 
                     logger.debug("Calibrating DeepLC")
                     self.deeplc_predictor = DeepLC(
-                        split_cal=10,
                         n_jobs=self.num_cpu,
-                        cnn_model=True,
                         verbose=False,
                         path_model=self.selected_model,
-                        pygam_calibration=True,
-                        deeplc_retrain=True,
+                        **self.config["ms2rescore"]["deeplc"],
                     )
                     self.deeplc_predictor.calibrate_preds(
                         seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
@@ -131,37 +146,47 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                             "calibrations) for the remaining runs."
                         )
 
-                    predictions = np.array(self.deeplc_predictor.make_preds(
-                        seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
-                    ))
+                    predictions = np.array(
+                        self.deeplc_predictor.make_preds(
+                            seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
+                        )
+                    )
                     observations = psm_list_run["retention_time"]
                     rt_diffs_run = np.abs(predictions - observations)
-                    
+
                     for i, psm in enumerate(psm_list_run):
                         psm["rescoring_features"].update(
-                            {"observed_retention_time": observations[i],
-                            "predicted_retention_time": predictions[i],
-                            "rt_diff": rt_diffs_run[i]
-                        })
-                        peptide = psm.peptidoform.proforma.split("\\")[0] # remove charge
-                        if peptide_rt_diff_dict[peptide]["rt_diff_best"] > rt_diffs_run[i]:
-                            peptide_rt_diff_dict[peptide] = {"observed_retention_time_best": observations[i], "predicted_retention_time_best": predictions[i], "rt_diff_best": rt_diffs_run[i]}
+                            {
+                                "observed_retention_time": observations[i],
+                                "predicted_retention_time": predictions[i],
+                                "rt_diff": rt_diffs_run[i],
+                            }
+                        )
+                        peptide = psm.peptidoform.proforma.split("\\")[
+                            0
+                        ]  # remove charge
+                        if (
+                            peptide_rt_diff_dict[peptide]["rt_diff_best"]
+                            > rt_diffs_run[i]
+                        ):
+                            peptide_rt_diff_dict[peptide] = {
+                                "observed_retention_time_best": observations[i],
+                                "predicted_retention_time_best": predictions[i],
+                                "rt_diff_best": rt_diffs_run[i],
+                            }
 
         for psm in psm_list:
-            psm["rescoring_features"].update(peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]])
-
+            psm["rescoring_features"].update(
+                peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
+            )
 
     def read_rt_from_spectrum_file(self, run_name):
-
         # Prepare spectrum filenames
         spectrum_filename = infer_spectrum_path(
             self.config["ms2rescore"]["spectrum_path"], run_name
         )
 
         return parse_mgf_title_rt(spectrum_filename)
-
-
-
 
     # TODO: Remove when DeepLC supports PSMList directly
     @staticmethod
@@ -180,7 +205,9 @@ class DeepLCFeatureGenerator(FeatureGenerator):
         psm_list_targets = psm_list[~psm_list["is_decoy"]]
         n_psms = self.get_number_of_calibration_psms(psm_list_targets)
         indices = np.argsort(psm_list_targets["score"])
-        indices = indices[-n_psms:] if self.higher_psm_score_better else indices[:n_psms]
+        indices = (
+            indices[-n_psms:] if self.higher_psm_score_better else indices[:n_psms]
+        )
         return psm_list[indices]
 
     def get_number_of_calibration_psms(self, psm_list):
@@ -192,9 +219,7 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                     "or equal to 0 or larger than 1."
                 )
             else:
-                num_calibration_psms = round(
-                    len(psm_list) * self.calibration_set_size
-                )
+                num_calibration_psms = round(len(psm_list) * self.calibration_set_size)
         elif isinstance(self.calibration_set_size, int):
             if self.calibration_set_size > len(psm_list):
                 logger.warning(
