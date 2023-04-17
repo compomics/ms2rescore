@@ -58,10 +58,12 @@ class DeepLCFeatureGenerator(FeatureGenerator):
             "lower_score_is_better"
         ]
         try:
-            self.calibration_set_size = self.config["deeplc"]["calibration_set_size"]
+            self.calibration_set_size = self.config["deeplc"].pop(
+                "calibration_set_size"
+            )
         except KeyError:
             self.calibration_set_size = 0.15
-        self.num_cpu = self.config["ms2rescore"]["num_cpu"]
+        self.num_cpu = 1
 
         if "deeplc_retrain" not in self.config["deeplc"]:
             self.config["deeplc"]["deeplc_retrain"] = True
@@ -131,7 +133,7 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                         n_jobs=self.num_cpu,
                         verbose=False,
                         path_model=self.selected_model,
-                        **self.config["ms2rescore"]["deeplc"],
+                        **self.config["deeplc"],
                     )
                     self.deeplc_predictor.calibrate_preds(
                         seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)

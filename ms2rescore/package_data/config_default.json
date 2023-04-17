@@ -23,5 +23,6 @@
         "model": "HCD",
         "frag_error": 0.02
     },
+    "deeplc":{},
     "percolator": {}
 }

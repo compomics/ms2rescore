@@ -25,8 +25,9 @@ id_file_parser = None
 FEATURE_GENERATORS = {
     "ms2pip": MS2PIPFeatureGenerator,
     "deeplc": DeepLCFeatureGenerator,
-    "maxquant": MaxquantFeatureGenerator 
+    "maxquant": MaxquantFeatureGenerator,
 }
+
 
 class MS2Rescore:
     """
@@ -88,12 +89,14 @@ class MS2Rescore:
             filetype=self.config["ms2rescore"]["psm_file_type"],
             show_progressbar=True,
         )
-    
-        psm_list.set_ranks(lower_score_better=self.config["ms2rescore"]["lower_score_is_better"])  
+
+        psm_list.set_ranks(
+            lower_score_better=self.config["ms2rescore"]["lower_score_is_better"]
+        )
         # psm_list = psm_list.get_rank1_psms() # only keep rank 1 PSMs, can be removed?
         if self.config["ms2rescore"]["id_decoy_pattern"]:
             psm_list.find_decoys(self.config["ms2rescore"]["id_decoy_pattern"])
-        
+
         logger.debug(f"{sum(psm_list['is_decoy'])} decoy PSMs found.")
         if not any(psm_list["is_decoy"]):
             raise MS2RescoreConfigurationError(
@@ -126,7 +129,9 @@ class MS2Rescore:
 
         psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
         for feature_generator in self.config["ms2rescore"]["feature_generators"]:
-            FEATURE_GENERATORS[feature_generator](config=self.config).add_features(psm_list)
+            FEATURE_GENERATORS[feature_generator](config=self.config).add_features(
+                psm_list
+            )
             psm_list = psm_list[psm_list["rescoring_features"] != None]
 
         if self.config["ms2rescore"]["USI"]:
@@ -135,10 +140,7 @@ class MS2Rescore:
 
         logging.debug(f"Writing {self.output_file_root}.pin file")
         if self.config["ms2rescore"]["rescoring_engine"] == "percolator":
-            percolator = PercolatorRescoring(
-                psm_list,
-                self.config
-            )
+            percolator = PercolatorRescoring(psm_list, self.config)
             percolator.rescore()
 
     @staticmethod

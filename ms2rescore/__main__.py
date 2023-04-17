@@ -13,8 +13,8 @@ def main():
     try:
         rescore = MS2Rescore(parse_cli_args=True, configuration=None, set_logger=True)
         rescore.run()
-    except Exception:
-        logger.exception("Critical error occurred in MS²Rescore")
+    except Exception as e:
+        logger.exception(e)
     finally:
         if rescore:
             rescore.save_log()

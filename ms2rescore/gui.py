@@ -6,6 +6,7 @@ import sys
 
 import tkinter as tk
 import customtkinter
+from ttkthemes import ThemedTk
 from PIL import Image
 import tkinter.messagebox
 from typing import Union, Callable
@@ -41,7 +42,7 @@ class App(customtkinter.CTk):
         self.queue = multiprocessing.Queue(-1)
         self.popupwindow = None
         # App config
-        self.geometry(f"{1100}x{580}")
+        self.geometry(f"{1100}x{700}")
         self.title("MS²Rescore GUI")
         self.minsize(500, 300)
 
@@ -114,6 +115,7 @@ class App(customtkinter.CTk):
         # Setup loggers (both textbox and CLI are configured)
         # logger.addHandler(logging.StreamHandler())
         logger.addHandler(logging.StreamHandler(sys.stdout))
+        logger.addHandler(logging.handlers.QueueHandler(self.queue))
         self.queue_listener = logging.handlers.QueueListener(
             self.queue, MyHandlerText(self.textbox)
         )
@@ -165,12 +167,11 @@ class App(customtkinter.CTk):
             self.ms2rescore_run.exception is not None
             or self.ms2rescore_run.exitcode != 0
         ):
+            print(self.ms2rescore_run.exception)
             self.popupwindow = PopupWindow(
-                "error occured\n\n"
-                + str(self.ms2rescore_run.exception)
+                "Error occured:\n"
+                + str(self.ms2rescore_run.exception[0])
                 + "\n\nSee log for more details",
-                width=600,
-                height=400,
             )
             self.popupwindow.focus()
         else:
@@ -305,7 +306,7 @@ class App(customtkinter.CTk):
             tabview_object, text="Select MGF file directory:", anchor="w"
         )
         self.mgf_dir_label.pack(anchor=tk.W)
-        self.mgf_dir = FileSelect(tabview_object, fileoption="directory")
+        self.mgf_dir = FileSelect(tabview_object, fileoption="file/dir")
         self.mgf_dir.pack(fill=tk.BOTH)
 
         self.pipeline_var = customtkinter.StringVar(value="infer")
@@ -491,7 +492,7 @@ class App(customtkinter.CTk):
 
     def create_config(self):
         """Create MS²Rescore config file"""
-
+        logger.debug("Creating config file")
         feature_generators = ["ms2pip", "deeplc"]
         if self.pipeline_var.get() == "msms":
             feature_generators = feature_generators + ["maxquant"]
@@ -525,7 +526,9 @@ class App(customtkinter.CTk):
             "model": self.selected_ms2pip_model.get(),
             "frag_error": float(self.frag_error_spinbox.get()),
         }
-        if not self.calibration_set_size.get().replace(".", "", 1).isdigit():
+        if self.calibration_set_size.get() == "":
+            calibration_set_size = 0.15
+        elif not self.calibration_set_size.get().replace(".", "", 1).isdigit():
             raise MS2RescoreConfigurationError(
                 f"Error parsing {self.calibration_set_size.get()}\nMake sure calibration set size is a number or percentage"
             )
@@ -630,10 +633,10 @@ class MS2RescoreProcess(multiprocessing.Process):
             )
             rescore.run()
             logger.info("M²Rescore finished successfully")
-        except Exception as err:
-            logger.exception("Critical error occurred in M²Rescore")
+        except Exception as e:
+            logger.exception(e)
             tb = traceback.format_exc()
-            self._cconn.send((err, tb))
+            self._cconn.send((e, tb))
         finally:
             if rescore:
                 rescore.save_log()
@@ -667,12 +670,14 @@ class FileSelect(customtkinter.CTkFrame):
     ):
         super().__init__(*args, width=width, height=height, **kwargs)
         self.selected_filename = None
-        fileoption = fileoption
+        self.grid_columnconfigure(0, weight=1)
         # Subwidgets
         self.entry = customtkinter.CTkEntry(
             self,
             placeholder_text="Select a file...",
         )
+        self.entry.grid(row=0, column=0, padx=20, pady=10, stick="ew")
+
         if fileoption == "directory":
             self.button = customtkinter.CTkButton(
                 self, text="Browse directories", command=self.pick_dir
@@ -683,15 +688,23 @@ class FileSelect(customtkinter.CTkFrame):
                 self, text="Browse files", command=self.pick_file
             )
 
+        elif fileoption == "file/dir":
+            self.button = customtkinter.CTkButton(
+                self, text="Browse files", command=self.pick_file
+            )
+            self.button2 = customtkinter.CTkButton(
+                self, text="Browse directories", command=self.pick_dir
+            )
         elif fileoption == "savefile":
             self.button = customtkinter.CTkButton(
                 self, text="Output filename prefix", command=self.save_file
             )
 
-        # Configure layout
-        self.grid_columnconfigure(0, weight=1)
-        self.entry.grid(row=0, column=0, padx=20, pady=10, stick="ew")
-        self.button.grid(row=0, column=1, padx=20, pady=10)
+        self.button.grid(row=0, column=1, padx=5, pady=5)
+        try:
+            self.button2.grid(row=0, column=2, padx=5, pady=5)
+        except AttributeError:
+            pass
 
     def pick_file(self):
         self.selected_filename = tkinter.filedialog.askopenfilename()

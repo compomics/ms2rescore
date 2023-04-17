@@ -140,8 +140,8 @@
             "properties": {
                 "init-weights": {
                     "description": "Weights file for scoring function",
-                    "oneOf": [{"type": "string"}, {"type": "null"}],
-                    "default": "null"
+                    "oneOf": [{"type": "string"}, {"type": "boolean"}],
+                    "default": false
                 }
         }
     }
