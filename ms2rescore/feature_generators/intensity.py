@@ -128,7 +128,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 psm_list_run = PSMList(
                     psm_list=list(chain.from_iterable(psms.values()))
                 )
-                psm_id_mapper = {str(i): psm for i, psm in enumerate(psm_list_run)}
+                psm_id_mapper = {i: psm for i, psm in enumerate(psm_list_run)}
                 # Prepare spectrum filenames
                 spectrum_filename = infer_spectrum_path(
                     self.config["ms2rescore"]["spectrum_path"], run
@@ -159,7 +159,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 for psm_id, psm in psm_id_mapper.items():
                     try:
                         psm["rescoring_features"].update(features[psm_id])
-                    except KeyError:
+                    except TypeError:  # if none we get type error
                         psm["rescoring_features"] = None
 
     @staticmethod
@@ -201,7 +201,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 processing_result.observed_intensity is None
                 or processing_result.predicted_intensity is None
             ):
-                return None
+                return (processing_result.psm_index, None)
 
             # Convert intensities to arrays
             target_b = processing_result.predicted_intensity["b"].clip(np.log2(0.001))
@@ -341,14 +341,13 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 [0.0 if ft is np.nan else ft for ft in feature_values],
             )
         )
-        return features
+        return (processing_result.psm_index, features)
 
     def _calculate_features(
         self, processing_results, num_cpu=1, show_progress_bar=True
     ):
         """Calculate MS²PIP-based features in parallelized fashion."""
         logger.debug("Computing features")
-        psm_index = [str(result.psm_index) for result in processing_results]
 
         # Do not use multiprocessing for small amount of features
         if len(processing_results) < 10000:
@@ -356,8 +355,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 self._compute_features(result) for result in processing_results
             ]
             all_features = {
-                psm_id: features
-                for psm_id, features in zip(psm_index, feature_result_list)
+                psm_id: features for psm_id, features in feature_result_list
             }
         else:
             # Split up df into list of chunk_size df's (will be divided over num_cpu)
@@ -373,7 +371,6 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                     transient=True,
                 )
                 all_features = {
-                    psm_id: features
-                    for psm_id, features in zip(psm_index, feature_result_list)
+                    psm_id: features for psm_id, features in feature_result_list
                 }
         return all_features

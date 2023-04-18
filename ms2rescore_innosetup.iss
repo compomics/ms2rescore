@@ -2,6 +2,7 @@
 #define MyAppPublisher "CompOmics"
 #define MyAppURL "https://github.com/compomics/ms2rescore"
 #define MyAppExeName "ms2rescore.exe"
+#define MyAppVersion "v3.0.0-dev0"
 
 [Setup]
 AppId={{2D3D12BD-3AE2-426E-8DE8-092148C12071}

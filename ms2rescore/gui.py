@@ -33,6 +33,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 plt.set_loglevel("warning")
+customtkinter.set_default_color_theme(
+    "ms2rescore\package_data\MS2Rescore_gui_theme.json"
+)
 
 
 class App(customtkinter.CTk):
@@ -167,7 +170,6 @@ class App(customtkinter.CTk):
             self.ms2rescore_run.exception is not None
             or self.ms2rescore_run.exitcode != 0
         ):
-            print(self.ms2rescore_run.exception)
             self.popupwindow = PopupWindow(
                 "Error occured:\n"
                 + str(self.ms2rescore_run.exception[0])
