@@ -23,7 +23,10 @@ def _parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument(
-        "psm_file",
+        "-f",
+        dest="psm_file",
+        metavar="FILE",
+        action="store",
         type=str,
         help="path to psm file (pin, mzid, msms.txt, tandem xml...)",
     )
@@ -88,7 +91,6 @@ def _parse_arguments() -> argparse.Namespace:
     )
 
     return parser.parse_args()
-
 
 
 def _validate_filenames(config: Dict) -> Dict:
