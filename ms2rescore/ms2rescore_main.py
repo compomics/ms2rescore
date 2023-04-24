@@ -90,9 +90,9 @@ class MS2Rescore:
             show_progressbar=True,
         )
 
-        psm_list.set_ranks(
-            lower_score_better=self.config["ms2rescore"]["lower_score_is_better"]
-        )
+        # psm_list.set_ranks(
+        #     lower_score_better=self.config["ms2rescore"]["lower_score_is_better"]
+        # )
         # psm_list = psm_list.get_rank1_psms() # only keep rank 1 PSMs, can be removed?
         if self.config["ms2rescore"]["id_decoy_pattern"]:
             psm_list.find_decoys(self.config["ms2rescore"]["id_decoy_pattern"])

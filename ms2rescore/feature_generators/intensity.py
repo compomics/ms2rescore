@@ -146,6 +146,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                     ],
                     model=self.config["ms2pip"]["model"],
                     compute_correlations=False,
+                    processes=self.config["ms2rescore"]["num_cpu"],
                 )
 
                 # Calculate features

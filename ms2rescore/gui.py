@@ -172,8 +172,14 @@ class App(customtkinter.CTk):
         ):
             self.popupwindow = PopupWindow(
                 "Error occured:\n"
-                + str(self.ms2rescore_run.exception[0])
+                + str(
+                    self.ms2rescore_run.exception[0]
+                    if self.ms2rescore_run.exception
+                    else self.ms2rescore_run.exitcode
+                )
                 + "\n\nSee log for more details",
+                width=500,
+                height=200,
             )
             self.popupwindow.focus()
         else:
