@@ -51,8 +51,10 @@ class PercolatorRescoring(Rescoringengine):
         except subprocess.CalledProcessError:
             logger.warn(f"Percolator was not run properly:\n {output.stdout}")
             raise MS2RescoreError("Percolator error")
+        stderr = self._decode_string(output.stderr)
+
         logger.info(
-            "Percolator output: \n" + output.stderr.decode(encoding="utf-8"),
+            "Percolator output: \n" + stderr,
             extra={"highlighter": None},
         )
 
@@ -88,3 +90,17 @@ class PercolatorRescoring(Rescoringengine):
         logger.debug(f"Running percolator command {' '.join(percolator_cmd)}")
 
         return percolator_cmd
+
+    @staticmethod
+    def _decode_string(encoded_string):
+        encodings = ["utf-8", "latin-1", "ascii", "iso-8859-1"]
+
+        for encoding in encodings:
+            try:
+                decoded_string = encoded_string.decode(encoding)
+                logger.debug(f"Decoded stderr with {encoding}")
+                return decoded_string
+            except UnicodeDecodeError:
+                pass
+
+        raise MS2RescoreError("Could not infer encoding of Percolator output")
