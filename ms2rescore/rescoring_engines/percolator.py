@@ -93,7 +93,12 @@ class PercolatorRescoring(Rescoringengine):
 
     @staticmethod
     def _decode_string(encoded_string):
-        encodings = ["utf-8", "latin-1", "ascii", "iso-8859-1"]
+        encodings = [
+            "utf-8",
+            "latin-1",
+            "ascii",
+            "iso-8859-15",
+        ]
 
         for encoding in encodings:
             try:
