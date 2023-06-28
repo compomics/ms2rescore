@@ -1,24 +1,23 @@
 """Plot MS²ReScore results."""
 
+import logging
+import os
 from abc import ABC
 from collections import defaultdict
-import logging
 from typing import List, Optional
 
+import click
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf
-from matplotlib.patches import Patch
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import os
-import click
-
+from matplotlib.patches import Patch
 from pyteomics.auxiliary import qvalues
-from statsmodels.distributions.empirical_distribution import ECDF
-from ms2rescore.percolator import PercolatorIn
-from ms2rescore._exceptions import MS2RescoreError
+
+# from ms2rescore.rescoring_engines.percolator import PercolatorIn
+from ms2rescore.exceptions import MS2RescoreError
 
 sns.set_style("whitegrid")
 logger = logging.getLogger(__name__)
@@ -105,6 +104,43 @@ DEEPLC_FEATURES = [
     "observed_retention_time_best",
     "predicted_retention_time_best",
 ]
+
+
+class ECDF:
+    """
+    Return the Empirical CDF of an array as a step function.
+
+    Parameters
+    ----------
+    x : array_like
+        Observations
+    """
+
+    def __init__(self, x):
+        # Get ECDF
+        x = np.array(x, copy=True)
+        x.sort()
+        nobs = len(x)
+        y = np.linspace(1.0 / nobs, 1, nobs)
+
+        # Make into step function
+        _x = np.asarray(x)
+        _y = np.asarray(y)
+
+        if _x.shape != _y.shape:
+            msg = "x and y do not have the same shape"
+            raise ValueError(msg)
+        if len(_x.shape) != 1:
+            msg = "x and y must be 1-dimensional"
+            raise ValueError(msg)
+
+        self.x = np.r_[-np.inf, _x]
+        self.y = np.r_[0.0, _y]
+        self.n = self.x.shape[0]
+
+    def __call__(self, time):
+        tind = np.searchsorted(self.x, time, side="right") - 1
+        return self.y[tind]
 
 
 class RescoreRecord(ABC):
@@ -195,9 +231,7 @@ class RescoreRecord(ABC):
             rwidth=1,
         )
         if fdr_threshold:
-            axes[0].vlines(
-                x=score_cutoff, ymin=0, ymax=axes[0].get_ylim()[1], linestyles="dashed"
-            )
+            axes[0].vlines(x=score_cutoff, ymin=0, ymax=axes[0].get_ylim()[1], linestyles="dashed")
         axes[0].legend()
         axes[0].set_ylabel("Number of matches")
         axes[0].set_xlabel(score_name)
@@ -208,16 +242,13 @@ class RescoreRecord(ABC):
             self.df.sort_values(score_label)[q_label],
         )
         if fdr_threshold:
-            axes[1].vlines(
-                x=score_cutoff, ymin=0, ymax=axes[1].get_ylim()[1], linestyles="dashed"
-            )
+            axes[1].vlines(x=score_cutoff, ymin=0, ymax=axes[1].get_ylim()[1], linestyles="dashed")
         axes[1].set_ylabel("q-value")
         axes[1].set_xlabel(score_name)
 
         # PP plot
         ratio = (
-            self.df[decoy_label].value_counts()[True]
-            / self.df[decoy_label].value_counts()[False]
+            self.df[decoy_label].value_counts()[True] / self.df[decoy_label].value_counts()[False]
         )
         Ft = ECDF(self.df[~self.df[decoy_label]][score_label])
         Fd = ECDF(self.df[self.df[decoy_label]][score_label])
@@ -332,11 +363,7 @@ class RescoreRecord(ABC):
         else:
             ax.set_xlabel("FDR threshold")
 
-        ax.legend(
-            frameon=True, 
-            ncol=4,
-            loc=9
-        )
+        ax.legend(frameon=True, ncol=4, loc=9)
         fig.set_size_inches(12, 10)
         fig.tight_layout()
         return ax
@@ -521,12 +548,8 @@ class RescoreRecord(ABC):
         number_samples = len(samples)
 
         for i, sample in enumerate(samples, start=1):
-
             if i == number_samples:
-
-                ax = fig.add_subplot(
-                    int(f"{number_samples}1{i}"), frameon=False
-                )
+                ax = fig.add_subplot(int(f"{number_samples}1{i}"), frameon=False)
                 ax.title.set_text(f"FDR={FDR}")
                 sns.barplot(
                     y="feature",
@@ -555,9 +578,7 @@ class RescoreRecord(ABC):
                 ax.axes.set_xlabel("unique identified peptides (%)")
                 ax.axes.set_ylabel("")
             else:
-                ax = fig.add_subplot(
-                    int(f"{len(samples)}1{i}"), frameon=False
-                )
+                ax = fig.add_subplot(int(f"{len(samples)}1{i}"), frameon=False)
                 sns.barplot(
                     y="feature",
                     x="gain",
@@ -611,7 +632,7 @@ class RescoreRecord(ABC):
         cls.count_plot(unique=False)
         pdf.savefig()
 
-        cls.qvalue_comparison(fdr_thresholds = FDR_thresholds)
+        cls.qvalue_comparison(fdr_thresholds=FDR_thresholds)
         plt.tight_layout()
         pdf.savefig()
 
@@ -632,13 +653,14 @@ class RescoreRecord(ABC):
 
         fig = plt.figure(figsize=(16, 6))
 
-        ax = plt.subplot2grid((1,15),(0,0), colspan=13, fig=fig)
+        ax = plt.subplot2grid((1, 15), (0, 0), colspan=13, fig=fig)
         cls.weights.plot_individual_feature_weights(ax)
 
-        ax1 = plt.subplot2grid((1,15),(0,13), colspan=1, fig=fig)
+        ax1 = plt.subplot2grid((1, 15), (0, 13), colspan=1, fig=fig)
         cls.weights.plot_feature_set_weights(ax1)
 
         fig.tight_layout()
+
 
 class PIN(RescoreRecord):
     """PIN file record."""
@@ -673,7 +695,9 @@ class PIN(RescoreRecord):
         """
 
     def __str__(self) -> str:
-        return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+        return (
+            f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+        )
 
     def _read_pin_file(self, path_to_pin):
         """Read pin file, calculate qvalues and write into single pandas DataFrame."""
@@ -757,7 +781,9 @@ class POUT(RescoreRecord):
         """
 
     def __str__(self) -> str:
-        return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+        return (
+            f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+        )
 
     @staticmethod
     def _read_pout(path):
@@ -795,9 +821,7 @@ class PERCWEIGHT(RescoreRecord):
         self.type = "weights"
         self.rescore_features = rescoring_features
         self.name = sample_name
-        self.weights_df = self.read_weights_file(
-            path_to_weights_file, normalized_weights
-        )
+        self.weights_df = self.read_weights_file(path_to_weights_file, normalized_weights)
         RescoreRecord.weights = self
 
         """
@@ -814,7 +838,9 @@ class PERCWEIGHT(RescoreRecord):
         """
 
     def __str__(self) -> str:
-        return f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+        return (
+            f"Sample name: {self.name}\nType: {self.type}\nRescore status: {self.rescore_features}"
+        )
 
     @staticmethod
     def _check_file_type(filepath):
@@ -828,9 +854,7 @@ class PERCWEIGHT(RescoreRecord):
     @property
     def _get_se_features(self):
         return [
-            ft
-            for ft in self.weights_df.columns
-            if ft not in MS2PIP_FEATURES + DEEPLC_FEATURES
+            ft for ft in self.weights_df.columns if ft not in MS2PIP_FEATURES + DEEPLC_FEATURES
         ]
 
     def read_weights_file(self, filename, use_norm_weights: bool):
@@ -857,17 +881,13 @@ class PERCWEIGHT(RescoreRecord):
         """Return a dict with the percentage of weight for each feature set"""
         feature_weights = {}
         total_weight = sum(self.weights_df.loc["mean", :].abs())
-        for name ,feature_set in zip(["MS²PIP", "DeepLC", "Search engine"], [MS2PIP_FEATURES, DEEPLC_FEATURES, self._get_se_features]):
+        for name, feature_set in zip(
+            ["MS²PIP", "DeepLC", "Search engine"],
+            [MS2PIP_FEATURES, DEEPLC_FEATURES, self._get_se_features],
+        ):
             try:
                 feature_weights[name] = (
-                    sum(
-                        np.abs(
-                            [
-                                self.weights_df.loc["mean", feature]
-                                for feature in feature_set
-                            ]
-                        )
-                    )
+                    sum(np.abs([self.weights_df.loc["mean", feature] for feature in feature_set]))
                     / total_weight
                     * 100
                 )
@@ -931,7 +951,6 @@ class PERCWEIGHT(RescoreRecord):
             except KeyError:
                 continue
 
-
         if absolute:
             mean_row = self.weights_df.loc["mean", :].abs().reindex(reindex_list)
         else:
@@ -949,9 +968,9 @@ class PERCWEIGHT(RescoreRecord):
         ax.legend(
             [ms2pip_l, deeplc_l, searchengine_l],
             ["MS²PIP", "DeepLC", "Search engine"],
-            frameon=True, 
+            frameon=True,
             ncol=3,
-            loc=2
+            loc=2,
         )
 
         return ax
@@ -976,39 +995,57 @@ class PERCWEIGHT(RescoreRecord):
 
         return color_mapping
 
+
 @click.command()
 @click.argument("pin_file", required=True)
-@click.option("-p","--pout", multiple=True, required=True, help=".pout MS²Rescore file, multiple .pout files possible with multiple flags")
-@click.option("-d","--pout_dec", multiple=True, required=True, help=".pout_dec MS²Rescore file, multiple .pout_dec files possible with multiple flags")
-@click.option("-f","--feature_sets", multiple=True, required=True, help="Features sets used for rescoring, if multiple pout files than multiple feature set names are required")
-@click.option("-s","--score_metric", required=True, help="Score metric used in the pin file")
-@click.option("-o","--output_filename", default="MS²Rescore_plots", help="output_name")
-@click.option("-w","--weights_file", default=None, help="Percolator weight file to plot feature importances")
-@click.option("-n","--sample_name", default="MS²Rescore run", help="Sample name used for generating plots")
+@click.option(
+    "-p",
+    "--pout",
+    multiple=True,
+    required=True,
+    help=".pout MS²Rescore file, multiple .pout files possible with multiple flags",
+)
+@click.option(
+    "-d",
+    "--pout_dec",
+    multiple=True,
+    required=True,
+    help=".pout_dec MS²Rescore file, multiple .pout_dec files possible with multiple flags",
+)
+@click.option(
+    "-f",
+    "--feature_sets",
+    multiple=True,
+    required=True,
+    help="Features sets used for rescoring, if multiple pout files than multiple feature set names are required",
+)
+@click.option("-s", "--score_metric", required=True, help="Score metric used in the pin file")
+@click.option("-o", "--output_filename", default="MS²Rescore_plots", help="output_name")
+@click.option(
+    "-w", "--weights_file", default=None, help="Percolator weight file to plot feature importances"
+)
+@click.option(
+    "-n", "--sample_name", default="MS²Rescore run", help="Sample name used for generating plots"
+)
 @click.option("--fdr", default="0.01", help="Comma separated FDR values to plot PSMs")
 def main(**kwargs):
     """
     Plot different analysis plots for the PIN_FILE, POUT_FILE and POUT_DEC_FILE from MS²Rescore
     """
 
-    if not (len(kwargs["pout"]) == len(kwargs["pout_dec"])) & (len(kwargs["pout"]) == len(kwargs["feature_sets"])):
+    if not (len(kwargs["pout"]) == len(kwargs["pout_dec"])) & (
+        len(kwargs["pout"]) == len(kwargs["feature_sets"])
+    ):
         raise MS2RescoreError("Pout, pout_dec and feature_sets should be of equal length")
-    
+
     kwargs["fdr"] = [float(fdr) for fdr in kwargs["fdr"].split(",")]
     logger.info(f"Create plots with these FDR vales: {kwargs['fdr']}")
     RescoreRecord.empty_rerecs()
-    PIN(
-        kwargs["pin_file"],
-        kwargs["sample_name"],
-        kwargs["score_metric"]
-    )
-    for pout, pout_dec, feature_sets in zip(kwargs["pout"], kwargs["pout_dec"], kwargs["feature_sets"]):
-        POUT(
-            pout,
-            pout_dec,
-            kwargs["sample_name"],
-            feature_sets
-        )
+    PIN(kwargs["pin_file"], kwargs["sample_name"], kwargs["score_metric"])
+    for pout, pout_dec, feature_sets in zip(
+        kwargs["pout"], kwargs["pout_dec"], kwargs["feature_sets"]
+    ):
+        POUT(pout, pout_dec, kwargs["sample_name"], feature_sets)
     if kwargs["weights_file"]:
         weights = PERCWEIGHT(
             kwargs["weights_file"],
@@ -1017,6 +1054,7 @@ def main(**kwargs):
         )
     logger.info(f"Saving plots to {kwargs['output_filename']}.pdf")
     RescoreRecord.save_plots_to_pdf(kwargs["output_filename"] + ".pdf", list(kwargs["fdr"]))
+
 
 if __name__ == "__main__":
     main()

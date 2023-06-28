@@ -22,13 +22,12 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
     "sphinx_rtd_theme",
     "sphinx_mdinclude",
 ]
 source_suffix = [".rst", ".md"]
 master_doc = "index"
-
-templates_path = ["_templates"]
 exclude_patterns = ["_build"]
 
 # Options for HTML output
@@ -37,8 +36,18 @@ html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
 
 # Autodoc options
+autodoc_default_options = {"members": True, "show-inheritance": True}
 autodoc_member_order = "bysource"
+autodoc_typehints = "description"
 autoclass_content = "init"
+
+# Intersphinx options
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "psm_utils": ("https://psm-utils.readthedocs.io/en/stable/", None),
+}
 
 
 def setup(app):

@@ -15,6 +15,7 @@ def main():
         rescore.run()
     except Exception as e:
         logger.exception(e)
+        raise e
     finally:
         if rescore:
             rescore.save_log()

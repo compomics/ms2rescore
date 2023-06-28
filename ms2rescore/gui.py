@@ -1,30 +1,28 @@
 """Graphical user interface for MS²Rescore using Gooey."""
+import importlib.resources
 import logging
 import logging.handlers
+import multiprocessing
 import os
 import sys
-
 import tkinter as tk
-import customtkinter
-from ttkthemes import ThemedTk
-from PIL import Image
 import tkinter.messagebox
-from typing import Union, Callable
-import webbrowser
-import multiprocessing
 import traceback
-from ms2rescore.setup_logging import LOG_MAPPING
-import importlib.resources
+import webbrowser
 from pathlib import Path
-import matplotlib.pyplot as plt
+from typing import Callable, Union
 
+import customtkinter
+import matplotlib.pyplot as plt
 from ms2pip.constants import MODELS as ms2pip_models
+from PIL import Image
 from psm_utils.io import FILETYPES
 
 import ms2rescore
-from ms2rescore.ms2rescore_main import MS2Rescore
-from ms2rescore.exceptions import MS2RescoreConfigurationError
 import ms2rescore.package_data.img as img_module
+from ms2rescore.exceptions import MS2RescoreConfigurationError
+from ms2rescore.ms2rescore_main import MS2Rescore
+from ms2rescore.setup_logging import LOG_MAPPING
 
 with importlib.resources.path(img_module, "config_icon.png") as resource:
     _IMG_DIR = Path(resource).parent
@@ -98,10 +96,10 @@ class App(customtkinter.CTk):
         self.textbox.pack(expand=True, fill=tk.BOTH)
         self.textbox.configure(state="disabled")
 
-        self.loggin_label = customtkinter.CTkLabel(
+        self.logging_label = customtkinter.CTkLabel(
             self.middle_frame, text="Logging Level:", anchor="w"
         )
-        self.loggin_label.grid(row=1, column=0, padx=10, pady=10)
+        self.logging_label.grid(row=1, column=0, padx=10, pady=10)
         self.logging_var = customtkinter.StringVar(value="info")
         self.combobox = customtkinter.CTkComboBox(
             master=self.middle_frame,
@@ -136,7 +134,7 @@ class App(customtkinter.CTk):
 
         self.progressbar = customtkinter.CTkProgressBar(self.middle_frame)
         self.progressbar.grid(row=1, column=2, padx=10, pady=10, sticky="e")
-        self.progressbar.configure(mode="indeterminnate")
+        self.progressbar.configure(mode="indeterminate")
         self.progressbar.start()
 
         self.textbox.configure(state="normal")
@@ -151,16 +149,14 @@ class App(customtkinter.CTk):
         self.monitor(self.ms2rescore_run)
 
     def stop_button_callback(self):
-        """Stop button callback"""
-
+        """Stop button has been pressed: Disable button, terminate process."""
         self.stop_button_pressed = True
         self.stop_button.configure(state="disabled")
         self.progressbar.grid_forget()
         self.ms2rescore_run.terminate()
 
     def finish_callback(self):
-        """Stop button callback"""
-
+        """Process finished by itself, either successfully or with an error."""
         self.stop_button.grid_forget()
         self.progressbar.grid_forget()
         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
@@ -183,7 +179,7 @@ class App(customtkinter.CTk):
             )
             self.popupwindow.focus()
         else:
-            self.popupwindow = PopupWindow("MS²Rescore finished succesfully!")
+            self.popupwindow = PopupWindow("MS²Rescore finished successfully!")
             self.popupwindow.focus()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
@@ -329,17 +325,17 @@ class App(customtkinter.CTk):
         )
         self.pipeline_combobox.pack(fill=tk.BOTH)
 
-        self.num_cpu_var = customtkinter.StringVar(value="-1")
-        self.num_cpu_label = customtkinter.CTkLabel(
+        self.processes_var = customtkinter.StringVar(value="-1")
+        self.processes_label = customtkinter.CTkLabel(
             tabview_object, text="Num CPU:", anchor="w"
         )
-        self.num_cpu_label.pack(anchor="w")
-        self.num_cpu = customtkinter.CTkOptionMenu(
+        self.processes_label.pack(anchor="w")
+        self.processes = customtkinter.CTkOptionMenu(
             master=tabview_object,
             values=[str(x) for x in list(range(-1, multiprocessing.cpu_count() + 1))],
-            variable=self.num_cpu_var,
+            variable=self.processes_var,
         )
-        self.num_cpu.pack(fill=tk.BOTH)
+        self.processes.pack(fill=tk.BOTH)
 
         self.modification_mapping_label = customtkinter.CTkLabel(
             tabview_object, text="Modification mapping", anchor="w"
@@ -460,11 +456,11 @@ class App(customtkinter.CTk):
             tabview_object, text="MS2 error tolerance in Da", anchor="w"
         )
         self.error_label.pack(anchor=tk.W, fill=tk.BOTH)
-        self.frag_error_spinbox = FloatSpinbox(
+        self.ms2_tolerance_spinbox = FloatSpinbox(
             tabview_object, step_size=0.01, width=110
         )
-        self.frag_error_spinbox.pack(padx=10, pady=10, anchor="w")
-        self.frag_error_spinbox.set(0.02)
+        self.ms2_tolerance_spinbox.pack(padx=10, pady=10, anchor="w")
+        self.ms2_tolerance_spinbox.set(0.02)
 
     def create_deeplc_tab(self, tabview_object):
         """Configuring the UI for the deeplc tab"""
@@ -515,7 +511,7 @@ class App(customtkinter.CTk):
             "spectrum_path": self.mgf_dir.selected_filename,
             "output_path": self.file_prefix.selected_filename,
             "log_level": self.logging_var.get(),
-            "num_cpu": int(self.num_cpu_var.get()),
+            "processes": int(self.processes_var.get()),
             "modification_mapping": self.parse_modification_mapping(
                 self.modification_mapping_box.get("0.0", "end")
             ),
@@ -532,7 +528,7 @@ class App(customtkinter.CTk):
         }
         ms2pip_config = {
             "model": self.selected_ms2pip_model.get(),
-            "frag_error": float(self.frag_error_spinbox.get()),
+            "ms2_tolerance": float(self.ms2_tolerance_spinbox.get()),
         }
         if self.calibration_set_size.get() == "":
             calibration_set_size = 0.15

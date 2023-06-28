@@ -5,17 +5,15 @@ import multiprocessing
 import warnings
 from itertools import chain
 from pathlib import Path
+from typing import Union
 
 import numpy as np
-from ms2pip.core import correlate
+import pandas as pd
+from ms2pip import correlate
+from ms2pip.result import ProcessingResult
 from psm_utils import PSMList
-from psm_utils.io import peptide_record
 from rich.progress import track
-from scipy.stats import pearsonr, spearmanr
-from sklearn.metrics import mean_squared_error as mse
-from collections import defaultdict
 
-from ms2rescore.exceptions import MS2RescoreError
 from ms2rescore.feature_generators import FeatureGenerator
 from ms2rescore.utils import infer_spectrum_path
 
@@ -108,92 +106,65 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
         """Add MS²PIP-derived features to PSMs."""
         logger.info("Adding MS²PIP-derived features to PSMs.")
 
-        """Generate rescoring features and add to psm_list."""
-        # Prepare MS²PIP configuration
-        self.config["ms2pip"].update(
-            {
-                "ptm": self._get_modification_config(psm_list),
-                "sptm": [],
-                "gptm": [],
-            }
-        )
-
         # Get easy-access nested version of PSMList
         psm_dict = psm_list.get_psm_dict()
         # Run MS²PIP for each spectrum file
         for collection, runs in psm_dict.items():
             for run, psms in runs.items():
-                # Prepare PSM file
-                logger.info(f"Preparing MS²PIP PSM file for {run}.")
-                psm_list_run = PSMList(
-                    psm_list=list(chain.from_iterable(psms.values()))
-                )
-                psm_id_mapper = {i: psm for i, psm in enumerate(psm_list_run)}
+                # Prepare PSMs
+                logger.debug(f"Running MS²PIP for spectrum file `{run}`...")
+                psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
+
                 # Prepare spectrum filenames
                 spectrum_filename = infer_spectrum_path(
                     self.config["ms2rescore"]["spectrum_path"], run
                 )
-                output_filename = "-".join(
-                    [self.tmp_file_root, str(collection), str(run)]
-                )  # TODO use this if files have to be written
 
                 # Run MS²PIP
-                ms2pip_processing_results = correlate(
+                ms2pip_results = correlate(
                     psms=psm_list_run,
                     spectrum_file=spectrum_filename,
-                    spectrum_id_pattern=self.config["ms2rescore"][
-                        "spectrum_id_pattern"
-                    ],
+                    spectrum_id_pattern=self.config["ms2rescore"]["spectrum_id_pattern"],
                     model=self.config["ms2pip"]["model"],
                     compute_correlations=False,
-                    processes=self.config["ms2rescore"]["num_cpu"],
+                    ms2_tolerance=self.config["ms2pip"]["ms2_tolerance"],
+                    processes=self.config["ms2rescore"]["processes"],
                 )
 
                 # Calculate features
                 logger.debug("Calculating features from predicted spectra")
-                features = self._calculate_features(
-                    ms2pip_processing_results,
-                    self.config["ms2rescore"]["num_cpu"],
-                    show_progress_bar=True,
-                )
-                # Add features to PSMs
-                for psm_id, psm in psm_id_mapper.items():
-                    try:
-                        psm["rescoring_features"].update(features[psm_id])
-                    except TypeError:  # if none we get type error
-                        psm["rescoring_features"] = None
+                # Do not use multiprocessing for small amount of PSMs
+                if len(ms2pip_results) < 10000:
+                    for result in ms2pip_results:
+                        features = self._calculate_features_single(result)
+                        if features:
+                            try:
+                                result.psm["rescoring_features"].update(features)
+                            except AttributeError:
+                                result.psm["rescoring_features"] = features
+                # Use multiprocessing for large amount of PSMs
+                else:
+                    with multiprocessing.Pool(int(self.config["ms2rescore"]["processes"])) as pool:
+                        # Use imap, so we can use a progress bar
+                        all_features = track(
+                            pool.imap(
+                                self._calculate_features_single,
+                                ms2pip_results,
+                                chunksize=1000,
+                            ),
+                            total=len(ms2pip_results),
+                            description="Calculating features...",
+                            transient=True,
+                        )
+                        for result, features in zip(ms2pip_results, all_features):
+                            if features:
+                                try:
+                                    result.psm["rescoring_features"].update(features)
+                                except AttributeError:
+                                    result.psm["rescoring_features"] = features
 
-    @staticmethod
-    def _get_modification_config(psm_list):
-        """
-        Get MS²PIP-style modification configuration from PSMList.
-
-        Notes
-        -----
-        Fixed, labile, and unlocalized modifications are ignored. Fixed modifications
-        should therefore already have been applied.
-
-        """
-        unique_modifications = set()
-        for psm in psm_list:
-            for aa, mods in psm.peptidoform.parsed_sequence:
-                if mods:
-                    unique_modifications.update([(aa, mod) for mod in mods])
-            if psm.peptidoform.properties["n_term"]:
-                unique_modifications.update(
-                    [("N-term", mod) for mod in psm.peptidoform.properties["n_term"]]
-                )
-            if psm.peptidoform.properties["c_term"]:
-                unique_modifications.update(
-                    [("C-term", mod) for mod in psm.peptidoform.properties["c_term"]]
-                )
-        return [
-            ",".join([mod.value, str(mod.mass), "opt", target])
-            for target, mod in unique_modifications
-        ]
-
-    def _compute_features(self, processing_result):
-        """Compute features from observed and predicted intensities."""
+    def _calculate_features_single(self, processing_result: ProcessingResult) -> Union[dict, None]:
+        """Calculate MS²PIP-based features for single PSM."""
         # Suppress RuntimeWarnings about invalid values
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -202,18 +173,15 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 processing_result.observed_intensity is None
                 or processing_result.predicted_intensity is None
             ):
-                return (processing_result.psm_index, None)
+                warnings.warn("No MS²PIP prediction for PSM")
+                return None
 
             # Convert intensities to arrays
             target_b = processing_result.predicted_intensity["b"].clip(np.log2(0.001))
             target_y = processing_result.predicted_intensity["y"].clip(np.log2(0.001))
             target_all = np.concatenate([target_b, target_y])
-            prediction_b = processing_result.observed_intensity["b"].clip(
-                np.log2(0.001)
-            )
-            prediction_y = processing_result.observed_intensity["y"].clip(
-                np.log2(0.001)
-            )
+            prediction_b = processing_result.observed_intensity["b"].clip(np.log2(0.001))
+            prediction_y = processing_result.observed_intensity["y"].clip(np.log2(0.001))
             prediction_all = np.concatenate([prediction_b, prediction_y])
 
             # Prepare 'unlogged' intensity arrays
@@ -235,12 +203,12 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
             # Compute features
             feature_values = [
                 # Features between spectra in log space
-                pearsonr(target_all, prediction_all)[0],  # Pearson all ions
-                pearsonr(target_b, prediction_b)[0],  # Pearson b ions
-                pearsonr(target_y, prediction_y)[0],  # Pearson y ions
-                mse(target_all, prediction_all),  # MSE all ions
-                mse(target_b, prediction_b),  # MSE b ions
-                mse(target_y, prediction_y),  # MSE y ions
+                np.corrcoef(target_all, prediction_all)[0][1],  # Pearson all ions
+                np.corrcoef(target_b, prediction_b)[0][1],  # Pearson b ions
+                np.corrcoef(target_y, prediction_y)[0][1],  # Pearson y ions
+                _mse(target_all, prediction_all),  # MSE all ions
+                _mse(target_b, prediction_b),  # MSE b ions
+                _mse(target_y, prediction_y),  # MSE y ions
                 np.min(abs_diff_all),  # min_abs_diff_norm
                 np.max(abs_diff_all),  # max_abs_diff_norm
                 np.quantile(abs_diff_all, 0.25),  # abs_diff_Q1_norm
@@ -265,36 +233,23 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 np.dot(target_all, prediction_all),  # Dot product all ions
                 np.dot(target_b, prediction_b),  # Dot product b ions
                 np.dot(target_y, prediction_y),  # Dot product y ions
-                np.dot(target_all, prediction_all)
-                / (
-                    np.linalg.norm(target_all, 2) * np.linalg.norm(prediction_all, 2)
-                ),  # Cos similarity all ions
-                np.dot(target_b, prediction_b)
-                / (
-                    np.linalg.norm(target_b, 2) * np.linalg.norm(prediction_b, 2)
-                ),  # Cos similarity b ions
-                np.dot(target_y, prediction_y)
-                / (
-                    np.linalg.norm(target_y, 2) * np.linalg.norm(prediction_y, 2)
-                ),  # Cos similarity y ions
+                _cosine_similarity(target_all, prediction_all),  # Cos similarity all ions
+                _cosine_similarity(target_b, prediction_b),  # Cos similarity b ions
+                _cosine_similarity(target_y, prediction_y),  # Cos similarity y ions
                 # Same features in normal space
-                pearsonr(target_all_unlog, prediction_all_unlog)[0],  # Pearson all ions
-                pearsonr(target_b_unlog, prediction_b_unlog)[0],  # Pearson b ions
-                pearsonr(target_y_unlog, prediction_y_unlog)[0],  # Pearson y ions
-                spearmanr(target_all_unlog, prediction_all_unlog)[
-                    0
-                ],  # Spearman all ions
-                spearmanr(target_b_unlog, prediction_b_unlog)[0],  # Spearman b ions
-                spearmanr(target_y_unlog, prediction_y_unlog)[0],  # Spearman y ions
-                mse(target_all_unlog, prediction_all_unlog),  # MSE all ions
-                mse(target_b_unlog, prediction_b_unlog),  # MSE b ions
-                mse(target_y_unlog, prediction_y_unlog),  # MSE y ions,
-                0
-                if np.min(abs_diff_b_unlog) <= np.min(abs_diff_y_unlog)
-                else 1,  # Ion type with min absolute difference
-                0
-                if np.max(abs_diff_b_unlog) >= np.max(abs_diff_y_unlog)
-                else 1,  # Ion type with max absolute difference
+                np.corrcoef(target_all_unlog, prediction_all_unlog)[0][1],  # Pearson all
+                np.corrcoef(target_b_unlog, prediction_b_unlog)[0][1],  # Pearson b
+                np.corrcoef(target_y_unlog, prediction_y_unlog)[0][1],  # Pearson y
+                _spearman(target_all_unlog, prediction_all_unlog),  # Spearman all ions
+                _spearman(target_b_unlog, prediction_b_unlog),  # Spearman b ions
+                _spearman(target_y_unlog, prediction_y_unlog),  # Spearman y ions
+                _mse(target_all_unlog, prediction_all_unlog),  # MSE all ions
+                _mse(target_b_unlog, prediction_b_unlog),  # MSE b ions
+                _mse(target_y_unlog, prediction_y_unlog),  # MSE y ions,
+                # Ion type with min absolute difference
+                0 if np.min(abs_diff_b_unlog) <= np.min(abs_diff_y_unlog) else 1,
+                # Ion type with max absolute difference
+                0 if np.max(abs_diff_b_unlog) >= np.max(abs_diff_y_unlog) else 1,
                 np.min(abs_diff_all_unlog),  # min_abs_diff
                 np.max(abs_diff_all_unlog),  # max_abs_diff
                 np.quantile(abs_diff_all_unlog, 0.25),  # abs_diff_Q1
@@ -319,21 +274,9 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 np.dot(target_all_unlog, prediction_all_unlog),  # Dot product all ions
                 np.dot(target_b_unlog, prediction_b_unlog),  # Dot product b ions
                 np.dot(target_y_unlog, prediction_y_unlog),  # Dot product y ions
-                np.dot(target_all_unlog, prediction_all_unlog)
-                / (
-                    np.linalg.norm(target_all_unlog, 2)
-                    * np.linalg.norm(prediction_all_unlog, 2)
-                ),  # Cos similarity all ions
-                np.dot(target_b_unlog, prediction_b_unlog)
-                / (
-                    np.linalg.norm(target_b_unlog, 2)
-                    * np.linalg.norm(prediction_b_unlog, 2)
-                ),  # Cos similarity b ions
-                np.dot(target_y_unlog, prediction_y_unlog)
-                / (
-                    np.linalg.norm(target_y_unlog, 2)
-                    * np.linalg.norm(prediction_y_unlog, 2)
-                ),  # Cos similarity y ions
+                _cosine_similarity(target_all_unlog, prediction_all_unlog),  # Cos similarity all
+                _cosine_similarity(target_b_unlog, prediction_b_unlog),  # Cos similarity b ions
+                _cosine_similarity(target_y_unlog, prediction_y_unlog),  # Cos similarity y ions
             ]
 
         features = dict(
@@ -344,34 +287,25 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
         )
         return (processing_result.psm_index, features)
 
-    def _calculate_features(
-        self, processing_results, num_cpu=1, show_progress_bar=True
-    ):
-        """Calculate MS²PIP-based features in parallelized fashion."""
-        logger.debug("Computing features")
 
-        # Do not use multiprocessing for small amount of features
-        if len(processing_results) < 10000:
-            feature_result_list = [
-                self._compute_features(result) for result in processing_results
-            ]
-            all_features = {
-                psm_id: features for psm_id, features in feature_result_list
-            }
-        else:
-            # Split up df into list of chunk_size df's (will be divided over num_cpu)
-            # Use imap, so we can use a progress bar
-            with multiprocessing.Pool(int(num_cpu)) as pool:
-                feature_result_list = track(
-                    pool.imap(
-                        self._compute_features, processing_results, chunksize=100
-                    ),
-                    total=len(processing_results),
-                    disable=True if not show_progress_bar else False,
-                    description="Calculating features...",
-                    transient=True,
-                )
-                all_features = {
-                    psm_id: features for psm_id, features in feature_result_list
-                }
-        return all_features
+def _spearman(x: np.ndarray, y: np.ndarray) -> float:
+    """Spearman rank correlation."""
+    x = np.array(x)
+    y = np.array(y)
+    x_rank = pd.Series(x).rank()
+    y_rank = pd.Series(y).rank()
+    return np.corrcoef(x_rank, y_rank)[0][1]
+
+
+def _mse(x: np.ndarray, y: np.ndarray) -> float:
+    """Mean squared error"""
+    x = np.array(x)
+    y = np.array(y)
+    return np.mean((x - y) ** 2)
+
+
+def _cosine_similarity(x: np.ndarray, y: np.ndarray) -> float:
+    """Cosine similarity"""
+    x = np.array(x)
+    y = np.array(y)
+    return np.dot(x, y) / (np.linalg.norm(x, 2) * np.linalg.norm(y, 2))

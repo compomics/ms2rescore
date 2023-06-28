@@ -36,7 +36,7 @@ class PercolatorRescoring(Rescoringengine):
             "decoy-results-peptides": self.output_file_root + "_decoy_peptides.pout",
             "weights": self.output_file_root + ".weights",
             "verbose": LOG_LEVEL_MAP[self.config["ms2rescore"]["log_level"]],
-            "num-threads": self.config["ms2rescore"]["num_cpu"],
+            "num-threads": self.config["ms2rescore"]["processes"],
             "post-processing-tdc": True,
         }
 

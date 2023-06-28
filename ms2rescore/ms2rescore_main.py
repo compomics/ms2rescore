@@ -77,7 +77,7 @@ class MS2Rescore:
 
         logger.debug(
             "Using %i of %i available CPUs.",
-            self.config["ms2rescore"]["num_cpu"],
+            self.config["ms2rescore"]["processes"],
             cpu_count(),
         )
 

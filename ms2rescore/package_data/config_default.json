@@ -1,9 +1,12 @@
 {
     "$schema": "./config_schema.json",
-    "ms2rescore":{
-        "feature_generators": ["ms2pip", "deeplc"],
+    "ms2rescore": {
+        "feature_generators": [
+            "ms2pip",
+            "deeplc"
+        ],
         "rescoring_engine": "percolator",
-        "config_file":null,
+        "config_file": null,
         "psm_file": null,
         "psm_file_type": "infer",
         "tmp_path": null,
@@ -16,13 +19,13 @@
         "lower_score_is_better": false,
         "modification_mapping": {},
         "fixed_modifications": {},
-        "num_cpu": -1,
+        "processes": -1,
         "USI": false
     },
     "ms2pip": {
         "model": "HCD",
-        "frag_error": 0.02
+        "ms2_tolerance": 0.02
     },
-    "deeplc":{},
+    "deeplc": {},
     "percolator": {}
 }

@@ -90,7 +90,7 @@
                     "default": {},
                     "additionalProperties": true
                 },
-                "num_cpu": {
+                "processes": {
                     "description": "Number of parallel processes to use; -1 for all available",
                     "type": "number",
                     "multipleOf": 1,
@@ -113,7 +113,7 @@
                     "type": "string",
                     "default": "HCD"
                 },
-                "frag_error": {
+                "ms2_tolerance": {
                     "description": "MS2 error tolerance in Da",
                     "type": "number",
                     "minimum": 0,

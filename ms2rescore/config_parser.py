@@ -23,12 +23,12 @@ def _parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument(
-        "-f",
-        dest="psm_file",
+        "-p",
         metavar="FILE",
         action="store",
         type=str,
-        help="path to psm file (pin, mzid, msms.txt, tandem xml...)",
+        dest="psm_file",
+        help="path to PSM file (pin, mzid, msms.txt, tandem xml...)",
     )
     parser.add_argument(
         "-m",
@@ -76,9 +76,9 @@ def _parse_arguments() -> argparse.Namespace:
         metavar="VALUE",
         action="store",
         type=int,
-        dest="num_cpu",
+        dest="processes",
         default=None,
-        help="number of cpus available to MS²Rescore",
+        help="number of parallel processes available to MS²Rescore",
     )
     parser.add_argument(
         "--psm_file_type",
@@ -132,19 +132,17 @@ def _validate_filenames(config: Dict) -> Dict:
     return config
 
 
-def _validate_num_cpu(config: Dict) -> Dict:
-    """Validate requested num_cpu with available cpu count."""
+def _validate_processes(config: Dict) -> Dict:
+    """Validate requested processes with available cpu count."""
     n_available = mp.cpu_count()
-    if (config["ms2rescore"]["num_cpu"] == -1) or (
-        config["ms2rescore"]["num_cpu"] > n_available
+    if (config["ms2rescore"]["processes"] == -1) or (
+        config["ms2rescore"]["processes"] > n_available
     ):
-        config["ms2rescore"]["num_cpu"] = n_available
+        config["ms2rescore"]["processes"] = n_available
     return config
 
 
-def parse_config(
-    parse_cli_args: bool = True, config_class: Optional[Dict] = None
-) -> Dict:
+def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = None) -> Dict:
     """
     Parse and validate MS²ReScore configuration files and arguments.
 
@@ -188,8 +186,7 @@ def parse_config(
                 cascade_conf.add_dict(tomlkit.load(toml_file))
         else:
             raise MS2RescoreConfigurationError(
-                "Unknown file extension for configuration file. Should be `json` or "
-                "`toml`."
+                "Unknown file extension for configuration file. Should be `json` or " "`toml`."
             )
     if parse_cli_args:
         cascade_conf.add_namespace(args, subkey="ms2rescore")
@@ -198,13 +195,11 @@ def parse_config(
     config = cascade_conf.parse()
 
     config = _validate_filenames(config)
-    config = _validate_num_cpu(config)
+    config = _validate_processes(config)
 
     config["ms2rescore"]["feature_generators"] = [
         fg.lower() for fg in config["ms2rescore"]["feature_generators"]
     ]
-    config["ms2rescore"]["rescoring_engine"] = config["ms2rescore"][
-        "rescoring_engine"
-    ].lower()
+    config["ms2rescore"]["rescoring_engine"] = config["ms2rescore"]["rescoring_engine"].lower()
 
     return config
