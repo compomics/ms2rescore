@@ -1,23 +1,21 @@
 """DeepLC retention time-based feature generator."""
 
+import contextlib
 import logging
 import os
-import contextlib
-import sys
-from typing import Union, Optional
-from pathlib import Path
+from collections import defaultdict
 from itertools import chain
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from collections import defaultdict
 from psm_utils import PSMList
 from psm_utils.io import peptide_record
 
-from ms2rescore.feature_generators import FeatureGenerator
-from ms2rescore.utils import infer_spectrum_path
-from ms2rescore.parse_mgf import parse_mgf_title_rt
 from ms2rescore.exceptions import MS2RescoreError
+from ms2rescore.feature_generators import FeatureGenerator
+from ms2rescore.parse_mgf import parse_mgf_title_rt
+from ms2rescore.utils import infer_spectrum_path
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
@@ -54,13 +52,9 @@ class DeepLCFeatureGenerator(FeatureGenerator):
             / Path(self.config["ms2rescore"]["psm_file"]).stem
         )
         self.feature_names = []
-        self.higher_psm_score_better = self.config["ms2rescore"][
-            "lower_score_is_better"
-        ]
+        self.higher_psm_score_better = self.config["ms2rescore"]["lower_score_is_better"]
         try:
-            self.calibration_set_size = self.config["deeplc"].pop(
-                "calibration_set_size"
-            )
+            self.calibration_set_size = self.config["deeplc"].pop("calibration_set_size")
         except KeyError:
             self.calibration_set_size = 0.15
         self.num_cpu = 1
@@ -103,12 +97,10 @@ class DeepLCFeatureGenerator(FeatureGenerator):
             self.deeplc_predictor = None
             self.selected_model = None
             for run, psms in runs.items():
-                logger.info(f"Processing {run}")
+                logger.info(f"Running DeepLC for PSMs from run `{run}`...")
                 # Prepare PSM file
                 with contextlib.redirect_stdout(open(os.devnull, "w")):
-                    psm_list_run = PSMList(
-                        psm_list=list(chain.from_iterable(psms.values()))
-                    )
+                    psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
                     if not all(psm_list["retention_time"]):
                         retention_times = psm_list_run["retention_time"]
@@ -123,7 +115,7 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                             ]  # Probably faster to replace all
                         except KeyError:
                             raise MS2RescoreError(
-                                "Could not find all map spectrum ids to retention times"
+                                "Could not map all spectrum ids to retention times"
                             )
 
                     psm_list_calibration = self.get_calibration_psms(psm_list_run)
@@ -164,13 +156,8 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                                 "rt_diff": rt_diffs_run[i],
                             }
                         )
-                        peptide = psm.peptidoform.proforma.split("\\")[
-                            0
-                        ]  # remove charge
-                        if (
-                            peptide_rt_diff_dict[peptide]["rt_diff_best"]
-                            > rt_diffs_run[i]
-                        ):
+                        peptide = psm.peptidoform.proforma.split("\\")[0]  # remove charge
+                        if peptide_rt_diff_dict[peptide]["rt_diff_best"] > rt_diffs_run[i]:
                             peptide_rt_diff_dict[peptide] = {
                                 "observed_retention_time_best": observations[i],
                                 "predicted_retention_time_best": predictions[i],
@@ -207,9 +194,7 @@ class DeepLCFeatureGenerator(FeatureGenerator):
         psm_list_targets = psm_list[~psm_list["is_decoy"]]
         n_psms = self.get_number_of_calibration_psms(psm_list_targets)
         indices = np.argsort(psm_list_targets["score"])
-        indices = (
-            indices[-n_psms:] if self.higher_psm_score_better else indices[:n_psms]
-        )
+        indices = indices[-n_psms:] if self.higher_psm_score_better else indices[:n_psms]
         return psm_list[indices]
 
     def get_number_of_calibration_psms(self, psm_list):

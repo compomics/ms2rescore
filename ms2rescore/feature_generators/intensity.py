@@ -5,7 +5,7 @@ import multiprocessing
 import warnings
 from itertools import chain
 from pathlib import Path
-from typing import Union
+from typing import List, Union
 
 import numpy as np
 import pandas as pd
@@ -105,22 +105,14 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
     def add_features(self, psm_list: PSMList) -> None:
         """Add MS²PIP-derived features to PSMs."""
         logger.info("Adding MS²PIP-derived features to PSMs.")
-
-        # Get easy-access nested version of PSMList
-        psm_dict = psm_list.get_psm_dict()
-        # Run MS²PIP for each spectrum file
-        for collection, runs in psm_dict.items():
+        for runs in psm_list.get_psm_dict().values():
             for run, psms in runs.items():
-                # Prepare PSMs
-                logger.debug(f"Running MS²PIP for spectrum file `{run}`...")
+                logger.info(f"Running MS²PIP for PSMs from run `{run}`...")
                 psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
-
-                # Prepare spectrum filenames
                 spectrum_filename = infer_spectrum_path(
                     self.config["ms2rescore"]["spectrum_path"], run
                 )
-
-                # Run MS²PIP
+                logger.debug(f"Using spectrum file `{spectrum_filename}`")
                 ms2pip_results = correlate(
                     psms=psm_list_run,
                     spectrum_file=spectrum_filename,
@@ -130,38 +122,40 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                     ms2_tolerance=self.config["ms2pip"]["ms2_tolerance"],
                     processes=self.config["ms2rescore"]["processes"],
                 )
+                self._calculate_features(ms2pip_results)
 
-                # Calculate features
-                logger.debug("Calculating features from predicted spectra")
-                # Do not use multiprocessing for small amount of PSMs
-                if len(ms2pip_results) < 10000:
-                    for result in ms2pip_results:
-                        features = self._calculate_features_single(result)
-                        if features:
-                            try:
-                                result.psm["rescoring_features"].update(features)
-                            except AttributeError:
-                                result.psm["rescoring_features"] = features
-                # Use multiprocessing for large amount of PSMs
-                else:
-                    with multiprocessing.Pool(int(self.config["ms2rescore"]["processes"])) as pool:
-                        # Use imap, so we can use a progress bar
-                        all_features = track(
-                            pool.imap(
-                                self._calculate_features_single,
-                                ms2pip_results,
-                                chunksize=1000,
-                            ),
-                            total=len(ms2pip_results),
-                            description="Calculating features...",
-                            transient=True,
-                        )
-                        for result, features in zip(ms2pip_results, all_features):
-                            if features:
-                                try:
-                                    result.psm["rescoring_features"].update(features)
-                                except AttributeError:
-                                    result.psm["rescoring_features"] = features
+    def _calculate_features(self, ms2pip_results: List[ProcessingResult]) -> None:
+        """Calculate features from all MS²PIP results and add to PSMs."""
+        logger.debug("Calculating features from predicted spectra")
+        # Do not use multiprocessing for small amount of PSMs
+        if len(ms2pip_results) < 10000:
+            for result in ms2pip_results:
+                features = self._calculate_features_single(result)
+                if features:
+                    try:
+                        result.psm["rescoring_features"].update(features)
+                    except (AttributeError, TypeError):
+                        result.psm["rescoring_features"] = features
+        # Use multiprocessing for large amount of PSMs
+        else:
+            with multiprocessing.Pool(int(self.config["ms2rescore"]["processes"])) as pool:
+                # Use imap, so we can use a progress bar
+                all_features = track(
+                    pool.imap(
+                        self._calculate_features_single,
+                        ms2pip_results,
+                        chunksize=1000,
+                    ),
+                    total=len(ms2pip_results),
+                    description="Calculating features...",
+                    transient=True,
+                )
+                for result, features in zip(ms2pip_results, all_features):
+                    if features:
+                        try:
+                            result.psm["rescoring_features"].update(features)
+                        except (AttributeError, TypeError):
+                            result.psm["rescoring_features"] = features
 
     def _calculate_features_single(self, processing_result: ProcessingResult) -> Union[dict, None]:
         """Calculate MS²PIP-based features for single PSM."""

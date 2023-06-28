@@ -16,8 +16,8 @@ import seaborn as sns
 from matplotlib.patches import Patch
 from pyteomics.auxiliary import qvalues
 
-# from ms2rescore.rescoring_engines.percolator import PercolatorIn
 from ms2rescore.exceptions import MS2RescoreError
+from ms2rescore.rescoring_engines.percolator import PercolatorIn
 
 sns.set_style("whitegrid")
 logger = logging.getLogger(__name__)

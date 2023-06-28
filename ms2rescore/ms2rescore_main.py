@@ -3,7 +3,7 @@ import re
 import subprocess
 from multiprocessing import cpu_count
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 import psm_utils.io
 from rich.console import Console
@@ -90,17 +90,15 @@ class MS2Rescore:
             show_progressbar=True,
         )
 
-        # psm_list.set_ranks(
-        #     lower_score_better=self.config["ms2rescore"]["lower_score_is_better"]
-        # )
-        # psm_list = psm_list.get_rank1_psms() # only keep rank 1 PSMs, can be removed?
         if self.config["ms2rescore"]["id_decoy_pattern"]:
             psm_list.find_decoys(self.config["ms2rescore"]["id_decoy_pattern"])
-
-        logger.debug(f"{sum(psm_list['is_decoy'])} decoy PSMs found.")
+        n_psms = len(psm_list)
+        percent_decoys = sum(psm_list["is_decoy"]) / n_psms * 100
+        logger.info(f"Found {n_psms} PSMs, of which {percent_decoys:.2f}% are decoys.")
         if not any(psm_list["is_decoy"]):
             raise MS2RescoreConfigurationError(
-                "No decoy PSMs found. Please check if decoys are present."
+                "No decoy PSMs found. Please check if decoys are present in the PSM file and that "
+                "the `id_decoy_pattern` option is correct."
             )
 
         logger.debug("Parsing modifications...")
