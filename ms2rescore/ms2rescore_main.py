@@ -7,7 +7,6 @@ from typing import Dict, Optional
 
 import psm_utils.io
 from rich.console import Console
-import matplotlib.pyplot as plt
 
 from ms2rescore import setup_logging
 from ms2rescore.config_parser import parse_config
@@ -19,7 +18,6 @@ from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
-plt.set_loglevel("warning")
 id_file_parser = None
 
 FEATURE_GENERATORS = {

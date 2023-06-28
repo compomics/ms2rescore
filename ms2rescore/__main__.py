@@ -4,6 +4,12 @@ import logging
 
 from ms2rescore import MS2Rescore
 
+try:
+    import matplotlib.pyplot as plt
+    plt.set_loglevel("warning")
+except ImportError:
+    pass
+
 logger = logging.getLogger(__name__)
 
 

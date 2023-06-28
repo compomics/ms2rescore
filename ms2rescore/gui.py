@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Callable, Union
 
 import customtkinter
-import matplotlib.pyplot as plt
 from ms2pip.constants import MODELS as ms2pip_models
 from PIL import Image
 from psm_utils.io import FILETYPES
@@ -30,7 +29,12 @@ with importlib.resources.path(img_module, "config_icon.png") as resource:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-plt.set_loglevel("warning")
+try:
+    import matplotlib.pyplot as plt
+    plt.set_loglevel("warning")
+except ImportError:
+    pass
+
 customtkinter.set_default_color_theme(
     "ms2rescore\package_data\MS2Rescore_gui_theme.json"
 )
@@ -231,7 +235,7 @@ class App(customtkinter.CTk):
         )
         self.ref_label2.bind(
             "<Button-1>",
-            lambda e: self.web_callback("https://doi.org/10.1093%2Fnar%2Fgkz299"),
+            lambda e: self.web_callback("https://doi.org/10.1093/nar/gkad335"),
         )
         self.ref_label2.grid(row=5, column=0, padx=3, pady=0, sticky="sew")
 
@@ -534,7 +538,8 @@ class App(customtkinter.CTk):
             calibration_set_size = 0.15
         elif not self.calibration_set_size.get().replace(".", "", 1).isdigit():
             raise MS2RescoreConfigurationError(
-                f"Error parsing {self.calibration_set_size.get()}\nMake sure calibration set size is a number or percentage"
+                f"Error parsing {self.calibration_set_size.get()}\nMake sure calibration set size "
+                f"is a number or percentage"
             )
         elif "." in self.calibration_set_size.get():
             calibration_set_size = float(self.calibration_set_size.get())
@@ -569,7 +574,8 @@ class App(customtkinter.CTk):
         for mod in modification_list:
             if len(mod.split(":")) != 2:
                 raise MS2RescoreConfigurationError(
-                    f"Error parsing {mod}\nMake sure modification name and unimod name are separated by ':'"
+                    f"Error parsing {mod}\nMake sure modification name and unimod name are "
+                    f"separated by ':'"
                 )
 
             modification_label, unimod_label = mod.split(":")[0], mod.split(":")[1]
@@ -591,7 +597,8 @@ class App(customtkinter.CTk):
         for mod in modification_list:
             if len(mod.split(":")) != 2:
                 raise MS2RescoreConfigurationError(
-                    f"Error parsing {mod}\nMake sure modification name and amino acids are separated by ':'\nMake sure multiple amino acids are separated by ','"
+                    f"Error parsing {mod}\nMake sure modification name and amino acids are "
+                    f"separated by ':'\nMake sure multiple amino acids are separated by ','"
                 )
 
             unimod_label, amino_acids = mod.split(":")[0], mod.split(":")[1]

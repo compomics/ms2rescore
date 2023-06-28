@@ -40,8 +40,6 @@ dependencies = [
     "ms2pip>=4.0.0-dev,<5",
     "click>=7",
     "cascade-config>=0.3.0,<2",
-    "matplotlib>=3,<4",
-    "seaborn>=0.11",
     "deeplc>=1.2.1",
     "tomlkit",
     "psm_utils>=0.3",
@@ -64,6 +62,10 @@ doc = [
     "semver>=2",
     "sphinx_rtd_theme",
     "sphinx-autobuild",
+]
+plotting = [
+    "matplotlib>=3",
+    "seaborn>=0.11",
 ]
 
 [project.urls]
