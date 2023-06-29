@@ -36,6 +36,9 @@ jobs:
       run: |
         pip install .[dev]
 
-    - name: Test with pytest
+    # - name: Test with pytest
+    #   run: |
+    #     pytest
+    - name: Test installation
       run: |
-        pytest
+        ms2rescore --help

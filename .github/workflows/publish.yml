@@ -77,7 +77,7 @@ jobs:
         run: pyinstaller ./ms2rescore.spec --clean --noconfirm
 
       - name: Test built exe
-        run: dist/ms2rescore/ms2rescore.exe --ignore-gooey --help
+        run: dist/ms2rescore/ms2rescore.exe
 
       - name: Run Inno Setup
         run: ISCC.exe ./ms2rescore_innosetup.iss /DMyAppVersion=$(ms2rescore -v)
