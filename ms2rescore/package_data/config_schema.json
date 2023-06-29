@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "MS²ReScore configuration",
+    "title": "MS²Rescore configuration",
     "description": "MS²Rescore JSON configuration file.",
     "type": "object",
     "required": ["ms2rescore"],
@@ -122,7 +122,7 @@
             }
         },
         "deeplc": {
-            "description": "DeepLC key word arguments",
+            "description": "DeepLC keyword arguments",
             "type": "object",
             "additionalProperties": true,
             "properties": {

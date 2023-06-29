@@ -11,10 +11,10 @@ from rich.console import Console
 from ms2rescore import setup_logging
 from ms2rescore.config_parser import parse_config
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
+from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
 from ms2rescore.feature_generators.intensity import MS2PIPFeatureGenerator
 from ms2rescore.feature_generators.maxquant import MaxquantFeatureGenerator
 from ms2rescore.rescoring_engines.percolator import PercolatorRescoring
-from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ FEATURE_GENERATORS = {
 
 class MS2Rescore:
     """
-    MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs.
+    MS²Rescore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs.
 
     Parameters
     ----------
@@ -50,9 +50,7 @@ class MS2Rescore:
         rich_console: Optional[Console] = None,
     ) -> None:
         """Initialize MS2ReScore object."""
-        self.config = parse_config(
-            parse_cli_args=parse_cli_args, config_class=configuration
-        )
+        self.config = parse_config(parse_cli_args=parse_cli_args, config_class=configuration)
         # Set output and temporary paths
         self.output_path = self.config["ms2rescore"]["output_path"]
         self.output_file_root = str(
@@ -88,6 +86,7 @@ class MS2Rescore:
             show_progressbar=True,
         )
 
+        logger.debug("Finding decoys...")
         if self.config["ms2rescore"]["id_decoy_pattern"]:
             psm_list.find_decoys(self.config["ms2rescore"]["id_decoy_pattern"])
         n_psms = len(psm_list)
@@ -101,9 +100,7 @@ class MS2Rescore:
 
         logger.debug("Parsing modifications...")
         psm_list.rename_modifications(self.config["ms2rescore"]["modification_mapping"])
-        psm_list.add_fixed_modifications(
-            self.config["ms2rescore"]["fixed_modifications"]
-        )
+        psm_list.add_fixed_modifications(self.config["ms2rescore"]["fixed_modifications"])
         psm_list.apply_fixed_modifications()
 
         logger.debug("Applying `psm_id_pattern`...")
@@ -124,10 +121,9 @@ class MS2Rescore:
             psm_list["spectrum_id"] = new_ids
 
         psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
+        
         for feature_generator in self.config["ms2rescore"]["feature_generators"]:
-            FEATURE_GENERATORS[feature_generator](config=self.config).add_features(
-                psm_list
-            )
+            FEATURE_GENERATORS[feature_generator](config=self.config).add_features(psm_list)
             psm_list = psm_list[psm_list["rescoring_features"] != None]
 
         if self.config["ms2rescore"]["USI"]:

@@ -41,6 +41,7 @@ dependencies = [
     "click>=7",
     "cascade-config>=0.3.0,<2",
     "deeplc>=1.2.1",
+    "deeplcretrainer==0.1.17",  # TODO: Release version pin
     "tomlkit",
     "psm_utils>=0.3",
     "customtkinter>=5,<6",
@@ -48,8 +49,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "ruff",
     "black",
-    "isort>5",
     "pytest",
     "pytest-cov"
 ]
@@ -87,5 +88,6 @@ build-backend = "flit_core.buildapi"
 line-length = 99
 target-version = ['py38']
 
-[tool.isort]
-profile = "black"
+[tool.ruff]
+line-length = 99
+target-version = 'py38'

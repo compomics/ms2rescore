@@ -18,7 +18,7 @@ from ms2rescore.exceptions import MS2RescoreConfigurationError
 def _parse_arguments() -> argparse.Namespace:
     """Parse CLI arguments."""
     parser = argparse.ArgumentParser(
-        description="MS²ReScore: Sensitive PSM rescoring with predicted MS²\
+        description="MS²Rescore: Sensitive PSM rescoring with predicted MS²\
             peak intensities."
     )
     parser.add_argument("-v", "--version", action="version", version=__version__)
@@ -45,7 +45,7 @@ def _parse_arguments() -> argparse.Namespace:
         action="store",
         type=str,
         dest="config_file",
-        help="path to MS²ReScore configuration file (see README.md)",
+        help="path to MS²Rescore configuration file (see README.md)",
     )
     parser.add_argument(
         "-t",
@@ -144,7 +144,7 @@ def _validate_processes(config: Dict) -> Dict:
 
 def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = None) -> Dict:
     """
-    Parse and validate MS²ReScore configuration files and arguments.
+    Parse and validate MS²Rescore configuration files and arguments.
 
     Default configuration, user configuration files, and CLI/class arguments are parsed
     in cascading order.
@@ -160,7 +160,7 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
     config_schema = pkg_resources.open_text(package_data, "config_schema.json")
     config_default = pkg_resources.open_text(package_data, "config_default.json")
 
-    # MS²ReScore can be run from the CLI, or as a Python module
+    # MS²Rescore can be run from the CLI, or as a Python module
     if parse_cli_args:
         args = _parse_arguments()
         config_user = args.config_file
