@@ -25,7 +25,7 @@ requirements = importlib.metadata.requires(project)
 requirements = {
     re.match(r"^[\w\-]+", req)[0]  # Remove version specifiers
     for req in requirements
-    if not "; extra ==" in req  # Exclude optional dependencies
+    if "; extra ==" not in req  # Exclude optional dependencies
 }
 requirements.update([project])
 hidden_imports = set()

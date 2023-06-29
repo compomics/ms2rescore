@@ -36,7 +36,7 @@ except ImportError:
     pass
 
 customtkinter.set_default_color_theme(
-    "ms2rescore\package_data\MS2Rescore_gui_theme.json"
+    "ms2rescore\package_data\ms2rescore-gui-theme.json"
 )
 
 
