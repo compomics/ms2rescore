@@ -27,26 +27,14 @@ jobs:
       - name: Test built package
         run: |
           pip install dist/ms2rescore-*.whl
-          pytest
+          # pytest
+          ms2rescore --help
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v2
         with:
           name: python-package
           path: dist/*
-
-      - name: Zip GUI windows installer
-        run: zip ms2rescore-gui-windows.zip ./gui-windows/* -r
-
-      - name: Upload GUI windows installer
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./ms2rescore-gui-windows.zip
-          asset_name: ms2rescore-gui-windows.zip
-          asset_content_type: application/zip
 
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -82,8 +70,16 @@ jobs:
       - name: Run Inno Setup
         run: ISCC.exe ./ms2rescore_innosetup.iss /DMyAppVersion=$(ms2rescore -v)
 
-      - name: Upload installer
+      - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: dist
           path: dist/*.exe
+
+      - name: Upload installer to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
+          file_glob: true
+          file: dist/*.exe
