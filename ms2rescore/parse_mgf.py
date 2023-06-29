@@ -3,10 +3,10 @@
 import logging
 import mmap
 import os.path
-import random
-import re
+from typing import Union, Tuple, Dict
 
 from rich.progress import track
+from pyteomics.mgf import MGF
 
 from ms2rescore.exceptions import MS2RescoreError
 
@@ -20,23 +20,27 @@ class ParseMGFError(MS2RescoreError):
 
 def parse_mgf_title_rt(
     path_to_mgf: Union[str, os.PathLike]
-) -> Tuple[Dict[int, str], Dict[int, float]]:
+) -> Dict[str, float]:
     """Parse MGF file to extract title and retention time fields, by spectrum index."""
-    title = None
-    retention_times = dict()
-    with open(path_to_mgf, "rt") as mgf_in:
-        for line in mgf_in:
-            if line[0] == "T":
-                if line.startswith("TITLE="):
-                    title = line[6:].strip()
-            if line[0] == "R":
-                if line.startswith("RTINSECONDS="):
-                    if not title:
-                        raise ParseMGFError("Missing `TITLE` for `RTINSECONDS` entry.")
-                    retention_times[title] = float(line[12:].strip())
-                    title = None  # Reset to detect potential missing titles
-    return retention_times
+    logger.debug("Parsing MGF file to extract retention times.")
+    mgf_reader = MGF(path_to_mgf, read_charges=False, read_ions=False)
+    retention_times = {}
+    for spectrum in mgf_reader:
+        try:
+            title = spectrum["params"]["title"]
+        except KeyError:
+            raise ParseMGFError("MGF file missing title field.")
+        try:
+            rt = float(spectrum["params"]["rtinseconds"])
+        except KeyError:
+            rt = None
+        retention_times[title] = rt
 
+    print(retention_times)
+    if any(list(retention_times.values())):
+        return retention_times
+    else:
+        raise ParseMGFError("MGF file missing rtinseconds field.")
 
 def get_num_lines(file_path):
     fp = open(file_path, "r+")

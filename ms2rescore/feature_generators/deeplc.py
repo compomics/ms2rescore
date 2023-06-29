@@ -1,19 +1,21 @@
 """DeepLC retention time-based feature generator."""
 
+import contextlib
 import logging
 import os
-from typing import Union, Optional
-from pathlib import Path
+from collections import defaultdict
 from itertools import chain
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from psm_utils import PSMList
 from psm_utils.io import peptide_record
 
+from ms2rescore.exceptions import MS2RescoreError
 from ms2rescore.feature_generators import FeatureGenerator
+from ms2rescore.parse_mgf import parse_mgf_title_rt
 from ms2rescore.utils import infer_spectrum_path
-import click
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
@@ -23,10 +25,8 @@ class DeepLCFeatureGenerator(FeatureGenerator):
     def __init__(
         self,
         config,
-        higher_psm_score_better: bool = True,
-        calibration_set_size: Optional[Union[int, float]] = 0.20,
-        num_cpu: int = 1,
-        *args, **kwargs
+        *args,
+        **kwargs,
     ) -> None:
         """
         Generate DeepLC-based features for rescoring.
@@ -52,103 +52,130 @@ class DeepLCFeatureGenerator(FeatureGenerator):
             / Path(self.config["ms2rescore"]["psm_file"]).stem
         )
         self.feature_names = []
-        self.higher_psm_score_better = higher_psm_score_better
-        self.calibration_set_size = calibration_set_size
-        self.num_cpu = num_cpu
+        self.higher_psm_score_better = self.config["ms2rescore"]["lower_score_is_better"]
+        try:
+            self.calibration_set_size = self.config["deeplc"].pop("calibration_set_size")
+        except KeyError:
+            self.calibration_set_size = 0.15
+        self.num_cpu = 1
+
+        if "deeplc_retrain" not in self.config["deeplc"]:
+            self.config["deeplc"]["deeplc_retrain"] = True
 
         self.deeplc_predictor = None
         self.selected_model = None
+
+        self.feature_names = [
+            "observed_retention_time",
+            "predicted_retention_time",
+            "rt_diff",
+            "observed_retention_time_best",
+            "predicted_retention_time_best",
+            "rt_diff_best",
+        ]
 
     def add_features(self, psm_list: PSMList) -> None:
         """Add DeepLC-derived features to PSMs."""
         from deeplc import DeepLC
 
+        logger.info("Adding DeepLC-derived features to PSMs.")
+
         # Get easy-access nested version of PSMList
         psm_dict = psm_list.get_psm_dict()
+        peptide_rt_diff_dict = defaultdict(
+            lambda: {
+                "observed_retention_time_best": np.Inf,
+                "predicted_retention_time_best": np.Inf,
+                "rt_diff_best": np.Inf,
+            }
+        )
 
         # Run MS²PIP for each spectrum file
         for collection, runs in psm_dict.items():
             # Reset DeepLC predictor for each collection of runs
+
             self.deeplc_predictor = None
             self.selected_model = None
             for run, psms in runs.items():
-                logger.debug(f"Processing {run}")
+                logger.info(f"Running DeepLC for PSMs from run `{run}`...")
                 # Prepare PSM file
-                psm_list_run = PSMList(
-                    psm_list=list(chain.from_iterable(psms.values()))
-                )
-                psm_list_calibration = self.get_calibration_psms(psm_list)
+                with contextlib.redirect_stdout(open(os.devnull, "w")):
+                    psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
-                logger.debug("Calibrating DeepLC")
-                self.deeplc_predictor = DeepLC(
-                    split_cal=10,
-                    n_jobs=self.num_cpu,
-                    cnn_model=True,
-                    verbose=False,
-                    path_model=self.selected_model,
-                    pygam_calibration=True
-                )
-                self.deeplc_predictor.calibrate_preds(
-                    seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
-                )
-                # Still calibrate for each run, but do not try out all model options.
-                # Just use model that was selected based on first run
-                if not self.selected_model:
-                    self.selected_model = list(self.deeplc_predictor.model.keys())
-                    logger.debug(
-                        f"Selected DeepLC model {self.selected_model} based on "
-                        "calibration of first run. Using this model (after new "
-                        "calibrations) for the remaining runs."
+                    if not all(psm_list["retention_time"]):
+                        retention_times = psm_list_run["retention_time"]
+                        spec_ids = psm_list_run["retention_time"]
+                        retention_time_dict = self.read_rt_from_spectrum_file(run)
+
+                        try:
+                            # psm_list["retention_time"] = [rt if rt else retention_time_dict[spec_ids[i]] for i, rt in enumerate(retention_times)]
+                            psm_list_run["retention_time"] = [
+                                retention_time_dict[psm_id]
+                                for psm_id in psm_list_run["spectrum_id"]
+                            ]  # Probably faster to replace all
+                        except KeyError:
+                            raise MS2RescoreError(
+                                "Could not map all spectrum ids to retention times"
+                            )
+
+                    psm_list_calibration = self.get_calibration_psms(psm_list_run)
+
+                    logger.debug("Calibrating DeepLC")
+                    self.deeplc_predictor = DeepLC(
+                        n_jobs=self.num_cpu,
+                        verbose=False,
+                        path_model=self.selected_model,
+                        **self.config["deeplc"],
                     )
-
-                predictions = np.array(self.deeplc_predictor.make_preds(
-                    seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
-                ))
-                observations = psm_list
-
-
-                # TODO: Was working here
-                exit()
-
-                predicted_rts = pd.Series(
-                    self.deeplc_predictor.make_preds(
-                        seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
+                    self.deeplc_predictor.calibrate_preds(
+                        seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
                     )
-                )
-                retention_time_df["spec_id"] = peprec_raw_df["spec_id"].copy()
-                retention_time_df["predicted_retention_time"] = predicted_rts
+                    # Still calibrate for each run, but do not try out all model options.
+                    # Just use model that was selected based on first run
+                    if not self.selected_model:
+                        self.selected_model = list(self.deeplc_predictor.model.keys())
+                        logger.debug(
+                            f"Selected DeepLC model {self.selected_model} based on "
+                            "calibration of first run. Using this model (after new "
+                            "calibrations) for the remaining runs."
+                        )
 
-                raw_specific_predicted_dfs.append(retention_time_df)
-            self.peprec.df = pd.merge(
-                self.peprec.df,
-                pd.concat(raw_specific_predicted_dfs, ignore_index=True),
-                on="spec_id",
-                how="inner",
-            )
-        else:
-            self.deeplc_predictor = DeepLC(
-                split_cal=10, n_jobs=self.num_cpu, cnn_model=True, verbose=False, pygam_calibration=True
-            )
-            self.deeplc_predictor.calibrate_preds(
-                seq_df=self.get_calibration_data(self.peprec.df)
-            )
-            predicted_rts = pd.Series(
-                self.deeplc_predictor.make_preds(
-                    seq_df=self.get_prediction_data(self.peprec.df),
-                )
-            )
-            self.peprec.df["predicted_retention_time"] = predicted_rts
+                    predictions = np.array(
+                        self.deeplc_predictor.make_preds(
+                            seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
+                        )
+                    )
+                    observations = psm_list_run["retention_time"]
+                    rt_diffs_run = np.abs(predictions - observations)
 
-        self._calculate_features()
-        self.feature_df.to_csv(self.feature_path, index=False)
+                    for i, psm in enumerate(psm_list_run):
+                        psm["rescoring_features"].update(
+                            {
+                                "observed_retention_time": observations[i],
+                                "predicted_retention_time": predictions[i],
+                                "rt_diff": rt_diffs_run[i],
+                            }
+                        )
+                        peptide = psm.peptidoform.proforma.split("\\")[0]  # remove charge
+                        if peptide_rt_diff_dict[peptide]["rt_diff_best"] > rt_diffs_run[i]:
+                            peptide_rt_diff_dict[peptide] = {
+                                "observed_retention_time_best": observations[i],
+                                "predicted_retention_time_best": predictions[i],
+                                "rt_diff_best": rt_diffs_run[i],
+                            }
+
+        for psm in psm_list:
+            psm["rescoring_features"].update(
+                peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
+            )
 
     def read_rt_from_spectrum_file(self, run_name):
-
         # Prepare spectrum filenames
         spectrum_filename = infer_spectrum_path(
-            self.config["ms2rescore"]["spectrum_path"], run
+            self.config["ms2rescore"]["spectrum_path"], run_name
         )
 
+        return parse_mgf_title_rt(spectrum_filename)
 
     # TODO: Remove when DeepLC supports PSMList directly
     @staticmethod
@@ -179,9 +206,7 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                     "or equal to 0 or larger than 1."
                 )
             else:
-                num_calibration_psms = round(
-                    len(psm_list) * self.calibration_set_size
-                )
+                num_calibration_psms = round(len(psm_list) * self.calibration_set_size)
         elif isinstance(self.calibration_set_size, int):
             if self.calibration_set_size > len(psm_list):
                 logger.warning(
@@ -199,82 +224,3 @@ class DeepLCFeatureGenerator(FeatureGenerator):
             )
         logger.debug(f"Using {num_calibration_psms} PSMs for calibration")
         return num_calibration_psms
-
-    def _calculate_features(self):
-        """Calculate retention time features for rescoring."""
-        # Absolute difference between observed and predicted'
-        self.feature_df = self.peprec.df.copy()
-        self.feature_df["rt_diff"] = (
-            self.feature_df["observed_retention_time"]
-            - self.feature_df["predicted_retention_time"]
-        ).abs()
-
-        # Minimum RT difference for a peptidoform
-        min_rt_diff = self.feature_df[
-            [
-                "peptide",
-                "modifications",
-                "observed_retention_time",
-                "predicted_retention_time",
-                "rt_diff",
-            ]
-        ].copy()
-
-        min_rt_diff = (
-            min_rt_diff.sort_values("rt_diff", ascending=True)
-            .drop_duplicates(subset=["peptide", "modifications"], keep="first")
-            .rename(
-                columns={
-                    "rt_diff": "rt_diff_best",
-                    "observed_retention_time": "observed_retention_time_best",
-                    "predicted_retention_time": "predicted_retention_time_best",
-                }
-            )
-        )
-
-        # Merging minimum RT difference features to full set
-        self.feature_df = self.feature_df.merge(
-            min_rt_diff, on=["peptide", "modifications"], how="left"
-        )
-
-        # Only keep feature columns
-        id_columns = ["spec_id", "charge", "peptide", "modifications"]
-        feature_columns = [
-            "observed_retention_time",
-            "predicted_retention_time",
-            "rt_diff",
-            "rt_diff_best",
-            "observed_retention_time_best",
-            "predicted_retention_time_best",
-        ]
-        self.feature_df = self.feature_df[id_columns + feature_columns].copy()
-
-
-def get_rt_features(
-    peprec_filename: Union[str, os.PathLike],
-    output_filename: Union[str, os.PathLike],
-    num_cpu: int,
-):
-    """Get retention time features with DeepLC."""
-    logger.info("Adding retention time features with DeepLC.")
-    rt_int = RetentionTimeIntegration(
-        peprec_filename,
-        output_filename + "_rtfeatures.csv",
-        num_cpu=num_cpu,
-        higher_psm_score_better=True,
-        calibration_set_size=250,
-    )
-    rt_int.run()
-
-
-@click.command()
-@click.argument("peprec")
-@click.argument("features")
-def main(**kwargs):
-    """Run ms2rescore.retention_time."""
-    rt = RetentionTimeIntegration(kwargs["peprec"], kwargs["features"])
-    rt.run()
-
-
-if __name__ == "__main__":
-    main()

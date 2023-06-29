@@ -27,7 +27,7 @@ class MaxquantFeatureGenerator(FeatureGenerator):
 
     def add_features(self, psm_list: PSMList):
         """Add MS²PIP-derived features to PSMs."""
-        logger.debug("Adding Maxquant-specific features to PSMs.")
+        logger.info("Adding Maxquant-derived features to PSMs.")
 
         for psm in psm_list:
             psm["rescoring_features"].update(self._compute_features(psm["metadata"]))

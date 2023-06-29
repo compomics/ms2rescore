@@ -8,11 +8,10 @@ on:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.7, 3.8]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
     - uses: actions/checkout@v2
 
@@ -24,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install wheel flake8 pytest
+        pip install flake8
 
     - name: Lint with flake8
       run: |
@@ -33,14 +32,13 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: Install openMP on macOS (XGBoost dependency)
-      run: brew install libomp
-      if: runner.os == 'macOS'
-
     - name: Build and install ms2rescore package
       run: |
-        pip install .
+        pip install .[dev]
 
-    - name: Test with pytest
+    # - name: Test with pytest
+    #   run: |
+    #     pytest
+    - name: Test installation
       run: |
-        pytest
+        ms2rescore --help

@@ -3,7 +3,7 @@ import re
 import subprocess
 from multiprocessing import cpu_count
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 import psm_utils.io
 from rich.console import Console
@@ -11,19 +11,25 @@ from rich.console import Console
 from ms2rescore import setup_logging
 from ms2rescore.config_parser import parse_config
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
-from ms2rescore.feature_generators.ms2pip import MS2PIPFeatureGenerator
+from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
+from ms2rescore.feature_generators.intensity import MS2PIPFeatureGenerator
 from ms2rescore.feature_generators.maxquant import MaxquantFeatureGenerator
 from ms2rescore.rescoring_engines.percolator import PercolatorRescoring
-from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
 id_file_parser = None
 
+FEATURE_GENERATORS = {
+    "ms2pip": MS2PIPFeatureGenerator,
+    "deeplc": DeepLCFeatureGenerator,
+    "maxquant": MaxquantFeatureGenerator,
+}
+
 
 class MS2Rescore:
     """
-    MS²ReScore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs.
+    MS²Rescore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs.
 
     Parameters
     ----------
@@ -44,9 +50,7 @@ class MS2Rescore:
         rich_console: Optional[Console] = None,
     ) -> None:
         """Initialize MS2ReScore object."""
-        self.config = parse_config(
-            parse_cli_args=parse_cli_args, config_class=configuration
-        )
+        self.config = parse_config(parse_cli_args=parse_cli_args, config_class=configuration)
         # Set output and temporary paths
         self.output_path = self.config["ms2rescore"]["output_path"]
         self.output_file_root = str(
@@ -69,7 +73,7 @@ class MS2Rescore:
 
         logger.debug(
             "Using %i of %i available CPUs.",
-            self.config["ms2rescore"]["num_cpu"],
+            self.config["ms2rescore"]["processes"],
             cpu_count(),
         )
 
@@ -82,13 +86,21 @@ class MS2Rescore:
             show_progressbar=True,
         )
 
-        psm_list.set_ranks(lower_score_better=False)  # TODO make config option
-        psm_list = psm_list.get_rank1_psms()
+        logger.debug("Finding decoys...")
+        if self.config["ms2rescore"]["id_decoy_pattern"]:
+            psm_list.find_decoys(self.config["ms2rescore"]["id_decoy_pattern"])
+        n_psms = len(psm_list)
+        percent_decoys = sum(psm_list["is_decoy"]) / n_psms * 100
+        logger.info(f"Found {n_psms} PSMs, of which {percent_decoys:.2f}% are decoys.")
+        if not any(psm_list["is_decoy"]):
+            raise MS2RescoreConfigurationError(
+                "No decoy PSMs found. Please check if decoys are present in the PSM file and that "
+                "the `id_decoy_pattern` option is correct."
+            )
+
         logger.debug("Parsing modifications...")
         psm_list.rename_modifications(self.config["ms2rescore"]["modification_mapping"])
-        psm_list.add_fixed_modifications(
-            self.config["ms2rescore"]["fixed_modifications"]
-        )
+        psm_list.add_fixed_modifications(self.config["ms2rescore"]["fixed_modifications"])
         psm_list.apply_fixed_modifications()
 
         logger.debug("Applying `psm_id_pattern`...")
@@ -108,17 +120,19 @@ class MS2Rescore:
             new_ids = [_match_ids(old_id) for old_id in psm_list["spectrum_id"]]
             psm_list["spectrum_id"] = new_ids
 
-        # fgen = MS2PIPFeatureGenerator(config=self.config)
-        # fgen.add_features(psm_list)
+        psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
+        
+        for feature_generator in self.config["ms2rescore"]["feature_generators"]:
+            FEATURE_GENERATORS[feature_generator](config=self.config).add_features(psm_list)
+            psm_list = psm_list[psm_list["rescoring_features"] != None]
 
-        MaxquantFeatureGenerator().add_features(psm_list)
+        if self.config["ms2rescore"]["USI"]:
+            logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
+            psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
+
         logging.debug(f"Writing {self.output_file_root}.pin file")
-
         if self.config["ms2rescore"]["rescoring_engine"] == "percolator":
-            percolator = PercolatorRescoring(
-                psm_list,
-                self.config
-            )
+            percolator = PercolatorRescoring(psm_list, self.config)
             percolator.rescore()
 
     @staticmethod

@@ -8,16 +8,18 @@ keywords = [
     "MS2PIP",
     "DeepLC",
     "Percolator",
-    "Proteomics",
-    "peptide",
-    "peak intensity prediction",
-    "spectrum",
+    "proteomics",
+    "mass spectrometry",
+    "peptide identification",
+    "rescoring",
     "machine learning",
 ]
 authors = [
     {name = "Ralf Gabriels", email = "ralf@gabriels.dev"},
     {name = "Arthur Declercq", email = "arthur.declercq@ugent.be"},
     {name = "Ana Sílvia C. Silva"},
+    {name = "Robbin Bouwmeester"},
+    {name = "Louise Buur"},
 ]
 classifiers = [
     "Intended Audience :: Science/Research",
@@ -28,33 +30,27 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
 ]
 dynamic = ["version"]
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.16.0,<2",
-    "pandas>=0.24.0,<2",
-    "scikit-learn>=0.20.0,<2",
-    "scipy>=1.2.0,<2",
+    "pandas>=0.24.0,<3",  # TODO: Check compatibility
     "rich>=12",
     "pyteomics>=4.1.0,<5",
     "lxml>=4.5,<5",
-    "ms2pip>=3.8,<4",
+    "ms2pip>=4.0.0-dev,<5",
     "click>=7",
     "cascade-config>=0.3.0,<2",
-    "matplotlib>=3,<4",
-    "seaborn>=0.11",
-    "statsmodels>=0.12",
-    "deeplc>=0.1.17",
+    "deeplc>=1.2.1",
+    "deeplcretrainer==0.1.17",  # TODO: Release version pin
     "tomlkit",
-    "psm_utils",
+    "psm_utils>=0.3",
+    "customtkinter>=5,<6",
 ]
 
 [project.optional-dependencies]
-gui = [
-    "gooey>=1.0"
-]
 dev = [
+    "ruff",
     "black",
-    "isort>5",
     "pytest",
     "pytest-cov"
 ]
@@ -67,6 +63,10 @@ doc = [
     "semver>=2",
     "sphinx_rtd_theme",
     "sphinx-autobuild",
+]
+plotting = [
+    "matplotlib>=3",
+    "seaborn>=0.11",
 ]
 
 [project.urls]
@@ -84,5 +84,10 @@ ms2rescore-plotting = "ms2rescore.plotting:main"
 requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
-[tool.isort]
-profile = "black"
+[tool.black]
+line-length = 99
+target-version = ['py38']
+
+[tool.ruff]
+line-length = 99
+target-version = 'py38'

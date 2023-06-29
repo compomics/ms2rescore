@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "MS²ReScore configuration",
+    "title": "MS²Rescore configuration",
     "description": "MS²Rescore JSON configuration file.",
     "type": "object",
     "required": ["ms2rescore"],
@@ -15,11 +15,11 @@
                     "type": "array",
                     "items": {
                         "type": "string",
-                        "enum": ["ms2pip", "deeplc", "maxquant", "percolator"]
+                        "enum": ["ms2pip", "deeplc", "maxquant"]
                     },
                     "minItems": 1,
                     "uniqueItems": true,
-                    "default": ["ms2pip", "deeplc", "maxquant", "percolator"]
+                    "default": ["ms2pip", "deeplc"]
                 },
                 "rescoring_engine": {
                     "description": "Rescoring engine to use.",
@@ -74,6 +74,11 @@
                     "default": "(.*)",
                     "format": "regex"
                 },
+                "lower_score_is_better": {
+                    "description": "Bool indicating if lower score is better",
+                    "type": "boolean",
+                    "default": false
+                },
                 "modification_mapping": {
                     "description": "Mapping of modification labels to each replacement label.",
                     "type": "object",
@@ -85,12 +90,16 @@
                     "default": {},
                     "additionalProperties": true
                 },
-                "num_cpu": {
+                "processes": {
                     "description": "Number of parallel processes to use; -1 for all available",
                     "type": "number",
                     "multipleOf": 1,
                     "minimum": -1,
                     "default": -1
+                },
+                "USI": {
+                    "description": "Use universal spectrum identifier (USI)",
+                    "type": "boolean"
                 }
             }
         },
@@ -104,7 +113,7 @@
                     "type": "string",
                     "default": "HCD"
                 },
-                "frag_error": {
+                "ms2_tolerance": {
                     "description": "MS2 error tolerance in Da",
                     "type": "number",
                     "minimum": 0,
@@ -113,9 +122,28 @@
             }
         },
         "deeplc": {
-            "description": "DeepLC settings",
+            "description": "DeepLC keyword arguments",
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": true,
+            "properties": {
+                "calibration_set_size": {
+                    "description": "Calibration set size",
+                    "oneOf": [{"type": "integer"}, {"type": "number"}],
+                    "default": 0.15
+                }
+            }
+        },
+        "percolator": {
+            "description": "Percolator settings",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "init-weights": {
+                    "description": "Weights file for scoring function",
+                    "oneOf": [{"type": "string"}, {"type": "boolean"}],
+                    "default": false
+                }
         }
     }
+}
 }
