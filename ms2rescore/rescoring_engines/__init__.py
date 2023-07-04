@@ -8,7 +8,7 @@ from psm_utils import PSMList
 logger = logging.getLogger(__name__)
 
 
-class Rescoringengine(ABC):
+class RescoringEngineBase(ABC):
     """Base class for rescoring engines."""
 
     def __init__(self, *args, **kwargs) -> None:
@@ -17,4 +17,3 @@ class Rescoringengine(ABC):
     @abstractmethod
     def rescore(psm_list: PSMList):
         raise NotImplementedError()
-

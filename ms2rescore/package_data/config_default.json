@@ -1,11 +1,17 @@
 {
     "$schema": "./config_schema.json",
     "ms2rescore": {
-        "feature_generators": [
-            "ms2pip",
-            "deeplc"
-        ],
-        "rescoring_engine": "percolator",
+        "feature_generators": {
+            "ms2pip": {
+                "model": "HCD",
+                "ms2_tolerance": 0.02
+            },
+            "deeplc": {
+                "deeplc_retrain": true
+            },
+            "maxquant": {}
+        },
+        "rescoring_engine": { "mokapot": {} },
         "config_file": null,
         "psm_file": null,
         "psm_file_type": "infer",
@@ -21,11 +27,5 @@
         "fixed_modifications": {},
         "processes": -1,
         "USI": false
-    },
-    "ms2pip": {
-        "model": "HCD",
-        "ms2_tolerance": 0.02
-    },
-    "deeplc": {},
-    "percolator": {}
+    }
 }

@@ -11,20 +11,12 @@ from rich.console import Console
 from ms2rescore import setup_logging
 from ms2rescore.config_parser import parse_config
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
-from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
-from ms2rescore.feature_generators.intensity import MS2PIPFeatureGenerator
-from ms2rescore.feature_generators.maxquant import MaxquantFeatureGenerator
+from ms2rescore.feature_generators import FEATURE_GENERATORS
 from ms2rescore.rescoring_engines.percolator import PercolatorRescoring
 
 logger = logging.getLogger(__name__)
 
 id_file_parser = None
-
-FEATURE_GENERATORS = {
-    "ms2pip": MS2PIPFeatureGenerator,
-    "deeplc": DeepLCFeatureGenerator,
-    "maxquant": MaxquantFeatureGenerator,
-}
 
 
 class MS2Rescore:
@@ -51,6 +43,7 @@ class MS2Rescore:
     ) -> None:
         """Initialize MS2ReScore object."""
         self.config = parse_config(parse_cli_args=parse_cli_args, config_class=configuration)
+
         # Set output and temporary paths
         self.output_path = self.config["ms2rescore"]["output_path"]
         self.output_file_root = str(
@@ -106,34 +99,45 @@ class MS2Rescore:
         logger.debug("Applying `psm_id_pattern`...")
         if self.config["ms2rescore"]["psm_id_pattern"]:
             pattern = re.compile(self.config["ms2rescore"]["psm_id_pattern"])
-
-            def _match_ids(old_id):
-                match = re.search(pattern, str(old_id))
-                try:
-                    return match[1]
-                except (TypeError, IndexError):
-                    raise MS2RescoreError(
-                        "`psm_id_pattern` could not be matched to all PSM spectrum IDs."
-                        " Are you sure that the regex contains a capturing group?"
-                    )
-
-            new_ids = [_match_ids(old_id) for old_id in psm_list["spectrum_id"]]
+            new_ids = [_match_psm_ids(old_id, pattern) for old_id in psm_list["spectrum_id"]]
             psm_list["spectrum_id"] = new_ids
 
         psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
-        
-        for feature_generator in self.config["ms2rescore"]["feature_generators"]:
-            FEATURE_GENERATORS[feature_generator](config=self.config).add_features(psm_list)
-            psm_list = psm_list[psm_list["rescoring_features"] != None]
+
+        # Add rescoring features
+        feature_names = dict()
+        for fgen_name, fgen_config in self.config["ms2rescore"]["feature_generators"].items():
+            # TODO: Handle this somewhere else, more generally? Warning required?
+            if fgen_name == "maxquant" and not (psm_list["source"] == "msms").all():
+                continue
+            conf = self.config["ms2rescore"].copy()
+            conf.update(fgen_config)
+            fgen = FEATURE_GENERATORS[fgen_name](**conf)
+            fgen.add_features(psm_list)
+            feature_names[fgen_name] = fgen.feature_names
+
+        # Filter out psms that do not have all added features
+        all_feature_names = set([f for fgen in feature_names.values() for f in fgen])
+        psm_list = psm_list[
+            [(set(psm.rescoring_features.keys()) == all_feature_names) for psm in psm_list]
+        ]
 
         if self.config["ms2rescore"]["USI"]:
             logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
             psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
 
-        logging.debug(f"Writing {self.output_file_root}.pin file")
-        if self.config["ms2rescore"]["rescoring_engine"] == "percolator":
-            percolator = PercolatorRescoring(psm_list, self.config)
-            percolator.rescore()
+        if "percolator" in self.config["ms2rescore"]["rescoring_engine"]:
+            logging.debug(f"Writing {self.output_file_root}.pin file")
+            percolator = PercolatorRescoring(
+                self.output_file_root,
+                log_level=self.config["ms2rescore"]["log_level"],
+                processes=self.config["ms2rescore"]["processes"],
+                percolator_kwargs=self.config["ms2rescore"]["rescoring_engine"]["percolator"],
+            )
+            percolator.rescore(psm_list)
+
+        elif "mokapot" in self.config["ms2rescore"]["rescoring_engine"]:
+            raise NotImplementedError()
 
     @staticmethod
     def _validate_cli_dependency(command):
@@ -153,3 +157,15 @@ class MS2Rescore:
             )
         else:
             logger.warning("Could not write logs to HTML: rich console is not defined.")
+
+
+def _match_psm_ids(old_id, regex_pattern):
+    """Match PSM IDs to regex pattern or raise Exception if no match present."""
+    match = re.search(regex_pattern, str(old_id))
+    try:
+        return match[1]
+    except (TypeError, IndexError):
+        raise MS2RescoreError(
+            "`psm_id_pattern` could not be matched to all PSM spectrum IDs."
+            " Ensure that the regex contains a capturing group?"
+        )

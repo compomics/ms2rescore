@@ -37,7 +37,13 @@ def infer_spectrum_path(
 
     # If passed path is directory, join with run name
     elif os.path.isdir(configured_path):
-        resolved_path = os.path.join(configured_path, run_name)
+        if run_name:
+            resolved_path = os.path.join(configured_path, run_name)
+        else:
+            raise MS2RescoreConfigurationError(
+                "Could not resolve spectrum file name: Spectrum path is directory "
+                "but no run name in PSM file found."
+            )
 
     # If passed path is file, use that, but warn if basename doesn't match expected
     elif os.path.isfile(configured_path):

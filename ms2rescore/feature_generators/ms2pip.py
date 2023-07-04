@@ -4,8 +4,7 @@ import logging
 import multiprocessing
 import warnings
 from itertools import chain
-from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -14,113 +13,149 @@ from ms2pip.result import ProcessingResult
 from psm_utils import PSMList
 from rich.progress import track
 
-from ms2rescore.feature_generators import FeatureGenerator
+from ms2rescore.feature_generators._base_classes import FeatureGeneratorBase
 from ms2rescore.utils import infer_spectrum_path
 
 logger = logging.getLogger(__name__)
 
 
-class MS2PIPFeatureGenerator(FeatureGenerator):
-    def __init__(self, config, *args, **kwargs) -> None:
+class MS2PIPFeatureGenerator(FeatureGeneratorBase):
+    """MS²PIP fragmentation intensity-based feature generator."""
+
+    feature_names = [
+        "spec_pearson_norm",
+        "ionb_pearson_norm",
+        "iony_pearson_norm",
+        "spec_mse_norm",
+        "ionb_mse_norm",
+        "iony_mse_norm",
+        "min_abs_diff_norm",
+        "max_abs_diff_norm",
+        "abs_diff_Q1_norm",
+        "abs_diff_Q2_norm",
+        "abs_diff_Q3_norm",
+        "mean_abs_diff_norm",
+        "std_abs_diff_norm",
+        "ionb_min_abs_diff_norm",
+        "ionb_max_abs_diff_norm",
+        "ionb_abs_diff_Q1_norm",
+        "ionb_abs_diff_Q2_norm",
+        "ionb_abs_diff_Q3_norm",
+        "ionb_mean_abs_diff_norm",
+        "ionb_std_abs_diff_norm",
+        "iony_min_abs_diff_norm",
+        "iony_max_abs_diff_norm",
+        "iony_abs_diff_Q1_norm",
+        "iony_abs_diff_Q2_norm",
+        "iony_abs_diff_Q3_norm",
+        "iony_mean_abs_diff_norm",
+        "iony_std_abs_diff_norm",
+        "dotprod_norm",
+        "dotprod_ionb_norm",
+        "dotprod_iony_norm",
+        "cos_norm",
+        "cos_ionb_norm",
+        "cos_iony_norm",
+        "spec_pearson",
+        "ionb_pearson",
+        "iony_pearson",
+        "spec_spearman",
+        "ionb_spearman",
+        "iony_spearman",
+        "spec_mse",
+        "ionb_mse",
+        "iony_mse",
+        "min_abs_diff_iontype",
+        "max_abs_diff_iontype",
+        "min_abs_diff",
+        "max_abs_diff",
+        "abs_diff_Q1",
+        "abs_diff_Q2",
+        "abs_diff_Q3",
+        "mean_abs_diff",
+        "std_abs_diff",
+        "ionb_min_abs_diff",
+        "ionb_max_abs_diff",
+        "ionb_abs_diff_Q1",
+        "ionb_abs_diff_Q2",
+        "ionb_abs_diff_Q3",
+        "ionb_mean_abs_diff",
+        "ionb_std_abs_diff",
+        "iony_min_abs_diff",
+        "iony_max_abs_diff",
+        "iony_abs_diff_Q1",
+        "iony_abs_diff_Q2",
+        "iony_abs_diff_Q3",
+        "iony_mean_abs_diff",
+        "iony_std_abs_diff",
+        "dotprod",
+        "dotprod_ionb",
+        "dotprod_iony",
+        "cos",
+        "cos_ionb",
+        "cos_iony",
+    ]
+
+    def __init__(
+        self,
+        *args,
+        model: str = "HCD",
+        ms2_tolerance: float = 0.02,
+        spectrum_path: Optional[str] = None,
+        spectrum_id_pattern: str = ".*",
+        processes: 1,
+        **kwargs,
+    ) -> None:
+        """
+        MS²PIP fragmentation intensity-based feature generator.
+
+        Parameters
+        ----------
+        model
+            MS²PIP prediction model to use. Defaults to "HCD".
+        ms2_tolerance
+            MS2 mass tolerance in Da. Defaults to 0.02.
+        spectrum_path
+            Path to spectrum file or directory with spectrum files. If None, inferred from `run`
+            field in PSMs. Defaults to None.
+        spectrum_id_pattern : str, optional
+            Regular expression pattern to extract spectrum ID from spectrum file. Defaults to ".*".
+        processes : int, optional
+            Number of processes to use. Defaults to 1.
+
+        """
         super().__init__(*args, **kwargs)
-        self.config = config
-        self.tmp_file_root = str(
-            Path(self.config["ms2rescore"]["tmp_path"])
-            / Path(self.config["ms2rescore"]["psm_file"]).stem
-        )
-        self.feature_names = [
-            "spec_pearson_norm",
-            "ionb_pearson_norm",
-            "iony_pearson_norm",
-            "spec_mse_norm",
-            "ionb_mse_norm",
-            "iony_mse_norm",
-            "min_abs_diff_norm",
-            "max_abs_diff_norm",
-            "abs_diff_Q1_norm",
-            "abs_diff_Q2_norm",
-            "abs_diff_Q3_norm",
-            "mean_abs_diff_norm",
-            "std_abs_diff_norm",
-            "ionb_min_abs_diff_norm",
-            "ionb_max_abs_diff_norm",
-            "ionb_abs_diff_Q1_norm",
-            "ionb_abs_diff_Q2_norm",
-            "ionb_abs_diff_Q3_norm",
-            "ionb_mean_abs_diff_norm",
-            "ionb_std_abs_diff_norm",
-            "iony_min_abs_diff_norm",
-            "iony_max_abs_diff_norm",
-            "iony_abs_diff_Q1_norm",
-            "iony_abs_diff_Q2_norm",
-            "iony_abs_diff_Q3_norm",
-            "iony_mean_abs_diff_norm",
-            "iony_std_abs_diff_norm",
-            "dotprod_norm",
-            "dotprod_ionb_norm",
-            "dotprod_iony_norm",
-            "cos_norm",
-            "cos_ionb_norm",
-            "cos_iony_norm",
-            "spec_pearson",
-            "ionb_pearson",
-            "iony_pearson",
-            "spec_spearman",
-            "ionb_spearman",
-            "iony_spearman",
-            "spec_mse",
-            "ionb_mse",
-            "iony_mse",
-            "min_abs_diff_iontype",
-            "max_abs_diff_iontype",
-            "min_abs_diff",
-            "max_abs_diff",
-            "abs_diff_Q1",
-            "abs_diff_Q2",
-            "abs_diff_Q3",
-            "mean_abs_diff",
-            "std_abs_diff",
-            "ionb_min_abs_diff",
-            "ionb_max_abs_diff",
-            "ionb_abs_diff_Q1",
-            "ionb_abs_diff_Q2",
-            "ionb_abs_diff_Q3",
-            "ionb_mean_abs_diff",
-            "ionb_std_abs_diff",
-            "iony_min_abs_diff",
-            "iony_max_abs_diff",
-            "iony_abs_diff_Q1",
-            "iony_abs_diff_Q2",
-            "iony_abs_diff_Q3",
-            "iony_mean_abs_diff",
-            "iony_std_abs_diff",
-            "dotprod",
-            "dotprod_ionb",
-            "dotprod_iony",
-            "cos",
-            "cos_ionb",
-            "cos_iony",
-        ]
+        self.model = model
+        self.ms2_tolerance = ms2_tolerance
+        self.spectrum_path = spectrum_path
+        self.spectrum_id_pattern = spectrum_id_pattern
+        self.processes = processes
 
     def add_features(self, psm_list: PSMList) -> None:
-        """Add MS²PIP-derived features to PSMs."""
+        """
+        Add MS²PIP-derived features to PSMs.
+
+        Parameters
+        ----------
+        psm_list
+            PSMs to add features to.
+
+        """
         logger.info("Adding MS²PIP-derived features to PSMs.")
         for runs in psm_list.get_psm_dict().values():
             for run, psms in runs.items():
                 logger.info(f"Running MS²PIP for PSMs from run `{run}`...")
                 psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
-                spectrum_filename = infer_spectrum_path(
-                    self.config["ms2rescore"]["spectrum_path"], run
-                )
+                spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
                 logger.debug(f"Using spectrum file `{spectrum_filename}`")
                 ms2pip_results = correlate(
                     psms=psm_list_run,
                     spectrum_file=spectrum_filename,
-                    spectrum_id_pattern=self.config["ms2rescore"]["spectrum_id_pattern"],
-                    model=self.config["ms2pip"]["model"],
+                    spectrum_id_pattern=self.spectrum_id_pattern,
+                    model=self.model,
+                    ms2_tolerance=self.ms2_tolerance,
                     compute_correlations=False,
-                    ms2_tolerance=self.config["ms2pip"]["ms2_tolerance"],
-                    processes=self.config["ms2rescore"]["processes"],
+                    processes=self.processes,
                 )
                 self._calculate_features(ms2pip_results)
 
@@ -138,7 +173,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                         result.psm["rescoring_features"] = features
         # Use multiprocessing for large amount of PSMs
         else:
-            with multiprocessing.Pool(int(self.config["ms2rescore"]["processes"])) as pool:
+            with multiprocessing.Pool(int(self.processes)) as pool:
                 # Use imap, so we can use a progress bar
                 all_features = track(
                     pool.imap(
@@ -162,7 +197,6 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
         # Suppress RuntimeWarnings about invalid values
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-
             if (
                 processing_result.observed_intensity is None
                 or processing_result.predicted_intensity is None
@@ -279,6 +313,7 @@ class MS2PIPFeatureGenerator(FeatureGenerator):
                 [0.0 if ft is np.nan else ft for ft in feature_values],
             )
         )
+
         return (processing_result.psm_index, features)
 
 

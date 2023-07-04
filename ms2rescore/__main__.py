@@ -1,6 +1,7 @@
 """MS²Rescore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs."""
 
 import logging
+import sys
 
 from rich.console import Console
 from rich.text import Text
@@ -46,7 +47,7 @@ def main():
         rescore.run()
     except Exception as e:
         logger.exception(e)
-        raise e
+        sys.exit(1)
     finally:
         if rescore:
             rescore.save_log()

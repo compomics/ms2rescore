@@ -176,7 +176,11 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
             "If `parse_cli_args` is False, `config_class` arguments are required."
         )
 
-    cascade_conf = CascadeConfig(validation_schema=json.load(config_schema))
+    cascade_conf = CascadeConfig(
+        validation_schema=json.load(config_schema),
+        none_overrides_value=False,
+        max_recursion_depth=1,
+    )
     cascade_conf.add_dict(json.load(config_default))
     if config_user:
         if Path(config_user).suffix.lower() == ".json":
@@ -197,9 +201,8 @@ def parse_config(parse_cli_args: bool = True, config_class: Optional[Dict] = Non
     config = _validate_filenames(config)
     config = _validate_processes(config)
 
-    config["ms2rescore"]["feature_generators"] = [
-        fg.lower() for fg in config["ms2rescore"]["feature_generators"]
-    ]
-    config["ms2rescore"]["rescoring_engine"] = config["ms2rescore"]["rescoring_engine"].lower()
+    config["feature_generators"] = {k.lower(): v for k, v in config["feature_generators"].items()}
+    config["rescoring_engine"] = {k.lower(): v for k, v in config["rescoring_engine"]}
+
 
     return config

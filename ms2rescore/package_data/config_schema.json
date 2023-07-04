@@ -11,29 +11,46 @@
             "additionalProperties": false,
             "properties": {
                 "feature_generators": {
-                    "description": "Feature generators to use.",
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "enum": ["ms2pip", "deeplc", "maxquant"]
-                    },
-                    "minItems": 1,
-                    "uniqueItems": true,
-                    "default": ["ms2pip", "deeplc"]
+                    "description": "Feature generators and their configurations.",
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": { "$ref": "#/$defs/feature_generator" },
+                        "ms2pip": {
+                            "$ref": "#/$defs/feature_generator/$defs/ms2pip"
+                        },
+                        "deeplc": {
+                            "$ref": "#/$defs/feature_generator/$defs/deeplc"
+                        },
+                        "maxquant": {
+                            "$ref": "#/$defs/feature_generator/$defs/maxquant"
+                        }
+                    }
                 },
                 "rescoring_engine": {
-                    "description": "Rescoring engine to use.",
-                    "oneOf": [{"type": "string"}, {"type": "null"}],
-                    "enum": [null, "percolator"],
-                    "default": "percolator"
+                    "description": "Rescoring engine to use and its configuration.",
+                    "type": "object",
+                    "minProperties": 1,
+                    "maxProperties": 1,
+                    "patternProperties": {
+                        ".*": { "$ref": "#/$defs/rescoring_engine" },
+                        "percolator": {
+                            "$ref": "#/$defs/rescoring_engine/$defs/percolator"
+                        },
+                        "mokapot": {
+                            "$ref": "#/$defs/rescoring_engine/$defs/mokapot"
+                        }
+                    },
+                    "default": {
+                        "mokapot": {}
+                    }
                 },
                 "config_file": {
                     "description": "Path to configuration file",
-                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
                 "psm_file": {
                     "description": "Path to file with peptide-spectrum matches.",
-                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
                 "psm_file_type": {
                     "description": "PSM file type. By default inferred from file extension.",
@@ -42,15 +59,15 @@
                 },
                 "spectrum_path": {
                     "description": "Path to spectrum file or directory with spectrum files",
-                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
                 "tmp_path": {
                     "description": "Path to directory to place temporary files",
-                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
                 "output_path": {
                     "description": "Path and root name for output files",
-                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
                 "log_level": {
                     "description": "Logging level",
@@ -59,18 +76,18 @@
                 },
                 "id_decoy_pattern": {
                     "description": "Regex pattern used to identify the decoy PSMs in identification file.",
-                    "oneOf": [{"type": "string"}, {"type": "null"}],
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
                     "default": null
                 },
-                "spectrum_id_pattern":{
+                "spectrum_id_pattern": {
                     "description": "Regex pattern to extract index or scan number from spectrum file. Requires at least one capturing group.",
-                    "oneOf": [{"type": "string"}, {"type": "null"}],
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
                     "default": "(.*)",
                     "format": "regex"
                 },
                 "psm_id_pattern": {
                     "description": "Regex pattern to extract index or scan number from PSM file. Requires at least one capturing group.",
-                    "oneOf": [{"type": "string"}, {"type": "null"}],
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
                     "default": "(.*)",
                     "format": "regex"
                 },
@@ -102,48 +119,85 @@
                     "type": "boolean"
                 }
             }
-        },
-        "ms2pip": {
-            "description": "MS²PIP settings.",
+        }
+    },
+    "$defs": {
+        "feature_generator": {
+            "description": "Feature generator configuration",
             "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "model": {
-                    "description": "MS²PIP model to use (see MS²PIP documentation)",
-                    "type": "string",
-                    "default": "HCD"
+            "additionalProperties": true,
+            "$defs": {
+                "ms2pip": {
+                    "$schema": "#/definitions/feature_generator",
+                    "description": "MS²PIP feature generator configuration",
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                        "model": {
+                            "description": "MS²PIP model to use (see MS²PIP documentation)",
+                            "type": "string",
+                            "default": "HCD"
+                        },
+                        "ms2_tolerance": {
+                            "description": "MS2 error tolerance in Da",
+                            "type": "number",
+                            "minimum": 0,
+                            "default": 0.02
+                        }
+                    }
                 },
-                "ms2_tolerance": {
-                    "description": "MS2 error tolerance in Da",
-                    "type": "number",
-                    "minimum": 0,
-                    "default": 0.02
+                "deeplc": {
+                    "$schema": "#/definitions/feature_generator",
+                    "description": "DeepLC feature generator configuration",
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                        "calibration_set_size": {
+                            "description": "Calibration set size",
+                            "oneOf": [
+                                { "type": "integer" },
+                                { "type": "number" }
+                            ],
+                            "default": 0.15
+                        }
+                    }
+                },
+                "maxquant": {
+                    "$schema": "#/definitions/feature_generator",
+                    "description": "MaxQuant feature generator configuration",
+                    "type": "object",
+                    "additionalProperties": true
                 }
             }
         },
-        "deeplc": {
-            "description": "DeepLC keyword arguments",
+        "rescoring_engine": {
+            "description": "Rescoring engine configuration",
             "type": "object",
             "additionalProperties": true,
-            "properties": {
-                "calibration_set_size": {
-                    "description": "Calibration set size",
-                    "oneOf": [{"type": "integer"}, {"type": "number"}],
-                    "default": 0.15
+            "$defs": {
+                "mokapot": {
+                    "$schema": "#/definitions/rescoring_engine",
+                    "description": "Mokapot rescoring engine configuration",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "percolator": {
+                    "$schema": "#/definitions/rescoring_engine",
+                    "description": "Percolator rescoring engine configuration",
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                        "init-weights": {
+                            "description": "Weights file for scoring function",
+                            "oneOf": [
+                                { "type": "string" },
+                                { "type": "boolean" }
+                            ],
+                            "default": false
+                        }
+                    }
                 }
             }
-        },
-        "percolator": {
-            "description": "Percolator settings",
-            "type": "object",
-            "additionalProperties": true,
-            "properties": {
-                "init-weights": {
-                    "description": "Weights file for scoring function",
-                    "oneOf": [{"type": "string"}, {"type": "boolean"}],
-                    "default": false
-                }
         }
     }
-}
 }

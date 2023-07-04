@@ -1,20 +1,11 @@
 """Feature generation for MS²Rescore."""
 
-import logging
-from abc import ABC, abstractmethod
+from ms2rescore.feature_generators.ms2pip import MS2PIPFeatureGenerator
+from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
+from ms2rescore.feature_generators.maxquant import MaxQuantFeatureGenerator
 
-from psm_utils import PSMList
-
-logger = logging.getLogger(__name__)
-
-
-class FeatureGenerator(ABC):
-    """Base class for feature generators."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__()
-
-    @abstractmethod
-    def add_features(psm_list: PSMList):
-        raise NotImplementedError()
-
+FEATURE_GENERATORS = {
+    "ms2pip": MS2PIPFeatureGenerator,
+    "deeplc": DeepLCFeatureGenerator,
+    "maxquant": MaxQuantFeatureGenerator,
+}

@@ -1,11 +1,11 @@
 import logging
 import subprocess
-from pathlib import Path
+from typing import Any, Dict, Optional
 
 import psm_utils
 
-from ms2rescore.rescoring_engines import Rescoringengine
 from ms2rescore.exceptions import MS2RescoreError
+from ms2rescore.rescoring_engines import RescoringEngineBase
 
 logger = logging.getLogger(__name__)
 
@@ -19,33 +19,40 @@ LOG_LEVEL_MAP = {
 }
 
 
-class PercolatorRescoring(Rescoringengine):
-    def __init__(self, psm_list, config, *args, **kwargs) -> None:
+class PercolatorRescoring(RescoringEngineBase):
+    def __init__(
+        self,
+        output_file_root: str,
+        *args,
+        log_level: str = "info",
+        processes: int = 1,
+        percolator_kwargs: Optional[Dict[str, Any]] = None,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
 
-        self.psm_list = psm_list
-        self.config = config
-        self.output_file_root = str(
-            Path(self.config["ms2rescore"]["output_path"])
-            / Path(self.config["ms2rescore"]["psm_file"]).stem
-        )  # TODO add feature generators to the name?
-        self.kwargs = {
+        self.output_file_root = output_file_root
+        self.log_level = log_level
+        self.processes = processes
+        self.percolator_kwargs = {
             "results-psms": self.output_file_root + "_target_psms.pout",
             "decoy-results-psms": self.output_file_root + "_decoy_psms.pout",
             "results-peptides": self.output_file_root + "_target_peptides.pout",
             "decoy-results-peptides": self.output_file_root + "_decoy_peptides.pout",
             "weights": self.output_file_root + ".weights",
-            "verbose": LOG_LEVEL_MAP[self.config["ms2rescore"]["log_level"]],
-            "num-threads": self.config["ms2rescore"]["processes"],
+            "verbose": LOG_LEVEL_MAP[self.log_level],
+            "num-threads": self.processes,
             "post-processing-tdc": True,
         }
+        if percolator_kwargs:
+            self.percolator_kwargs.update(percolator_kwargs)
 
-    def rescore(self):
-        """Run Percolator"""
-        self.write_pin_file()
+    def rescore(self, psm_list: psm_utils.PSMList):
+        """Run Percolator on a PSMList."""
+        self.write_pin_file(psm_list, self.output_file_root)
         try:
             output = subprocess.run(
-                self.parse_percolator_command(),
+                self._parse_percolator_command(),
                 capture_output=True,
             )
         except subprocess.CalledProcessError:
@@ -58,30 +65,28 @@ class PercolatorRescoring(Rescoringengine):
             extra={"highlighter": None},
         )
 
-    def write_pin_file(self):
-        """Write pin file for rescoring"""
-        logger.debug(f"Writing pin file to {self.output_file_root}.pin")
+    @staticmethod
+    def write_pin_file(psm_list: psm_utils.PSMList, output_file_root: str):
+        """Write PIN file for rescoring"""
+        logger.debug(f"Writing pin file to {output_file_root}.pin")
         psm_utils.io.write_file(
-            self.psm_list,
-            filename=f"{self.output_file_root}.pin",
+            psm_list,
+            filename=output_file_root + ".pin",
             filetype="percolator",
             style="pin",
-            feature_names=self.psm_list[0].rescoring_features.keys(),
+            feature_names=psm_list[0].rescoring_features.keys(),
         )
 
-    def parse_percolator_command(self):
+    def _parse_percolator_command(self):
         """Create Percolator command"""
-
-        self.kwargs.update(self.config["percolator"])
-
         percolator_cmd = ["percolator"]
-        for key, value in self.kwargs.items():
+        for key, value in self.percolator_kwargs.items():
             if not isinstance(value, bool):
                 percolator_cmd.append(f"--{key}")
                 percolator_cmd.append(str(value))
                 if key == "init-weights":
                     percolator_cmd.append("--static")
-            elif isinstance(value, bool) & value == False:
+            elif isinstance(value, bool) & value is False:
                 continue
             else:
                 percolator_cmd.append(f"--{key}")
@@ -107,5 +112,5 @@ class PercolatorRescoring(Rescoringengine):
                 return decoded_string
             except UnicodeDecodeError:
                 pass
-
-        raise MS2RescoreError("Could not infer encoding of Percolator output")
+        else:
+            raise MS2RescoreError("Could not infer encoding of Percolator logs.")

@@ -4,8 +4,9 @@ import contextlib
 import logging
 import os
 from collections import defaultdict
+from inspect import getargspec
 from itertools import chain
-from pathlib import Path
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,7 @@ from psm_utils import PSMList
 from psm_utils.io import peptide_record
 
 from ms2rescore.exceptions import MS2RescoreError
-from ms2rescore.feature_generators import FeatureGenerator
+from ms2rescore.feature_generators._base_classes import FeatureGeneratorBase
 from ms2rescore.parse_mgf import parse_mgf_title_rt
 from ms2rescore.utils import infer_spectrum_path
 
@@ -21,62 +22,77 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
 
 
-class DeepLCFeatureGenerator(FeatureGenerator):
+class DeepLCFeatureGenerator(FeatureGeneratorBase):
+    """DeepLC retention time-based feature generator."""
+
+    feature_names = [
+        "observed_retention_time",
+        "predicted_retention_time",
+        "rt_diff",
+        "observed_retention_time_best",
+        "predicted_retention_time_best",
+        "rt_diff_best",
+    ]
+
     def __init__(
         self,
-        config,
         *args,
+        lower_score_is_better: bool = False,
+        calibration_set_size: Union[int, float] = 0.15,
+        spectrum_path: Optional[str] = None,
+        processes: int = 1,
         **kwargs,
     ) -> None:
         """
         Generate DeepLC-based features for rescoring.
 
+        DeepLC retraining is on by default. Add `deeplc_retrain: False` as a keyword argument to
+        disable retraining.
+
         Parameters
         ----------
-        psm_list: psm_utils.PSMList
-            List of PSMs to which to add features.
-        higher_psm_score_better: bool
-            Whether a higher PSM score (`psm_score` column in PEPREC) denotes a better
-            score. (default: True)
+        lower_score_is_better
+            Whether a lower PSM score denotes a better matching PSM. Default: False
         calibration_set_size: int or float
             Amount of best PSMs to use for DeepLC calibration. If this value is lower
-            than the number of available PSMs, all PSMs will be used. (default: 0.20)
-        num_cpu: {int, None}
-            Number of processes to use in DeepLC
+            than the number of available PSMs, all PSMs will be used. (default: 0.15)
+        spectrum_path
+            Path to spectrum file or directory with spectrum files. If None, inferred from `run`
+            field in PSMs. Defaults to None.
+        processes: {int, None}
+            Number of processes to use in DeepLC. Defaults to 1.
+        kwargs: dict
+            Additional keyword arguments are passed to DeepLC.
 
         """
         super().__init__(*args, **kwargs)
-        self.config = config
-        self.tmp_file_root = str(
-            Path(self.config["ms2rescore"]["tmp_path"])
-            / Path(self.config["ms2rescore"]["psm_file"]).stem
-        )
-        self.feature_names = []
-        self.higher_psm_score_better = self.config["ms2rescore"]["lower_score_is_better"]
-        try:
-            self.calibration_set_size = self.config["deeplc"].pop("calibration_set_size")
-        except KeyError:
-            self.calibration_set_size = 0.15
-        self.num_cpu = 1
 
-        if "deeplc_retrain" not in self.config["deeplc"]:
-            self.config["deeplc"]["deeplc_retrain"] = True
+        self.higher_psm_score_better = lower_score_is_better
+        self.calibration_set_size = calibration_set_size
+        self.spectrum_path = spectrum_path
+        self.processes = processes
+        self.deeplc_kwargs = kwargs or {}
+
+        # Lazy-load DeepLC
+        from deeplc import DeepLC
+
+        self.DeepLC = DeepLC
+
+        # Remove any kwargs that are not DeepLC arguments
+        self.deeplc_kwargs = {
+            k: v for k, v in self.deeplc_kwargs.items() if k in getargspec(DeepLC).args
+        }
+        self.deeplc_kwargs.update({"config_file": None})
+
+        # Set default DeepLC arguments
+        if "deeplc_retrain" not in self.deeplc_kwargs:
+            self.deeplc_kwargs["deeplc_retrain"] = True
 
         self.deeplc_predictor = None
         self.selected_model = None
 
-        self.feature_names = [
-            "observed_retention_time",
-            "predicted_retention_time",
-            "rt_diff",
-            "observed_retention_time_best",
-            "predicted_retention_time_best",
-            "rt_diff_best",
-        ]
-
     def add_features(self, psm_list: PSMList) -> None:
         """Add DeepLC-derived features to PSMs."""
-        from deeplc import DeepLC
 
         logger.info("Adding DeepLC-derived features to PSMs.")
 
@@ -91,9 +107,8 @@ class DeepLCFeatureGenerator(FeatureGenerator):
         )
 
         # Run MS²PIP for each spectrum file
-        for collection, runs in psm_dict.items():
+        for runs in psm_dict.values():
             # Reset DeepLC predictor for each collection of runs
-
             self.deeplc_predictor = None
             self.selected_model = None
             for run, psms in runs.items():
@@ -103,16 +118,14 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
                     if not all(psm_list["retention_time"]):
-                        retention_times = psm_list_run["retention_time"]
-                        spec_ids = psm_list_run["retention_time"]
-                        retention_time_dict = self.read_rt_from_spectrum_file(run)
-
+                        # Prepare spectrum filenames
+                        spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
+                        retention_time_dict = parse_mgf_title_rt(spectrum_filename)
                         try:
-                            # psm_list["retention_time"] = [rt if rt else retention_time_dict[spec_ids[i]] for i, rt in enumerate(retention_times)]
                             psm_list_run["retention_time"] = [
                                 retention_time_dict[psm_id]
                                 for psm_id in psm_list_run["spectrum_id"]
-                            ]  # Probably faster to replace all
+                            ]
                         except KeyError:
                             raise MS2RescoreError(
                                 "Could not map all spectrum ids to retention times"
@@ -121,11 +134,11 @@ class DeepLCFeatureGenerator(FeatureGenerator):
                     psm_list_calibration = self.get_calibration_psms(psm_list_run)
 
                     logger.debug("Calibrating DeepLC")
-                    self.deeplc_predictor = DeepLC(
-                        n_jobs=self.num_cpu,
+                    self.deeplc_predictor = self.DeepLC(
+                        n_jobs=self.processes,
                         verbose=False,
                         path_model=self.selected_model,
-                        **self.config["deeplc"],
+                        **self.deeplc_kwargs,
                     )
                     self.deeplc_predictor.calibrate_preds(
                         seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
@@ -168,14 +181,6 @@ class DeepLCFeatureGenerator(FeatureGenerator):
             psm["rescoring_features"].update(
                 peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
             )
-
-    def read_rt_from_spectrum_file(self, run_name):
-        # Prepare spectrum filenames
-        spectrum_filename = infer_spectrum_path(
-            self.config["ms2rescore"]["spectrum_path"], run_name
-        )
-
-        return parse_mgf_title_rt(spectrum_filename)
 
     # TODO: Remove when DeepLC supports PSMList directly
     @staticmethod
