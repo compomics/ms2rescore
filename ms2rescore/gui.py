@@ -21,7 +21,6 @@ import ms2rescore
 import ms2rescore.package_data.img as img_module
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 from ms2rescore.ms2rescore_main import MS2Rescore
-from ms2rescore.setup_logging import LOG_MAPPING
 
 with importlib.resources.path(img_module, "config_icon.png") as resource:
     _IMG_DIR = Path(resource).parent
@@ -31,13 +30,20 @@ logger.setLevel(logging.INFO)
 
 try:
     import matplotlib.pyplot as plt
+
     plt.set_loglevel("warning")
 except ImportError:
     pass
 
-customtkinter.set_default_color_theme(
-    "ms2rescore\package_data\ms2rescore-gui-theme.json"
-)
+LOG_MAPPING = {
+    "critical": logging.CRITICAL,
+    "error": logging.ERROR,
+    "warning": logging.WARNING,
+    "info": logging.INFO,
+    "debug": logging.DEBUG,
+}
+
+customtkinter.set_default_color_theme("ms2rescore\package_data\ms2rescore-gui-theme.json")
 
 
 class App(customtkinter.CTk):
@@ -48,7 +54,7 @@ class App(customtkinter.CTk):
         self.popupwindow = None
         # App config
         self.geometry(f"{1100}x{700}")
-        self.title("MS²Rescore GUI")
+        self.title("MS²Rescore")
         self.minsize(500, 300)
 
         # create 1x2 grid system
@@ -63,59 +69,46 @@ class App(customtkinter.CTk):
 
         self.create_sidebar_frame(self.sidebar_frame)
 
-        # Tabview config
-        self.middle_frame = customtkinter.CTkFrame(self, corner_radius=0)
-        self.middle_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
-        self.middle_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
-        self.middle_frame.grid_rowconfigure((0), weight=20)
-        self.middle_frame.grid_rowconfigure((1), weight=0)
+        # Main frame
+        self.main_frame = customtkinter.CTkFrame(self, corner_radius=0)
+        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=0)
+        self.main_frame.grid_columnconfigure((0, 1), weight=1)
+        self.main_frame.grid_rowconfigure((0), weight=20)
+        self.main_frame.grid_rowconfigure((1), weight=0)
 
-        config_tabview = customtkinter.CTkTabview(self.middle_frame)
-        config_tabview.grid(
-            row=0, column=0, columnspan=2, padx=10, pady=(10, 0), sticky="nsew"
-        )
+        # Configuration tabview
+        config_tabview = customtkinter.CTkTabview(self.main_frame)
+        config_tabview.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        config_tabview.add("Main")
+        config_tabview.add("Advanced")
+        config_tabview.add("MS²PIP")
+        config_tabview.add("DeepLC")
+        config_tabview.set("Main")
 
-        config_tabview.add("Main")  # add tab at the end
-        config_tabview.add("Advanced")  # add tab at the end
-        config_tabview.add("MS²PIP")  # add tab at the end
-        config_tabview.add("DeepLC")  # add tab at the end
-        config_tabview.set("Main")  # set currently visible tab
-
-        # Create tabs
         self.create_main_tab(config_tabview.tab("Main"))
         self.create_advanced_tab(config_tabview.tab("Advanced"))
         self.create_ms2pip_tab(config_tabview.tab("MS²PIP"))
         self.create_deeplc_tab(config_tabview.tab("DeepLC"))
 
-        progess_tabview = customtkinter.CTkTabview(self.middle_frame)
-        progess_tabview.grid(
-            row=0, column=2, columnspan=2, padx=10, pady=(10, 0), sticky="nsew"
-        )
-
-        progess_tabview.add("Progress")  # add tab at the end
-        progess_tabview.set("Progress")  # set currently visible tab
+        progress_tabview = customtkinter.CTkTabview(self.main_frame, state="disabled")
+        progress_tabview.grid(row=0, column=1, padx=10, pady=(10, 0), sticky="nsew")
+        progress_tabview.add("Progress")
+        progress_tabview.set("Progress")
 
         # Text box for logger output
-        self.textbox = customtkinter.CTkTextbox(progess_tabview.tab("Progress"))
+        self.textbox = customtkinter.CTkTextbox(progress_tabview.tab("Progress"))
         self.textbox.pack(expand=True, fill=tk.BOTH)
         self.textbox.configure(state="disabled")
 
-        self.logging_label = customtkinter.CTkLabel(
-            self.middle_frame, text="Logging Level:", anchor="w"
+        self.logging_level_selection = LoggingLevelSelection(
+            self.main_frame, fg_color="transparent"
         )
-        self.logging_label.grid(row=1, column=0, padx=10, pady=10)
-        self.logging_var = customtkinter.StringVar(value="info")
-        self.combobox = customtkinter.CTkComboBox(
-            master=self.middle_frame,
-            values=["info", "debug", "warning", "error", "critical"],
-            variable=self.logging_var,
-        )
-        self.combobox.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
+        self.logging_level_selection.grid(row=1, column=0, padx=10, pady=10, sticky="se")
 
         self.start_button = customtkinter.CTkButton(
-            master=self.middle_frame, command=self.start_button_callback, text="Start"
+            master=self.main_frame, command=self.start_button_callback, text="Start"
         )
-        self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
+        self.start_button.grid(row=1, column=1, padx=10, pady=10, sticky="e")
 
         # Setup loggers (both textbox and CLI are configured)
         # logger.addHandler(logging.StreamHandler())
@@ -131,13 +124,13 @@ class App(customtkinter.CTk):
 
         self.start_button.grid_forget()
         self.stop_button = customtkinter.CTkButton(
-            master=self.middle_frame, text="Stop", command=self.stop_button_callback
+            master=self.main_frame, text="Stop", command=self.stop_button_callback
         )
         self.stop_button_pressed = False
-        self.stop_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
+        self.stop_button.grid(row=1, column=1, padx=10, pady=10, sticky="w")
 
-        self.progressbar = customtkinter.CTkProgressBar(self.middle_frame)
-        self.progressbar.grid(row=1, column=2, padx=10, pady=10, sticky="e")
+        self.progressbar = customtkinter.CTkProgressBar(self.main_frame)
+        self.progressbar.grid(row=1, column=1, padx=10, pady=10, sticky="e")
         self.progressbar.configure(mode="indeterminate")
         self.progressbar.start()
 
@@ -147,7 +140,7 @@ class App(customtkinter.CTk):
 
         self.create_config()
         self.ms2rescore_run = MS2RescoreProcess(
-            self.config, self.queue, self.logging_var.get()
+            self.config, self.queue, self.logging_level_selection.get()
         )
         self.ms2rescore_run.start()
         self.monitor(self.ms2rescore_run)
@@ -166,11 +159,9 @@ class App(customtkinter.CTk):
         self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
         if self.stop_button_pressed:
             self.stop_button_pressed = False
-        elif (
-            self.ms2rescore_run.exception is not None
-            or self.ms2rescore_run.exitcode != 0
-        ):
+        elif self.ms2rescore_run.exception is not None or self.ms2rescore_run.exitcode != 0:
             self.popupwindow = PopupWindow(
+                "MS²Rescore error",
                 "Error occured:\n"
                 + str(
                     self.ms2rescore_run.exception[0]
@@ -183,7 +174,9 @@ class App(customtkinter.CTk):
             )
             self.popupwindow.focus()
         else:
-            self.popupwindow = PopupWindow("MS²Rescore finished successfully!")
+            self.popupwindow = PopupWindow(
+                "MS²Rescore finished", "MS²Rescore finished successfully!"
+            )
             self.popupwindow.focus()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
@@ -200,9 +193,7 @@ class App(customtkinter.CTk):
             light_image=Image.open(os.path.join(str(_IMG_DIR), "ms2rescore_logo.png")),
             size=(130, 130),
         )
-        self.logo_label = customtkinter.CTkLabel(
-            tkinter_frame, text="", image=self.logo
-        )
+        self.logo_label = customtkinter.CTkLabel(tkinter_frame, text="", image=self.logo)
         self.logo_label.grid(row=0, column=0, rowspan=4, padx=0, pady=10)
 
         # self.citing_label = customtkinter.CTkLabel(
@@ -264,9 +255,7 @@ class App(customtkinter.CTk):
             command=self.change_appearance_mode_event,
         )
         self.appearance_mode_optionemenu.grid(row=10, column=0, padx=20, pady=(10, 10))
-        self.scaling_label = customtkinter.CTkLabel(
-            tkinter_frame, text="UI Scaling:", anchor="w"
-        )
+        self.scaling_label = customtkinter.CTkLabel(tkinter_frame, text="UI Scaling:", anchor="w")
         self.scaling_label.grid(row=11, column=0, padx=20, pady=(10, 0))
         self.scaling_optionemenu = customtkinter.CTkOptionMenu(
             tkinter_frame,
@@ -295,9 +284,7 @@ class App(customtkinter.CTk):
         )
         self.github_button.grid(row=13, column=0, padx=20, pady=(10, 10))
 
-        self.version_label = customtkinter.CTkLabel(
-            tkinter_frame, text=ms2rescore.__version__
-        )
+        self.version_label = customtkinter.CTkLabel(tkinter_frame, text=ms2rescore.__version__)
         self.version_label.grid(row=14, column=0, padx=20, pady=(10, 10))
 
     def create_main_tab(self, tabview_object):
@@ -330,9 +317,7 @@ class App(customtkinter.CTk):
         self.pipeline_combobox.pack(fill=tk.BOTH)
 
         self.processes_var = customtkinter.StringVar(value="-1")
-        self.processes_label = customtkinter.CTkLabel(
-            tabview_object, text="Num CPU:", anchor="w"
-        )
+        self.processes_label = customtkinter.CTkLabel(tabview_object, text="Num CPU:", anchor="w")
         self.processes_label.pack(anchor="w")
         self.processes = customtkinter.CTkOptionMenu(
             master=tabview_object,
@@ -345,21 +330,15 @@ class App(customtkinter.CTk):
             tabview_object, text="Modification mapping", anchor="w"
         )
         self.modification_mapping_label.pack(anchor=tk.W)
-        self.modification_mapping_box = customtkinter.CTkTextbox(
-            tabview_object, height=50
-        )
-        self.modification_mapping_box.insert(
-            "0.0", "Modification label: unimod modification"
-        )
+        self.modification_mapping_box = customtkinter.CTkTextbox(tabview_object, height=50)
+        self.modification_mapping_box.insert("0.0", "Modification label: unimod modification")
         self.modification_mapping_box.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
         self.fixed_modification_label = customtkinter.CTkLabel(
             tabview_object, text="Fixed modifications", anchor="w"
         )
         self.fixed_modification_label.pack(anchor=tk.W)
-        self.fixed_modifications_box = customtkinter.CTkTextbox(
-            tabview_object, height=50
-        )
+        self.fixed_modifications_box = customtkinter.CTkTextbox(tabview_object, height=50)
         self.fixed_modifications_box.insert("0.0", "Unimod modification: aa,aa")
         self.fixed_modifications_box.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
@@ -427,9 +406,7 @@ class App(customtkinter.CTk):
         )
         self.weightsfile.pack(anchor="w", fill=tk.BOTH)
 
-        self.tmp_dir = OptionalInput(
-            tabview_object, text="temp directory", fileoption="directory"
-        )
+        self.tmp_dir = OptionalInput(tabview_object, text="temp directory", fileoption="directory")
         self.tmp_dir.pack(anchor="w", fill=tk.BOTH)
 
         self.file_prefix = OptionalInput(
@@ -460,9 +437,7 @@ class App(customtkinter.CTk):
             tabview_object, text="MS2 error tolerance in Da", anchor="w"
         )
         self.error_label.pack(anchor=tk.W, fill=tk.BOTH)
-        self.ms2_tolerance_spinbox = FloatSpinbox(
-            tabview_object, step_size=0.01, width=110
-        )
+        self.ms2_tolerance_spinbox = FloatSpinbox(tabview_object, step_size=0.01, width=110)
         self.ms2_tolerance_spinbox.pack(padx=10, pady=10, anchor="w")
         self.ms2_tolerance_spinbox.set(0.02)
 
@@ -501,39 +476,7 @@ class App(customtkinter.CTk):
     def create_config(self):
         """Create MS²Rescore config file"""
         logger.debug("Creating config file")
-        feature_generators = ["ms2pip", "deeplc"]
-        if self.pipeline_var.get() == "msms":
-            feature_generators = feature_generators + ["maxquant"]
 
-        ms2rescore_config = {
-            "feature_generators": feature_generators,
-            # "rescoring_engine": "percolator",
-            "config_file": self.config_filepath.selected_filename,
-            "psm_file": self.id_file.selected_filename,
-            "psm_file_type": self.pipeline_var.get(),
-            "tmp_path": self.tmp_dir.selected_filename,
-            "spectrum_path": self.mgf_dir.selected_filename,
-            "output_path": self.file_prefix.selected_filename,
-            "log_level": self.logging_var.get(),
-            "processes": int(self.processes_var.get()),
-            "modification_mapping": self.parse_modification_mapping(
-                self.modification_mapping_box.get("0.0", "end")
-            ),
-            "fixed_modifications": self.parse_fixed_modifications(
-                self.fixed_modifications_box.get("0.0", "end")
-            ),
-            "id_decoy_pattern": self.id_decoy_pattern.get(),
-            "psm_id_pattern": self.psm_id_pattern.get(),
-            "spectrum_id_pattern": self.spectrum_id_pattern.get(),
-            "lower_score_is_better": True
-            if self.lower_score_var.get() == "true"
-            else False,
-            "USI": True if self.usi_var.get() == "true" else False,
-        }
-        ms2pip_config = {
-            "model": self.selected_ms2pip_model.get(),
-            "ms2_tolerance": float(self.ms2_tolerance_spinbox.get()),
-        }
         if self.calibration_set_size.get() == "":
             calibration_set_size = 0.15
         elif not self.calibration_set_size.get().replace(".", "", 1).isdigit():
@@ -545,25 +488,52 @@ class App(customtkinter.CTk):
             calibration_set_size = float(self.calibration_set_size.get())
         else:
             calibration_set_size = int(self.calibration_set_size.get())
-        deeplc_config = {
-            "deeplc_retrain": True
-            if self.transfer_learning_tickbox.get() == "true"
-            else False,
-            "calibration_set_size": calibration_set_size,
-        }
 
-        percolator_config = {
-            "init-weights": self.weightsfile.selected_filename
-            if self.weightsfile.selected_filename
-            else False,
+        feature_generators = {
+            "ms2pip": {
+                "model": self.selected_ms2pip_model.get(),
+                "ms2_tolerance": float(self.ms2_tolerance_spinbox.get()),
+            },
+            "deeplc": {
+                "deeplc_retrain": True
+                if self.transfer_learning_tickbox.get() == "true"
+                else False,
+                "calibration_set_size": calibration_set_size,
+            },
         }
+        if self.pipeline_var.get() == "msms":
+            feature_generators["maxquant"] = {}
 
-        self.config = {
-            "ms2rescore": ms2rescore_config,
-            "ms2pip": ms2pip_config,
-            "deeplc": deeplc_config,
-            "percolator": percolator_config,
+        ms2rescore_config = {
+            "feature_generators": feature_generators,
+            "rescoring_engine": {
+                "percolator": {
+                    "init-weights": self.weightsfile.selected_filename
+                    if self.weightsfile.selected_filename
+                    else False,
+                }
+            },
+            "config_file": self.config_filepath.selected_filename,
+            "psm_file": self.id_file.selected_filename,
+            "psm_file_type": self.pipeline_var.get(),
+            "tmp_path": self.tmp_dir.selected_filename,
+            "spectrum_path": self.mgf_dir.selected_filename,
+            "output_path": self.file_prefix.selected_filename,
+            "log_level": self.logging_level_selection.get(),
+            "processes": int(self.processes_var.get()),
+            "modification_mapping": self.parse_modification_mapping(
+                self.modification_mapping_box.get("0.0", "end")
+            ),
+            "fixed_modifications": self.parse_fixed_modifications(
+                self.fixed_modifications_box.get("0.0", "end")
+            ),
+            "id_decoy_pattern": self.id_decoy_pattern.get(),
+            "psm_id_pattern": self.psm_id_pattern.get(),
+            "spectrum_id_pattern": self.spectrum_id_pattern.get(),
+            "lower_score_is_better": True if self.lower_score_var.get() == "true" else False,
+            "USI": True if self.usi_var.get() == "true" else False,
         }
+        self.config = {"ms2rescore": ms2rescore_config}
 
     @staticmethod
     def parse_modification_mapping(modifications_txt):
@@ -579,9 +549,7 @@ class App(customtkinter.CTk):
                 )
 
             modification_label, unimod_label = mod.split(":")[0], mod.split(":")[1]
-            if (modification_label == "") or (
-                modification_label == "Modification label"
-            ):
+            if (modification_label == "") or (modification_label == "Modification label"):
                 continue
             else:
                 modification_map[modification_label] = unimod_label.lstrip(" ")
@@ -619,6 +587,26 @@ class App(customtkinter.CTk):
             self.finish_callback()
 
 
+class LoggingLevelSelection(customtkinter.CTkFrame):
+    def __init__(self, master, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.selected_level = customtkinter.StringVar(value="info")
+        self.grid_columnconfigure(1, weight=1)
+
+        self.label = customtkinter.CTkLabel(self, text="Logging level:", anchor="w")
+        self.label.grid(row=0, column=0, padx=5)
+
+        self.combobox = customtkinter.CTkOptionMenu(
+            master=self,
+            values=["info", "debug", "warning", "error", "critical"],
+            variable=self.selected_level,
+        )
+        self.combobox.grid(row=0, column=1, sticky="e")
+
+    def get(self):
+        return self.selected_level.get()
+
+
 class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""
 
@@ -638,19 +626,13 @@ class MS2RescoreProcess(multiprocessing.Process):
 
         rescore = None
         try:
-            rescore = MS2Rescore(
-                parse_cli_args=False,
-                configuration=self.config,
-            )
+            rescore = MS2Rescore(configuration=self.config)
             rescore.run()
             logger.info("M²Rescore finished successfully")
         except Exception as e:
             logger.exception(e)
             tb = traceback.format_exc()
             self._cconn.send((e, tb))
-        finally:
-            if rescore:
-                rescore.save_log()
 
     @property
     def exception(self):
@@ -670,15 +652,11 @@ class MyHandlerText(logging.StreamHandler):
         self.textctrl.configure(state="normal")  # Enable text control to allow insert
         self.textctrl.insert("end", msg + "\n")
         self.flush()
-        self.textctrl.configure(
-            state="disabled"
-        )  # Disable text control to prevent user input
+        self.textctrl.configure(state="disabled")  # Disable text control to prevent user input
 
 
 class FileSelect(customtkinter.CTkFrame):
-    def __init__(
-        self, *args, width: int = 100, height: int = 32, fileoption="openfile", **kwargs
-    ):
+    def __init__(self, *args, width: int = 100, height: int = 32, fileoption="openfile", **kwargs):
         super().__init__(*args, width=width, height=height, **kwargs)
         self.selected_filename = None
         self.grid_columnconfigure(0, weight=1)
@@ -852,22 +830,23 @@ class FloatSpinbox(customtkinter.CTkFrame):
 
 
 class PopupWindow(customtkinter.CTkToplevel):
-    def __init__(self, txt, width=275, height=150, *args, **kwargs):
+    def __init__(self, title, txt, width=275, height=150, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        window_width = width
-        window_height = height
-        x = int(int(self.winfo_screenwidth() / 2) - int(window_width / 2))
-        y = int(int(self.winfo_screenheight() / 2) - int(window_height / 2))
-        self.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        x = int(int(self.winfo_screenwidth() / 2) + width)
+        y = int(int(self.winfo_screenheight() / 2) + height)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.title(title)
 
-        self.label = customtkinter.CTkLabel(self, text=txt, font=("Bold", 16))
-        self.label.pack(padx=20, pady=20)
+        self.textbox = customtkinter.CTkTextbox(self, state="normal", wrap="word")
+        self.textbox.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        self.textbox.insert("0.0", txt)
+        self.textbox.configure(state="disabled")
 
-        self.close_button = customtkinter.CTkButton(
-            self, text="Close", command=self.destroy
-        )
-        self.close_button.pack(padx=20, pady=20)
+        self.close_button = customtkinter.CTkButton(self, text="Close", command=self.destroy)
+        self.close_button.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="sw")
 
 
 if __name__ == "__main__":
