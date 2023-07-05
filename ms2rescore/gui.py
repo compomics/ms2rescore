@@ -94,49 +94,37 @@ class App(customtkinter.CTk):
         progress_tabview.grid(row=0, column=1, padx=10, pady=(10, 0), sticky="nsew")
         progress_tabview.add("Progress")
         progress_tabview.set("Progress")
+        progress_tabview.tab("Progress").grid_columnconfigure(0, weight=1)
+        progress_tabview.tab("Progress").grid_rowconfigure(0, weight=1)
 
         # Text box for logger output
-        self.textbox = customtkinter.CTkTextbox(progress_tabview.tab("Progress"))
-        self.textbox.pack(expand=True, fill=tk.BOTH)
-        self.textbox.configure(state="disabled")
+        self.logging_output = LoggingOutput(progress_tabview.tab("Progress"))
+        self.logging_output.grid(row=0, column=0, sticky="nsew")
 
         self.logging_level_selection = LoggingLevelSelection(
             self.main_frame, fg_color="transparent"
         )
         self.logging_level_selection.grid(row=1, column=0, padx=10, pady=10, sticky="se")
 
-        self.start_button = customtkinter.CTkButton(
-            master=self.main_frame, command=self.start_button_callback, text="Start"
+        self.progress_control = ProgressControl(
+            self.main_frame,
+            start_callback=self.start_button_callback,
+            stop_callback=self.stop_button_callback,
+            fg_color="transparent",
         )
-        self.start_button.grid(row=1, column=1, padx=10, pady=10, sticky="e")
+        self.progress_control.grid(row=1, column=1, padx=10, pady=10, sticky="sew")
 
         # Setup loggers (both textbox and CLI are configured)
-        # logger.addHandler(logging.StreamHandler())
         logger.addHandler(logging.StreamHandler(sys.stdout))
         logger.addHandler(logging.handlers.QueueHandler(self.queue))
         self.queue_listener = logging.handlers.QueueListener(
-            self.queue, MyHandlerText(self.textbox)
+            self.queue, TextCtrHandler(self.logging_output)
         )
         self.queue_listener.start()
 
     def start_button_callback(self):
         """Start button callback"""
-
-        self.start_button.grid_forget()
-        self.stop_button = customtkinter.CTkButton(
-            master=self.main_frame, text="Stop", command=self.stop_button_callback
-        )
-        self.stop_button_pressed = False
-        self.stop_button.grid(row=1, column=1, padx=10, pady=10, sticky="w")
-
-        self.progressbar = customtkinter.CTkProgressBar(self.main_frame)
-        self.progressbar.grid(row=1, column=1, padx=10, pady=10, sticky="e")
-        self.progressbar.configure(mode="indeterminate")
-        self.progressbar.start()
-
-        self.textbox.configure(state="normal")
-        self.textbox.delete("1.0", "end")
-        self.textbox.configure(state="disabled")
+        self.logging_output.reset()
 
         self.create_config()
         self.ms2rescore_run = MS2RescoreProcess(
@@ -147,18 +135,15 @@ class App(customtkinter.CTk):
 
     def stop_button_callback(self):
         """Stop button has been pressed: Disable button, terminate process."""
-        self.stop_button_pressed = True
-        self.stop_button.configure(state="disabled")
-        self.progressbar.grid_forget()
         self.ms2rescore_run.terminate()
+        # pass
 
     def finish_callback(self):
         """Process finished by itself, either successfully or with an error."""
-        self.stop_button.grid_forget()
-        self.progressbar.grid_forget()
-        self.start_button.grid(row=1, column=3, padx=10, pady=10, sticky="e")
-        if self.stop_button_pressed:
-            self.stop_button_pressed = False
+        # User terminated
+        if self.progress_control.stop_button_pressed:
+            pass
+        # Process stopped with error
         elif self.ms2rescore_run.exception is not None or self.ms2rescore_run.exitcode != 0:
             self.popupwindow = PopupWindow(
                 "MS²Rescore error",
@@ -173,11 +158,14 @@ class App(customtkinter.CTk):
                 height=200,
             )
             self.popupwindow.focus()
+        # Process finished successfully
         else:
             self.popupwindow = PopupWindow(
                 "MS²Rescore finished", "MS²Rescore finished successfully!"
             )
             self.popupwindow.focus()
+
+        self.progress_control.reset()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         """Change the appearance"""
@@ -607,6 +595,75 @@ class LoggingLevelSelection(customtkinter.CTkFrame):
         return self.selected_level.get()
 
 
+class LoggingOutput(customtkinter.CTkTextbox):
+    def __init__(self, master, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.configure(state="disabled", fg_color="transparent", wrap="word")
+
+    def reset(self):
+        self.configure(state="normal")
+        self.delete("1.0", "end")
+        self.configure(state="disabled")
+
+
+class ProgressControl(customtkinter.CTkFrame):
+    def __init__(self, master, start_callback, stop_callback, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.start_callback = start_callback
+        self.stop_callback = stop_callback
+        self.stop_button_pressed = False
+
+        self.grid_columnconfigure(0, weight=2)
+        self.grid_columnconfigure(1, weight=1)
+
+        self.progress_bar = customtkinter.CTkProgressBar(self, width=150)
+
+        self.start_button = customtkinter.CTkButton(
+            master=self, command=self._start_callback, text="Start"
+        )
+        self.stop_button = customtkinter.CTkButton(
+            master=self, command=self._stop_callback, text="Stop"
+        )
+
+        # On start only show start button
+        self.start_button.grid(row=0, column=1, sticky="e")
+
+    def reset(self):
+        """Reset to stopped status."""
+        self.stop_button_pressed = False
+        self.progress_bar.grid_forget()
+        self.stop_button.grid_forget()
+        self.start_button.grid(row=0, column=1, sticky="e")
+
+    def _start_callback(self):
+        """Internal callback for start button press."""
+        # Update status
+        self.stop_button_pressed = False
+
+        # Hide start button and show stop button
+        self.start_button.grid_forget()
+        self.stop_button = customtkinter.CTkButton(
+            master=self, text="Stop", command=self._stop_callback
+        )
+        self.stop_button.grid(row=0, column=1, sticky="e")
+
+        # Show and activate progress bar
+        self.progress_bar.grid(row=0, column=0, sticky="w")
+        self.progress_bar.configure(mode="indeterminate")
+        self.progress_bar.start()
+
+        # Call external function
+        self.start_callback()
+
+    def _stop_callback(self):
+        """Internal callback for stop button press."""
+        self.stop_button_pressed = True
+        self.progress_bar.grid_forget()
+        self.stop_button.configure(state="disabled")
+        self.start_button.grid(row=0, column=1, sticky="e")
+        self.stop_callback()
+
+
 class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""
 
@@ -641,7 +698,7 @@ class MS2RescoreProcess(multiprocessing.Process):
         return self._exception
 
 
-class MyHandlerText(logging.StreamHandler):
+class TextCtrHandler(logging.StreamHandler):
     def __init__(self, textctrl):
         logging.StreamHandler.__init__(self)
         self.textctrl = textctrl

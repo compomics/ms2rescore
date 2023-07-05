@@ -34,21 +34,15 @@ class MS2Rescore:
         self.config = configuration["ms2rescore"]  # TODO: Remove top-level key?
 
         if not self.config["psm_file"]:
-            raise MS2RescoreConfigurationError("No PSM file specified. Please must be configured")
+            raise MS2RescoreConfigurationError("No PSM file specified. Please specify a PSM file")
         elif not Path(self.config["psm_file"]).is_file():
-            raise MS2RescoreConfigurationError(
-                f"PSM file {self.config['psm_file']} not found."
-            )
+            raise MS2RescoreConfigurationError(f"PSM file {self.config['psm_file']} not found.")
 
         # Set output and temporary paths
         self.output_path = self.config["output_path"] or "."
-        self.output_file_root = str(
-            Path(self.output_path) / Path(self.config["psm_file"]).stem
-        )
+        self.output_file_root = str(Path(self.output_path) / Path(self.config["psm_file"]).stem)
         self.tmp_path = self.config["tmp_path"] or TemporaryDirectory().name
-        self.tmp_file_root = str(
-            Path(self.tmp_path) / Path(self.config["psm_file"]).stem
-        )
+        self.tmp_file_root = str(Path(self.tmp_path) / Path(self.config["psm_file"]).stem)
 
         logger.debug(
             "Using %i of %i available CPUs.",
