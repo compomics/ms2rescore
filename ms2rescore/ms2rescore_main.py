@@ -10,7 +10,7 @@ import psm_utils.io
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
 from ms2rescore.feature_generators import FEATURE_GENERATORS
-from ms2rescore.rescoring_engines.percolator import PercolatorRescoring
+from ms2rescore.rescoring_engines import percolator
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +82,8 @@ class MS2Rescore:
             new_ids = [_match_psm_ids(old_id, pattern) for old_id in psm_list["spectrum_id"]]
             psm_list["spectrum_id"] = new_ids
 
+        # TODO: Temporary fix until implemented in psm_utils
+        # Ensure that spectrum IDs are strings (Pydantic 2.0 does not coerce int to str)
         psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
 
         # Add rescoring features
@@ -98,23 +100,28 @@ class MS2Rescore:
 
         # Filter out psms that do not have all added features
         all_feature_names = set([f for fgen in feature_names.values() for f in fgen])
-        psm_list = psm_list[
-            [(set(psm.rescoring_features.keys()) == all_feature_names) for psm in psm_list]
+        psms_with_features = [
+            (set(psm.rescoring_features.keys()) == all_feature_names) for psm in psm_list
         ]
+        psm_list = psm_list[psms_with_features]
+        if psms_with_features.count(False) > 0:
+            logger.warning(
+                f"Removed {psms_with_features.count(False)} PSMs that did not have all "
+                f"rescoring features."
+            )
 
         if self.config["USI"]:
             logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
             psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
 
         if "percolator" in self.config["rescoring_engine"]:
-            logging.debug(f"Writing {self.output_file_root}.pin file")
-            percolator = PercolatorRescoring(
-                self.output_file_root,
+            percolator.rescore(
+                psm_list,
+                output_file_root=self.output_file_root,
                 log_level=self.config["log_level"],
                 processes=self.config["processes"],
                 percolator_kwargs=self.config["rescoring_engine"]["percolator"],
             )
-            percolator.rescore(psm_list)
 
         elif "mokapot" in self.config["rescoring_engine"]:
             raise NotImplementedError()
