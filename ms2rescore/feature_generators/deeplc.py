@@ -4,7 +4,7 @@ import contextlib
 import logging
 import os
 from collections import defaultdict
-from inspect import getargspec
+from inspect import getfullargspec
 from itertools import chain
 from typing import Optional, Union
 
@@ -80,7 +80,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
 
         # Remove any kwargs that are not DeepLC arguments
         self.deeplc_kwargs = {
-            k: v for k, v in self.deeplc_kwargs.items() if k in getargspec(DeepLC).args
+            k: v for k, v in self.deeplc_kwargs.items() if k in getfullargspec(DeepLC).args
         }
         self.deeplc_kwargs.update({"config_file": None})
 
