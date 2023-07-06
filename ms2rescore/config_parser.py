@@ -82,8 +82,8 @@ def parse_configurations(configurations) -> Dict:
         configurations = [configurations]
 
     # Initialize CascadeConfig with validation schema and defaults
-    config_schema = importlib.resources.open_text(package_data, "config_schema")
-    config_default = importlib.resources.open_text(package_data, "config_default")
+    config_schema = importlib.resources.open_text(package_data, "config_schema.json")
+    config_default = importlib.resources.open_text(package_data, "config_default.json")
     cascade_conf = CascadeConfig(
         validation_schema=json.load(config_schema),
         none_overrides_value=False,
