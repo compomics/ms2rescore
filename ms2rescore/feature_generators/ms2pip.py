@@ -102,7 +102,7 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
         model: str = "HCD",
         ms2_tolerance: float = 0.02,
         spectrum_path: Optional[str] = None,
-        spectrum_id_pattern: str = ".*",
+        spectrum_id_pattern: str = "(.*)",
         processes: 1,
         **kwargs,
     ) -> None:
@@ -157,52 +157,45 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
                     compute_correlations=False,
                     processes=self.processes,
                 )
-                self._calculate_features(ms2pip_results)
+                self._calculate_features(psm_list_run, ms2pip_results)
 
-    def _calculate_features(self, ms2pip_results: List[ProcessingResult]) -> None:
+    def _calculate_features(
+        self, psm_list: PSMList, ms2pip_results: List[ProcessingResult]
+    ) -> None:
         """Calculate features from all MS²PIP results and add to PSMs."""
         logger.debug("Calculating features from predicted spectra")
-        # Do not use multiprocessing for small amount of PSMs
-        if len(ms2pip_results) < 10000:
-            for result in ms2pip_results:
-                features = self._calculate_features_single(result)
+        with multiprocessing.Pool(int(self.processes)) as pool:
+            # Use imap, so we can use a progress bar
+            all_features = track(
+                pool.imap(self._calculate_features_single, ms2pip_results, chunksize=1000),
+                total=len(ms2pip_results),
+                description="Calculating features...",
+                transient=True,
+            )
+            counts_failed = 0
+            for result, features in zip(ms2pip_results, all_features):
                 if features:
+                    # Cannot use result.psm directly, as it is a copy from MS²PIP multiprocessing
                     try:
-                        result.psm["rescoring_features"].update(features)
+                        psm_list[result.psm_index]["rescoring_features"].update(features)
                     except (AttributeError, TypeError):
-                        result.psm["rescoring_features"] = features
-        # Use multiprocessing for large amount of PSMs
-        else:
-            with multiprocessing.Pool(int(self.processes)) as pool:
-                # Use imap, so we can use a progress bar
-                all_features = track(
-                    pool.imap(
-                        self._calculate_features_single,
-                        ms2pip_results,
-                        chunksize=1000,
-                    ),
-                    total=len(ms2pip_results),
-                    description="Calculating features...",
-                    transient=True,
-                )
-                for result, features in zip(ms2pip_results, all_features):
-                    if features:
-                        try:
-                            result.psm["rescoring_features"].update(features)
-                        except (AttributeError, TypeError):
-                            result.psm["rescoring_features"] = features
+                        psm_list[result.psm_index]["rescoring_features"] = features
+                else:
+                    counts_failed += 1
+        logger.warning(f"Failed to calculate features for {counts_failed} PSMs")
 
     def _calculate_features_single(self, processing_result: ProcessingResult) -> Union[dict, None]:
         """Calculate MS²PIP-based features for single PSM."""
+        if (
+            processing_result.observed_intensity is None
+            or processing_result.predicted_intensity is None
+        ):
+            warnings.warn("No MS²PIP prediction for PSM")
+            return None
+
         # Suppress RuntimeWarnings about invalid values
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            if (
-                processing_result.observed_intensity is None
-                or processing_result.predicted_intensity is None
-            ):
-                warnings.warn("No MS²PIP prediction for PSM")
-                return None
 
             # Convert intensities to arrays
             target_b = processing_result.predicted_intensity["b"].clip(np.log2(0.001))
@@ -314,7 +307,7 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
             )
         )
 
-        return (processing_result.psm_index, features)
+        return features
 
 
 def _spearman(x: np.ndarray, y: np.ndarray) -> float:
