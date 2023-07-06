@@ -37,7 +37,7 @@ class MaxQuantFeatureGenerator(FeatureGeneratorBase):
             "Mass deviations [ppm]",
             "Mass Deviations [ppm]",
         ]:
-            if column_name in self.psm_list[0]["metadata"].keys():
+            if column_name in psm_list[0]["metadata"].keys():
                 self._mass_deviations_key = column_name
                 break
         else:
@@ -47,7 +47,7 @@ class MaxQuantFeatureGenerator(FeatureGeneratorBase):
 
         # Check other columns
         for column_name in ["Intensities", "Matches", "Intensity coverage"]:
-            if column_name not in self.psm_list[0]["metadata"].keys():
+            if column_name not in psm_list[0]["metadata"].keys():
                 raise MissingMetadataError(
                     f"Missing {column_name} entry in PSM metadata. Cannot compute MaxQuant features."
                 )
