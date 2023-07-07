@@ -10,7 +10,7 @@ import tkinter.messagebox
 import traceback
 import webbrowser
 from pathlib import Path
-from typing import Callable, Union
+from typing import Callable, List, Tuple, Union
 
 import customtkinter
 from ms2pip.constants import MODELS as ms2pip_models
@@ -63,15 +63,13 @@ class App(customtkinter.CTk):
         self.grid_rowconfigure((0), weight=1)
 
         # create sidebar frame with widgets
-        self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
+        self.sidebar_frame = SideBar(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
-
-        self.create_sidebar_frame(self.sidebar_frame)
 
         # Main frame
         self.main_frame = customtkinter.CTkFrame(self, corner_radius=0)
         self.main_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=0)
+        self.main_frame.configure(fg_color="transparent")
         self.main_frame.grid_columnconfigure((0, 1), weight=1)
         self.main_frame.grid_rowconfigure((0), weight=20)
         self.main_frame.grid_rowconfigure((1), weight=0)
@@ -166,114 +164,6 @@ class App(customtkinter.CTk):
             self.popupwindow.focus()
 
         self.progress_control.reset()
-
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        """Change the appearance"""
-        customtkinter.set_appearance_mode(new_appearance_mode)
-
-    def change_scaling_event(self, new_scaling: str):
-        new_scaling_float = int(new_scaling.replace("%", "")) / 100
-        customtkinter.set_widget_scaling(new_scaling_float)
-
-    def create_sidebar_frame(self, tkinter_frame):
-        """Create the UI sidebar"""
-        self.logo = customtkinter.CTkImage(
-            light_image=Image.open(os.path.join(str(_IMG_DIR), "ms2rescore_logo.png")),
-            size=(130, 130),
-        )
-        self.logo_label = customtkinter.CTkLabel(tkinter_frame, text="", image=self.logo)
-        self.logo_label.grid(row=0, column=0, rowspan=4, padx=0, pady=10)
-
-        # self.citing_label = customtkinter.CTkLabel(
-        #     tkinter_frame, text="Upon use please cite:", font = ("Bold", 14)
-        # )
-        # self.citing_label.grid(row=4, column=0, padx=1, pady=2, sticky="sw")
-        self.ref_label1 = customtkinter.CTkButton(
-            tkinter_frame,
-            text="Declercq et al. 2022 MCP",
-            text_color=("#000000", "#fefdff"),
-            fg_color="transparent",
-            anchor="w",
-            height=8,
-            font=("normal", 12),
-        )
-        self.ref_label1.bind(
-            "<Button-1>",
-            lambda e: self.web_callback("https://doi.org/10.1016/j.mcpro.2022.100266"),
-        )
-        self.ref_label1.grid(row=7, column=0, padx=3, pady=0, sticky="ew")
-
-        self.ref_label2 = customtkinter.CTkButton(
-            tkinter_frame,
-            text="Gabriels et al. 2019 NAR",
-            text_color=("#000000", "#fefdff"),
-            fg_color="transparent",
-            anchor="w",
-            height=8,
-            font=("normal", 12),
-        )
-        self.ref_label2.bind(
-            "<Button-1>",
-            lambda e: self.web_callback("https://doi.org/10.1093/nar/gkad335"),
-        )
-        self.ref_label2.grid(row=5, column=0, padx=3, pady=0, sticky="sew")
-
-        self.ref_label3 = customtkinter.CTkButton(
-            tkinter_frame,
-            text="Bouwmeester et al. 2021 Nat Methods",
-            text_color=("#000000", "#fefdff"),
-            fg_color="transparent",
-            anchor="w",
-            height=8,
-            font=("normal", 12),
-        )
-        self.ref_label3.bind(
-            "<Button-1>",
-            lambda e: self.web_callback("https://doi.org/10.1038/s41592-021-01301-5"),
-        )
-        self.ref_label3.grid(row=6, column=0, padx=3, pady=0, sticky="ew")
-
-        self.appearance_mode_label = customtkinter.CTkLabel(
-            tkinter_frame, text="Appearance Mode:", anchor="w"
-        )
-        self.appearance_mode_label.grid(row=9, column=0, padx=20, pady=(15, 0))
-        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(
-            tkinter_frame,
-            values=["System", "Light", "Dark"],
-            command=self.change_appearance_mode_event,
-        )
-        self.appearance_mode_optionemenu.grid(row=10, column=0, padx=20, pady=(10, 10))
-        self.scaling_label = customtkinter.CTkLabel(tkinter_frame, text="UI Scaling:", anchor="w")
-        self.scaling_label.grid(row=11, column=0, padx=20, pady=(10, 0))
-        self.scaling_optionemenu = customtkinter.CTkOptionMenu(
-            tkinter_frame,
-            values=["80%", "90%", "100%", "110%", "120%"],
-            command=self.change_scaling_event,
-        )
-        self.scaling_optionemenu.set("100%")  # set initial value
-        self.scaling_optionemenu.grid(row=12, column=0, padx=20, pady=(10, 20))
-
-        self.github_logo = customtkinter.CTkImage(
-            dark_image=Image.open(os.path.join(str(_IMG_DIR), "github-mark-white.png")),
-            light_image=Image.open(os.path.join(str(_IMG_DIR), "github-mark.png")),
-            size=(25, 25),
-        )
-        self.github_button = customtkinter.CTkButton(
-            tkinter_frame,
-            text="compomics/ms2rescore",
-            anchor="w",
-            fg_color="transparent",
-            text_color=("#000000", "#fefdff"),
-            image=self.github_logo,
-        )
-        self.github_button.bind(
-            "<Button-1>",
-            lambda e: self.web_callback("https://github.com/compomics/ms2rescore"),
-        )
-        self.github_button.grid(row=13, column=0, padx=20, pady=(10, 10))
-
-        self.version_label = customtkinter.CTkLabel(tkinter_frame, text=ms2rescore.__version__)
-        self.version_label.grid(row=14, column=0, padx=20, pady=(10, 10))
 
     def create_main_tab(self, tabview_object):
         """Configuring the UI for the main tab"""
@@ -457,9 +347,6 @@ class App(customtkinter.CTk):
             master=tabview_object, placeholder_text="0.15"
         )
         self.calibration_set_size.pack(padx=10, pady=10, fill=tk.BOTH)
-
-    def web_callback(self, url):
-        webbrowser.open_new(url)
 
     def create_config(self):
         """Create MS²Rescore config file"""
@@ -884,6 +771,129 @@ class FloatSpinbox(customtkinter.CTkFrame):
     def set(self, value: float):
         self.entry.delete(0, "end")
         self.entry.insert(0, str(float(value)))
+
+
+class SideBar(customtkinter.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """Create the UI sidebar"""
+        super().__init__(*args, **kwargs)
+
+        # Configure layout (three rows, one column)
+        self.rowconfigure(0, weight=1)
+        # self.rowconfigure((1,2,3,4,5), weight=1)
+
+        # Top row: logo
+        self.logo = customtkinter.CTkImage(
+            light_image=Image.open(os.path.join(str(_IMG_DIR), "ms2rescore_logo.png")),
+            size=(130, 130),
+        )
+        self.logo_label = customtkinter.CTkLabel(self, text="", image=self.logo)
+        self.logo_label.grid(row=0, column=0, padx=0, pady=(20, 50), sticky="n")
+
+        # self.citing_label = customtkinter.CTkLabel(
+        #     tkinter_frame, text="Upon use please cite:", font = ("Bold", 14)
+        # )
+        # self.citing_label.grid(row=4, column=0, padx=1, pady=2, sticky="sw")
+
+        # Citations
+        self.citations = CitationFrame(
+            self,
+            [
+                ("Declercq et al. 2022 MCP", "https://doi.org/10.1016/j.mcpro.2022.100266"),
+                ("Declercq et al. 2023 NAR", "https://doi.org/10.1093/nar/gkad335"),
+                (
+                    "Bouwmeester et al. 2021 Nat Methods",
+                    "https://doi.org/10.1038/s41592-021-01301-5",
+                ),
+            ],
+        )
+        self.citations.configure(fg_color="transparent")
+        self.citations.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
+
+        # Bottom row: Appearance and UI scaling
+        self.ui_control = UIControl(self)
+        self.ui_control.configure(fg_color="transparent")
+        self.ui_control.grid(row=2, column=0, padx=20, pady=(0, 10), sticky="ew")
+
+        # Bottom row: GH URL
+        self.github_button = customtkinter.CTkButton(
+            self,
+            text="compomics/ms2rescore",
+            anchor="w",
+            fg_color="transparent",
+            text_color=("#000000", "#fefdff"),
+            image=customtkinter.CTkImage(
+                dark_image=Image.open(os.path.join(str(_IMG_DIR), "github-mark-white.png")),
+                light_image=Image.open(os.path.join(str(_IMG_DIR), "github-mark.png")),
+                size=(25, 25),
+            ),
+        )
+        self.github_button.bind(
+            "<Button-1>",
+            lambda e: self.web_callback("https://github.com/compomics/ms2rescore"),
+        )
+        self.github_button.grid(row=4, column=0, padx=20, pady=(10, 10))
+
+        # Bottom row: version
+        self.version_label = customtkinter.CTkLabel(self, text=ms2rescore.__version__)
+        self.version_label.grid(row=5, column=0, padx=20, pady=(10, 10))
+
+
+class CitationFrame(customtkinter.CTkFrame):
+    def __init__(self, master, citations: List[Tuple[str]], *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.heading = customtkinter.CTkLabel(self, text="Please cite", anchor="w")
+        self.heading.grid(row=0, column=0, padx=0, pady=0, sticky="ew")
+
+        self.buttons = []
+        for i, (ref, url) in enumerate(citations):
+            button = customtkinter.CTkButton(
+                self,
+                text=ref,
+                text_color=("#000000", "#fefdff"),
+                fg_color="transparent",
+                anchor="w",
+                height=8,
+                command=lambda x=url: webbrowser.open_new(x),
+            )
+            button.grid(row=i + 1, column=0, padx=0, pady=0, sticky="ew")
+            self.buttons.append(button)
+
+
+class UIControl(customtkinter.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.columnconfigure(0, weight=1)
+
+        # Appearance mode (dark/light/system)
+        self.appearance_label = customtkinter.CTkLabel(self, text="Appearance Mode", anchor="w")
+        self.appearance_label.grid(row=0, column=0, padx=0, pady=(10, 0), sticky="ew")
+        self.appearance_optionmenu = customtkinter.CTkOptionMenu(
+            self,
+            values=["System", "Light", "Dark"],
+            command=customtkinter.set_appearance_mode,
+        )
+        self.appearance_optionmenu.grid(row=1, column=0, padx=0, pady=0, sticky="ew")
+
+        # UI scaling
+        self.scaling_label = customtkinter.CTkLabel(self, text="UI Scaling", anchor="w")
+        self.scaling_label.grid(row=2, column=0, padx=0, pady=(10, 0), sticky="ew")
+        self.scaling_optionmenu = customtkinter.CTkOptionMenu(
+            self,
+            values=["80%", "90%", "100%", "110%", "120%"],
+            command=self.set_scaling,
+        )
+        self.scaling_optionmenu.set("100%")  # set initial value
+        self.scaling_optionmenu.grid(row=3, column=0, padx=0, pady=0, sticky="ew")
+
+    @staticmethod
+    def set_appearance_mode(new_mode: str):
+        customtkinter.set_appearance_mode(new_mode)
+
+    @staticmethod
+    def set_scaling(new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        customtkinter.set_widget_scaling(new_scaling_float)
 
 
 class PopupWindow(customtkinter.CTkToplevel):
