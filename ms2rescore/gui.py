@@ -10,7 +10,7 @@ import tkinter.messagebox
 import traceback
 import webbrowser
 from pathlib import Path
-from typing import Callable, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 import customtkinter
 from ms2pip.constants import MODELS as ms2pip_models
@@ -71,24 +71,29 @@ class App(customtkinter.CTk):
         self.main_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=0)
         self.main_frame.configure(fg_color="transparent")
         self.main_frame.grid_columnconfigure((0, 1), weight=1)
-        self.main_frame.grid_rowconfigure((0), weight=20)
-        self.main_frame.grid_rowconfigure((1), weight=0)
+        self.main_frame.grid_rowconfigure(0, weight=1)
 
         # Configuration tabview
         config_tabview = customtkinter.CTkTabview(self.main_frame)
         config_tabview.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
-        config_tabview.add("Main")
-        config_tabview.add("Advanced")
-        config_tabview.add("MS²PIP")
-        config_tabview.add("DeepLC")
+
+        for tab in ["Main", "Advanced", "Feature generators"]:
+            config_tabview.add(tab)
+            config_tabview.tab(tab).grid_columnconfigure(0, weight=1)
+            config_tabview.tab(tab).grid_rowconfigure(0, weight=1)
         config_tabview.set("Main")
 
-        self.create_main_tab(config_tabview.tab("Main"))
-        self.create_advanced_tab(config_tabview.tab("Advanced"))
-        self.create_ms2pip_tab(config_tabview.tab("MS²PIP"))
-        self.create_deeplc_tab(config_tabview.tab("DeepLC"))
+        self.main_config = MainConfiguration(config_tabview.tab("Main"))
+        self.main_config.grid(row=0, column=0, sticky="nsew")
 
-        progress_tabview = customtkinter.CTkTabview(self.main_frame, state="disabled")
+        self.advanced_config = AdvancedConfiguration(config_tabview.tab("Advanced"))
+        self.advanced_config.grid(row=0, column=0, sticky="nsew")
+
+        self.fgen_config = FeatureGeneratorConfig(config_tabview.tab("Feature generators"))
+        self.fgen_config.grid(row=0, column=0, sticky="nsew")
+
+        # Progress tabview
+        progress_tabview = customtkinter.CTkTabview(self.main_frame)
         progress_tabview.grid(row=0, column=1, padx=10, pady=(10, 0), sticky="nsew")
         progress_tabview.add("Progress")
         progress_tabview.set("Progress")
@@ -106,8 +111,8 @@ class App(customtkinter.CTk):
 
         self.progress_control = ProgressControl(
             self.main_frame,
-            start_callback=self.start_button_callback,
-            stop_callback=self.stop_button_callback,
+            self.start_button_callback,
+            self.stop_button_callback,
             fg_color="transparent",
         )
         self.progress_control.grid(row=1, column=1, padx=10, pady=10, sticky="sew")
@@ -134,7 +139,7 @@ class App(customtkinter.CTk):
     def stop_button_callback(self):
         """Stop button has been pressed: Disable button, terminate process."""
         self.ms2rescore_run.terminate()
-        # pass
+        logger.info("MS²Rescore stopped by user")
 
     def finish_callback(self):
         """Process finished by itself, either successfully or with an error."""
@@ -165,192 +170,333 @@ class App(customtkinter.CTk):
 
         self.progress_control.reset()
 
-    def create_main_tab(self, tabview_object):
-        """Configuring the UI for the main tab"""
+    def create_config(self):
+        """Create MS²Rescore config file"""
+        logger.debug("Creating config file")
 
-        self.id_file_label = customtkinter.CTkLabel(
-            tabview_object, text="Select identification file:", anchor="w"
-        )
-        self.id_file_label.pack(anchor=tk.W)
-        self.id_file = FileSelect(tabview_object, fileoption="openfile")
-        self.id_file.pack(fill=tk.BOTH)
+        main_config = self.main_config.get()
+        advanced_config = self.advanced_config.get()
+        rescoring_engine_config = {
+            "percolator": {
+                "init-weights": advanced_config.pop("weightsfile")
+            }
+        }
 
-        self.mgf_dir_label = customtkinter.CTkLabel(
-            tabview_object, text="Select MGF file directory:", anchor="w"
-        )
-        self.mgf_dir_label.pack(anchor=tk.W)
-        self.mgf_dir = FileSelect(tabview_object, fileoption="file/dir")
-        self.mgf_dir.pack(fill=tk.BOTH)
+        self.config = {"ms2rescore": main_config}
+        self.config["ms2rescore"].update(advanced_config)
+        self.config["ms2rescore"]["feature_generators"] = self.fgen_config.get()
+        self.config["ms2rescore"]["rescoring_engine"] = rescoring_engine_config
 
-        self.pipeline_var = customtkinter.StringVar(value="infer")
-        self.pipeline_label = customtkinter.CTkLabel(
-            tabview_object, text="PSM file type:", anchor="w"
+    def monitor(self, ms2rescore_process):
+        """Monitor the ms2rescore thread"""
+        if ms2rescore_process.is_alive():  # while loop?
+            self.after(100, lambda: self.monitor(ms2rescore_process))
+        else:
+            self.finish_callback()
+
+
+class MainConfiguration(customtkinter.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """Main MS²Rescore configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.configure(fg_color="transparent")
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+
+        self.psm_file_label = customtkinter.CTkLabel(
+            self, text="Select identification file", anchor="w"
         )
-        self.pipeline_label.pack(anchor="w")
-        self.pipeline_combobox = customtkinter.CTkOptionMenu(
-            master=tabview_object,
+        self.psm_file_label.pack(anchor=tk.W)
+        self.psm_file = FileSelect(self, fileoption="openfile")
+        self.psm_file.pack(fill=tk.BOTH)
+
+        self.spectrum_path_label = customtkinter.CTkLabel(
+            self, text="Select MGF file directory:", anchor="w"
+        )
+        self.spectrum_path_label.pack(anchor=tk.W)
+        self.spectrum_path = FileSelect(self, fileoption="file/dir")
+        self.spectrum_path.pack(fill=tk.BOTH)
+
+        self.psm_file_type_var = customtkinter.StringVar(value="infer")
+        self.psm_file_type_label = customtkinter.CTkLabel(self, text="PSM file type:", anchor="w")
+        self.psm_file_type_label.pack(anchor="w")
+        self.psm_file_type_combobox = customtkinter.CTkOptionMenu(
+            master=self,
             values=list(FILETYPES.keys()),
-            variable=self.pipeline_var,
+            variable=self.psm_file_type_var,
         )
-        self.pipeline_combobox.pack(fill=tk.BOTH)
+        self.psm_file_type_combobox.pack(fill=tk.BOTH)
 
         self.processes_var = customtkinter.StringVar(value="-1")
-        self.processes_label = customtkinter.CTkLabel(tabview_object, text="Num CPU:", anchor="w")
+        self.processes_label = customtkinter.CTkLabel(self, text="Num CPU:", anchor="w")
         self.processes_label.pack(anchor="w")
         self.processes = customtkinter.CTkOptionMenu(
-            master=tabview_object,
+            master=self,
             values=[str(x) for x in list(range(-1, multiprocessing.cpu_count() + 1))],
             variable=self.processes_var,
         )
         self.processes.pack(fill=tk.BOTH)
 
         self.modification_mapping_label = customtkinter.CTkLabel(
-            tabview_object, text="Modification mapping", anchor="w"
+            self, text="Modification mapping", anchor="w"
         )
         self.modification_mapping_label.pack(anchor=tk.W)
-        self.modification_mapping_box = customtkinter.CTkTextbox(tabview_object, height=50)
+        self.modification_mapping_box = customtkinter.CTkTextbox(self, height=50)
         self.modification_mapping_box.insert("0.0", "Modification label: unimod modification")
-        self.modification_mapping_box.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        self.modification_mapping_box.pack(pady=10, fill=tk.BOTH, expand=True)
 
         self.fixed_modification_label = customtkinter.CTkLabel(
-            tabview_object, text="Fixed modifications", anchor="w"
+            self, text="Fixed modifications", anchor="w"
         )
         self.fixed_modification_label.pack(anchor=tk.W)
-        self.fixed_modifications_box = customtkinter.CTkTextbox(tabview_object, height=50)
+        self.fixed_modifications_box = customtkinter.CTkTextbox(self, height=50)
         self.fixed_modifications_box.insert("0.0", "Unimod modification: aa,aa")
-        self.fixed_modifications_box.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        self.fixed_modifications_box.pack(pady=10, fill=tk.BOTH, expand=True)
 
-    def create_advanced_tab(self, tabview_object):
-        """Configuring the UI for the advanced tab"""
+    def get(self) -> Dict:
+        """Get the configured values as a dictionary."""
+        return {
+            "psm_file": self.psm_file.get(),
+            "spectrum_path": self.spectrum_path.get(),
+            "psm_file_type": self.psm_file_type_var.get(),
+            "processes": int(self.processes_var.get()),
+            "modification_mapping": self._parse_modification_mapping(
+                self.modification_mapping_box.get("0.0", tk.END)
+            ),
+            "fixed_modifications": self._parse_fixed_modifications(
+                self.fixed_modifications_box.get("0.0", tk.END)
+            ),
+        }
 
-        self.lower_score_label = customtkinter.CTkLabel(
-            tabview_object, text="Lower score is better", anchor="w"
-        )
-        self.lower_score_label.pack(anchor=tk.W)
-        self.lower_score_var = customtkinter.StringVar(value="off")
-        self.lower_score_tickbox = customtkinter.CTkSwitch(
-            master=tabview_object,
+    @staticmethod
+    def _parse_modification_mapping(modifications_txt):
+        """Parse text input modifications mapping"""
+        modification_list = modifications_txt.rstrip().split("\n")
+        modification_map = {}
+        for mod in modification_list:
+            if len(mod.split(":")) != 2:
+                raise MS2RescoreConfigurationError(
+                    f"Error parsing {mod}\nMake sure modification name and unimod name are "
+                    f"separated by ':'"
+                )
+            modification_label, unimod_label = mod.split(":")[0], mod.split(":")[1]
+            if (modification_label == "") or (modification_label == "Modification label"):
+                continue
+            else:
+                modification_map[modification_label] = unimod_label.lstrip(" ")
+        return modification_map
+
+    @staticmethod
+    def _parse_fixed_modifications(modifications_txt):
+        """Parse text input fixed modifications"""
+        modification_list = modifications_txt.rstrip().split("\n")
+        fixed_modification_dict = {}
+        for mod in modification_list:
+            if len(mod.split(":")) != 2:
+                raise MS2RescoreConfigurationError(
+                    f"Error parsing {mod}\nMake sure modification name and amino acids are "
+                    f"separated by ':'\nMake sure multiple amino acids are separated by ','"
+                )
+            unimod_label, amino_acids = mod.split(":")[0], mod.split(":")[1]
+            amino_acids = [aa.upper() for aa in amino_acids.lstrip(" ").split(",")]
+            if (unimod_label == "") or (unimod_label == "Unimod modification"):
+                continue
+            else:
+                fixed_modification_dict[unimod_label] = amino_acids
+        return fixed_modification_dict
+
+
+class AdvancedConfiguration(customtkinter.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """Advanced MS²Rescore configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.columnconfigure(0, weight=1)
+
+        # Lower score
+        self.lower_score_var = customtkinter.StringVar(value="false")
+        lower_score_label = customtkinter.CTkLabel(self, text="Lower score is better", anchor="w")
+        lower_score_label.grid(row=0, column=0, sticky="w")
+        lower_score_tickbox = customtkinter.CTkSwitch(
+            master=self,
             text="",
             variable=self.lower_score_var,
             onvalue="true",
             offvalue="false",
         )
-        self.lower_score_tickbox.pack(anchor=tk.W, fill=tk.BOTH)
+        lower_score_tickbox.grid(row=0, column=1, sticky="e")
 
-        self.usi_label = customtkinter.CTkLabel(
-            tabview_object, text="Universal Spectrum Identifier", anchor="w"
-        )
-        self.usi_label.pack(anchor=tk.W)
+        # USI
         self.usi_var = customtkinter.StringVar(value="off")
+        usi_label = customtkinter.CTkLabel(self, text="Rename PSM IDs to their USI", anchor="w")
+        usi_label.grid(row=1, column=0, sticky="w")
         self.usi_tickbox = customtkinter.CTkSwitch(
-            master=tabview_object,
+            master=self,
             text="",
             variable=self.usi_var,
             onvalue="true",
             offvalue="false",
         )
-        self.usi_tickbox.pack(anchor=tk.W, fill=tk.BOTH)
+        self.usi_tickbox.grid(row=1, column=1, sticky="e")
 
-        # Regex patterns
-        self.id_decoy_pattern_label = customtkinter.CTkLabel(
-            tabview_object, text="Specify decoy pattern:", anchor="w"
+        # Decoy regex pattern
+        id_decoy_pattern_label = customtkinter.CTkLabel(
+            self, text="Decoy protein regex pattern", anchor="w"
         )
-        self.id_decoy_pattern_label.pack(anchor=tk.W)
+        id_decoy_pattern_label.grid(row=2, column=0, sticky="w")
         self.id_decoy_pattern = customtkinter.CTkEntry(
-            master=tabview_object, placeholder_text="decoy pattern regex"
+            master=self, placeholder_text="decoy regex pattern"
         )
-        self.id_decoy_pattern.pack(padx=10, pady=10, fill=tk.BOTH)
+        self.id_decoy_pattern.grid(row=2, column=1, sticky="e")
 
-        self.psm_id_pattern_label = customtkinter.CTkLabel(
-            tabview_object, text="Specify psm id pattern:", anchor="w"
+        # PSM ID regex pattern
+        psm_id_pattern_label = customtkinter.CTkLabel(
+            self, text="PSM ID regex pattern", anchor="w"
         )
-        self.psm_id_pattern_label.pack(anchor=tk.W)
+        psm_id_pattern_label.grid(row=3, column=0, sticky="w")
         self.psm_id_pattern = customtkinter.CTkEntry(
-            master=tabview_object, placeholder_text="psm id pattern regex"
+            master=self, placeholder_text="PSM ID regex pattern"
         )
-        self.psm_id_pattern.pack(padx=10, pady=10, fill=tk.BOTH)
+        self.psm_id_pattern.grid(row=3, column=1, sticky="e")
 
-        self.spectrum_id_pattern_label = customtkinter.CTkLabel(
-            tabview_object, text="Specify spectrum id pattern:", anchor="w"
+        # Spectrum ID regex pattern
+        spectrum_id_pattern_label = customtkinter.CTkLabel(
+            self, text="Spectrum ID regex pattern", anchor="w"
         )
-        self.spectrum_id_pattern_label.pack(anchor=tk.W)
+        spectrum_id_pattern_label.grid(row=4, column=0, sticky="w")
         self.spectrum_id_pattern = customtkinter.CTkEntry(
-            master=tabview_object, placeholder_text="spectrum id pattern regex"
+            master=self, placeholder_text="spectrum ID regex pattern"
         )
-        self.spectrum_id_pattern.pack(padx=10, pady=10, fill=tk.BOTH)
+        self.spectrum_id_pattern.grid(row=4, column=1, sticky="e")
 
         self.weightsfile = OptionalInput(
-            tabview_object, text="Percolator weights file", fileoption="openfile"
+            self, text="Load Percolator weights file", fileoption="openfile"
         )
-        self.weightsfile.pack(anchor="w", fill=tk.BOTH)
+        self.weightsfile.grid(row=5, column=0, columnspan=2, sticky="nsew")
 
-        self.tmp_dir = OptionalInput(tabview_object, text="temp directory", fileoption="directory")
-        self.tmp_dir.pack(anchor="w", fill=tk.BOTH)
+        self.tmp_path = OptionalInput(self, text="temp directory", fileoption="directory")
+        self.tmp_path.grid(row=6, column=0, columnspan=2, sticky="nsew")
 
-        self.file_prefix = OptionalInput(
-            tabview_object, text="output file prefix", fileoption="savefile"
+        self.file_prefix = OptionalInput(self, text="output file prefix", fileoption="savefile")
+        self.file_prefix.grid(row=7, column=0, columnspan=2, sticky="nsew")
+
+        self.config_file = OptionalInput(self, text="config file", fileoption="openfile")
+        self.config_file.grid(row=8, column=0, columnspan=2, sticky="nsew")
+
+    def get(self) -> Dict:
+        """Get the configured values as a dictionary."""
+        return {
+            "lower_score_is_better": self.lower_score_var.get(),
+            "usi": self.usi_var.get(),
+            "id_decoy_pattern": self.id_decoy_pattern.get(),
+            "psm_id_pattern": self.psm_id_pattern.get(),
+            "spectrum_id_pattern": self.spectrum_id_pattern.get(),
+            "weightsfile": self.weightsfile.get(),
+            "tmp_path": self.tmp_path.get(),
+            "output_path": self.file_prefix.get(),
+            "config_file": self.config_file.get(),
+        }
+
+
+class FeatureGeneratorConfig(customtkinter.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """Feature generator configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.configure(fg_color="transparent")
+        self.columnconfigure(0, weight=1)
+
+        self.ms2pip_config = MS2PIPConfiguration(self)
+        self.ms2pip_config.grid(row=0, column=0, pady=(0, 20), sticky="nsew")
+
+        self.deeplc_config = DeepLCConfiguration(self)
+        self.deeplc_config.grid(row=1, column=0, pady=(0, 20), sticky="nsew")
+
+    def get(self) -> Dict:
+        """Return the configuration as a dictionary."""
+        return {
+            "ms2pip": self.ms2pip_config.get(),
+            "deeplc": self.deeplc_config.get(),
+        }
+
+
+class MS2PIPConfiguration(customtkinter.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """MS²PIP configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.columnconfigure(0, weight=1)
+
+        self.title = customtkinter.CTkLabel(
+            self, text="MS²PIP", fg_color="gray30", corner_radius=6
         )
-        self.file_prefix.pack(anchor="w", fill=tk.BOTH)
+        self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
-        self.config_filepath = OptionalInput(
-            tabview_object, text="config file", fileoption="openfile"
-        )
-        self.config_filepath.pack(anchor="w", fill=tk.BOTH)
-
-    def create_ms2pip_tab(self, tabview_object):
-        """Configuring the UI for the MS²PIP tab"""
-
-        self.model_label = customtkinter.CTkLabel(
-            tabview_object, text="Select MS²PIP model", anchor="w"
-        )
-        self.model_label.pack(anchor=tk.W, fill=tk.BOTH)
         self.selected_ms2pip_model = customtkinter.StringVar(value="HCD2021")
+        self.model_label = customtkinter.CTkLabel(self, text="Select MS²PIP model", anchor="w")
+        self.model_label.grid(row=1, column=0, pady=5, sticky="w")
         self.ms2pip_models = customtkinter.CTkOptionMenu(
-            master=tabview_object,
+            master=self,
             values=list(ms2pip_models.keys()),
             variable=self.selected_ms2pip_model,
         )
-        self.ms2pip_models.pack(anchor=tk.W, fill=tk.BOTH)
+        self.ms2pip_models.grid(row=1, column=1, pady=5, sticky="ew")
+
         self.error_label = customtkinter.CTkLabel(
-            tabview_object, text="MS2 error tolerance in Da", anchor="w"
+            self, text="MS2 error tolerance in Da", anchor="w"
         )
-        self.error_label.pack(anchor=tk.W, fill=tk.BOTH)
-        self.ms2_tolerance_spinbox = FloatSpinbox(tabview_object, step_size=0.01, width=110)
-        self.ms2_tolerance_spinbox.pack(padx=10, pady=10, anchor="w")
+        self.error_label.grid(row=2, column=0, pady=5, sticky="w")
+        self.ms2_tolerance_spinbox = FloatSpinbox(self, step_size=0.01, width=110)
+        self.ms2_tolerance_spinbox.grid(row=2, column=1, pady=5, sticky="ew")
         self.ms2_tolerance_spinbox.set(0.02)
 
-    def create_deeplc_tab(self, tabview_object):
-        """Configuring the UI for the deeplc tab"""
+    def get(self) -> Dict:
+        """Return the configuration as a dictionary."""
+        return {
+            "model": self.selected_ms2pip_model.get(),
+            "ms2_tolerance": self.ms2_tolerance_spinbox.get(),
+        }
+
+
+class DeepLCConfiguration(customtkinter.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """DeepLC configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.columnconfigure(0, weight=1)
+
+        self.title = customtkinter.CTkLabel(
+            self, text="DeepLC", fg_color="gray30", corner_radius=6
+        )
+        self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.transfer_learning_label = customtkinter.CTkLabel(
-            tabview_object, text="Use transfer learning", anchor="w"
+            self, text="Use transfer learning", anchor="w"
         )
-        self.transfer_learning_label.pack(anchor=tk.W)
-        self.transfer_learning_var = customtkinter.StringVar(value="on")
+        self.transfer_learning_label.grid(row=1, column=0, pady=5, sticky="w")
+        self.transfer_learning_var = customtkinter.StringVar(value=True)
         self.transfer_learning_tickbox = customtkinter.CTkSwitch(
-            master=tabview_object,
+            master=self,
             text="",
             variable=self.transfer_learning_var,
-            onvalue="true",
-            offvalue="false",
+            onvalue=True,
+            offvalue=False,
         )
         self.transfer_learning_tickbox.select()
-        self.transfer_learning_tickbox.pack(anchor=tk.W, fill=tk.BOTH)
+        self.transfer_learning_tickbox.grid(row=1, column=1, pady=5, sticky="e")
 
         self.calibration_set_size_label = customtkinter.CTkLabel(
-            tabview_object,
+            self,
             text="Set calibration set size (percentage or number PSMs):",
             anchor="w",
         )
-        self.calibration_set_size_label.pack(anchor=tk.W)
-        self.calibration_set_size = customtkinter.CTkEntry(
-            master=tabview_object, placeholder_text="0.15"
-        )
-        self.calibration_set_size.pack(padx=10, pady=10, fill=tk.BOTH)
+        self.calibration_set_size_label.grid(row=2, column=0, pady=5, sticky="w")
+        self.calibration_set_size = customtkinter.CTkEntry(master=self, placeholder_text="0.15")
+        self.calibration_set_size.grid(row=2, column=1, pady=5, sticky="ew")
 
-    def create_config(self):
-        """Create MS²Rescore config file"""
-        logger.debug("Creating config file")
+    def get(self) -> Dict:
+        """Return the configuration as a dictionary."""
 
         if self.calibration_set_size.get() == "":
             calibration_set_size = 0.15
@@ -364,107 +510,15 @@ class App(customtkinter.CTk):
         else:
             calibration_set_size = int(self.calibration_set_size.get())
 
-        feature_generators = {
-            "ms2pip": {
-                "model": self.selected_ms2pip_model.get(),
-                "ms2_tolerance": float(self.ms2_tolerance_spinbox.get()),
-            },
-            "deeplc": {
-                "deeplc_retrain": True
-                if self.transfer_learning_tickbox.get() == "true"
-                else False,
-                "calibration_set_size": calibration_set_size,
-            },
+        return {
+            "transfer_learning": self.transfer_learning_var.get(),
+            "calibration_set_size": calibration_set_size,
         }
-        if self.pipeline_var.get() == "msms":
-            feature_generators["maxquant"] = {}
-
-        ms2rescore_config = {
-            "feature_generators": feature_generators,
-            "rescoring_engine": {
-                "percolator": {
-                    "init-weights": self.weightsfile.selected_filename
-                    if self.weightsfile.selected_filename
-                    else False,
-                }
-            },
-            "config_file": self.config_filepath.selected_filename,
-            "psm_file": self.id_file.selected_filename,
-            "psm_file_type": self.pipeline_var.get(),
-            "tmp_path": self.tmp_dir.selected_filename,
-            "spectrum_path": self.mgf_dir.selected_filename,
-            "output_path": self.file_prefix.selected_filename,
-            "log_level": self.logging_level_selection.get(),
-            "processes": int(self.processes_var.get()),
-            "modification_mapping": self.parse_modification_mapping(
-                self.modification_mapping_box.get("0.0", "end")
-            ),
-            "fixed_modifications": self.parse_fixed_modifications(
-                self.fixed_modifications_box.get("0.0", "end")
-            ),
-            "id_decoy_pattern": self.id_decoy_pattern.get(),
-            "psm_id_pattern": self.psm_id_pattern.get(),
-            "spectrum_id_pattern": self.spectrum_id_pattern.get(),
-            "lower_score_is_better": True if self.lower_score_var.get() == "true" else False,
-            "USI": True if self.usi_var.get() == "true" else False,
-        }
-        self.config = {"ms2rescore": ms2rescore_config}
-
-    @staticmethod
-    def parse_modification_mapping(modifications_txt):
-        """Parse text input modifications mapping"""
-
-        modification_list = modifications_txt.rstrip().split("\n")
-        modification_map = {}
-        for mod in modification_list:
-            if len(mod.split(":")) != 2:
-                raise MS2RescoreConfigurationError(
-                    f"Error parsing {mod}\nMake sure modification name and unimod name are "
-                    f"separated by ':'"
-                )
-
-            modification_label, unimod_label = mod.split(":")[0], mod.split(":")[1]
-            if (modification_label == "") or (modification_label == "Modification label"):
-                continue
-            else:
-                modification_map[modification_label] = unimod_label.lstrip(" ")
-
-        return modification_map
-
-    @staticmethod
-    def parse_fixed_modifications(modifications_txt):
-        """Parse text input fixed modifications"""
-
-        modification_list = modifications_txt.rstrip().split("\n")
-        fixed_modification_dict = {}
-        for mod in modification_list:
-            if len(mod.split(":")) != 2:
-                raise MS2RescoreConfigurationError(
-                    f"Error parsing {mod}\nMake sure modification name and amino acids are "
-                    f"separated by ':'\nMake sure multiple amino acids are separated by ','"
-                )
-
-            unimod_label, amino_acids = mod.split(":")[0], mod.split(":")[1]
-            amino_acids = [aa.upper() for aa in amino_acids.lstrip(" ").split(",")]
-
-            if (unimod_label == "") or (unimod_label == "Unimod modification"):
-                continue
-            else:
-                fixed_modification_dict[unimod_label] = amino_acids
-
-        return fixed_modification_dict
-
-    def monitor(self, ms2rescore_process):
-        """Monitor the ms2rescore thread"""
-        if ms2rescore_process.is_alive():  # while loop?
-            self.after(100, lambda: self.monitor(ms2rescore_process))
-        else:
-            self.finish_callback()
 
 
 class LoggingLevelSelection(customtkinter.CTkFrame):
-    def __init__(self, master, *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.selected_level = customtkinter.StringVar(value="info")
         self.grid_columnconfigure(1, weight=1)
 
@@ -483,8 +537,8 @@ class LoggingLevelSelection(customtkinter.CTkFrame):
 
 
 class LoggingOutput(customtkinter.CTkTextbox):
-    def __init__(self, master, *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.configure(state="disabled", fg_color="transparent", wrap="word")
 
     def reset(self):
@@ -494,7 +548,27 @@ class LoggingOutput(customtkinter.CTkTextbox):
 
 
 class ProgressControl(customtkinter.CTkFrame):
-    def __init__(self, master, start_callback, stop_callback, *args, **kwargs):
+    def __init__(
+        self,
+        master: tk.Frame,
+        start_callback: Callable,
+        stop_callback: Callable,
+        *args,
+        **kwargs,
+    ):
+        """
+        Progress control frame with progress bar and start/stop buttons.
+
+        Parameters
+        ----------
+        master
+            Parent widget.
+        start_callback
+            Callback function to be called when start button is pressed.
+        stop_callback
+            Callback function to be called when stop button is pressed.
+
+        """
         super().__init__(master, *args, **kwargs)
         self.start_callback = start_callback
         self.stop_callback = stop_callback
@@ -553,7 +627,6 @@ class ProgressControl(customtkinter.CTkFrame):
 
 class MS2RescoreProcess(multiprocessing.Process):
     """MS²Rescore threading class"""
-
     def __init__(self, config, queue, log_level) -> None:
         super().__init__()
         self.config = config.copy()
@@ -587,7 +660,7 @@ class MS2RescoreProcess(multiprocessing.Process):
 
 class TextCtrHandler(logging.StreamHandler):
     def __init__(self, textctrl):
-        logging.StreamHandler.__init__(self)
+        super().__init__()
         self.textctrl = textctrl
 
     def emit(self, record):
@@ -600,59 +673,83 @@ class TextCtrHandler(logging.StreamHandler):
 
 
 class FileSelect(customtkinter.CTkFrame):
-    def __init__(self, *args, width: int = 100, height: int = 32, fileoption="openfile", **kwargs):
-        super().__init__(*args, width=width, height=height, **kwargs)
-        self.selected_filename = None
+    def __init__(self, *args, fileoption="openfile", **kwargs):
+        """
+        Advanced file selection widget with entry and file, directory, or save button.
+
+        Parameters
+        ----------
+        fileoption : str
+            One of "openfile", "directory", "file/dir", or "savefile. Determines the type of file
+            selection dialog that is shown when the button is pressed.
+
+        Methods
+        -------
+        get()
+            Returns the selected file or directory.
+
+        """
+        super().__init__(*args, **kwargs)
+
+        self._selected_filename = None
+        self._button_1 = None
+        self._button_2 = None
+
         self.grid_columnconfigure(0, weight=1)
+
         # Subwidgets
-        self.entry = customtkinter.CTkEntry(
-            self,
-            placeholder_text="Select a file...",
-        )
-        self.entry.grid(row=0, column=0, padx=20, pady=10, stick="ew")
+        self._entry = customtkinter.CTkEntry(self, placeholder_text="Select a file or directory")
+        self._entry.grid(row=0, column=0, padx=0, pady=5, stick="ew")
 
         if fileoption == "directory":
-            self.button = customtkinter.CTkButton(
-                self, text="Browse directories", command=self.pick_dir
+            self._button_1 = customtkinter.CTkButton(
+                self, text="Browse directories", command=self._pick_dir
             )
 
         elif fileoption == "openfile":
-            self.button = customtkinter.CTkButton(
-                self, text="Browse files", command=self.pick_file
+            self._button_1 = customtkinter.CTkButton(
+                self, text="Browse files", command=self._pick_file
             )
 
         elif fileoption == "file/dir":
-            self.button = customtkinter.CTkButton(
-                self, text="Browse files", command=self.pick_file
+            self._button_1 = customtkinter.CTkButton(
+                self, text="Browse files", command=self._pick_file
             )
-            self.button2 = customtkinter.CTkButton(
-                self, text="Browse directories", command=self.pick_dir
+            self._button_2 = customtkinter.CTkButton(
+                self, text="Browse directories", command=self._pick_dir
             )
         elif fileoption == "savefile":
-            self.button = customtkinter.CTkButton(
-                self, text="Output filename prefix", command=self.save_file
+            self._button_1 = customtkinter.CTkButton(
+                self, text="Path to save file(s)", command=self._save_file
             )
 
-        self.button.grid(row=0, column=1, padx=5, pady=5)
-        try:
-            self.button2.grid(row=0, column=2, padx=5, pady=5)
-        except AttributeError:
-            pass
+        self._button_1.grid(row=0, column=1, padx=(5, 0), pady=5, sticky="e")
+        if self._button_2:
+            self._button_2.grid(row=0, column=2, padx=(5, 0), pady=5, sticky="e")
 
-    def pick_file(self):
-        self.selected_filename = tkinter.filedialog.askopenfilename()
-        self.entry.delete(0, "end")
-        self.entry.insert("end", self.selected_filename)
+    def get(self):
+        """Returns the selected file or directory."""
+        entry = self._entry.get()
+        if entry:
+            return entry
+        else:
+            return None
 
-    def pick_dir(self):
-        self.selected_filename = tkinter.filedialog.askdirectory()
-        self.entry.delete(0, "end")
-        self.entry.insert("end", self.selected_filename)
+    def _update_entry(self):
+        self._entry.delete(0, "end")
+        self._entry.insert("end", self._selected_filename)
 
-    def save_file(self):
-        self.selected_filename = tkinter.filedialog.asksaveasfilename()
-        self.entry.delete(0, "end")
-        self.entry.insert("end", self.selected_filename)
+    def _pick_file(self):
+        self._selected_filename = tkinter.filedialog.askopenfilename()
+        self._update_entry()
+
+    def _pick_dir(self):
+        self._selected_filename = tkinter.filedialog.askdirectory()
+        self._update_entry()
+
+    def _save_file(self):
+        self._selected_filename = tkinter.filedialog.asksaveasfilename()
+        self._update_entry()
 
 
 class OptionalInput(customtkinter.CTkFrame):
@@ -666,7 +763,6 @@ class OptionalInput(customtkinter.CTkFrame):
         **kwargs,
     ):
         super().__init__(*args, width=width, height=height, **kwargs)
-        self.selected_filename = None
         self.switch_var = customtkinter.StringVar(value="off")
         self.fileoption = fileoption
 
@@ -674,7 +770,7 @@ class OptionalInput(customtkinter.CTkFrame):
         self.switch = customtkinter.CTkSwitch(
             master=self,
             text=text,
-            command=self.switch_event,
+            command=self._switch_event,
             variable=self.switch_var,
             onvalue="on",
             offvalue="off",
@@ -685,15 +781,19 @@ class OptionalInput(customtkinter.CTkFrame):
         self.grid_rowconfigure(0, weight=1)
         self.switch.grid(row=0, column=0, padx=20, pady=10, sticky="ew")
 
-    def switch_event(self):
+    def _switch_event(self):
         if self.switch_var.get() == "on":
             self.file_select = FileSelect(self, fileoption=self.fileoption)
             self.file_select.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
-            self.selected_filename = self.file_select.selected_filename
 
         elif self.switch_var.get() == "off":
             self.file_select.grid_remove()
-            self.selected_filename = None
+
+    def get(self):
+        if self.switch_var.get() == "on":
+            return self.file_select.get()
+        else:
+            return None
 
 
 class FloatSpinbox(customtkinter.CTkFrame):

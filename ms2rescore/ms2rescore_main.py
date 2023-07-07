@@ -46,8 +46,8 @@ class MS2Rescore:
 
         logger.debug(
             "Using %i of %i available CPUs.",
-            self.config["processes"],
-            cpu_count(),
+            int(self.config["processes"]),
+            int(cpu_count()),
         )
 
     def run(self):
