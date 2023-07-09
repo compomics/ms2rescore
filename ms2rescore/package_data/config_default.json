@@ -26,6 +26,6 @@
         "modification_mapping": {},
         "fixed_modifications": {},
         "processes": -1,
-        "USI": false
+        "rename_to_usi": false
     }
 }

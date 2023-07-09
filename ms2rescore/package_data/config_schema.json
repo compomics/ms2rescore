@@ -114,8 +114,8 @@
                     "minimum": -1,
                     "default": -1
                 },
-                "USI": {
-                    "description": "Use universal spectrum identifier (USI)",
+                "rename_to_usi": {
+                    "description": "Convert spectrum IDs to their universal spectrum identifier",
                     "type": "boolean"
                 }
             }
@@ -189,10 +189,7 @@
                     "properties": {
                         "init-weights": {
                             "description": "Weights file for scoring function",
-                            "oneOf": [
-                                { "type": "string" },
-                                { "type": "boolean" }
-                            ],
+                            "oneOf": [{ "type": "string" }, { "type": "null" }],
                             "default": false
                         }
                     }

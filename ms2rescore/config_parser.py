@@ -121,7 +121,11 @@ def parse_configurations(configurations) -> Dict:
     config = _validate_processes(config)
 
     # Convert feature_generators and rescoring_engine names to lowercase
-    config["feature_generators"] = {k.lower(): v for k, v in config["feature_generators"].items()}
-    config["rescoring_engine"] = {k.lower(): v for k, v in config["rescoring_engine"]}
+    config["ms2rescore"]["feature_generators"] = {
+        k.lower(): v for k, v in config["ms2rescore"]["feature_generators"].items()
+    }
+    config["ms2rescore"]["rescoring_engine"] = {
+        k.lower(): v for k, v in config["ms2rescore"]["rescoring_engine"].items()
+    }
 
     return config

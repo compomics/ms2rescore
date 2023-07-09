@@ -110,7 +110,7 @@ class MS2Rescore:
                 f"rescoring features."
             )
 
-        if self.config["USI"]:
+        if self.config["rename_to_usi"]:
             logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
             psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
 
