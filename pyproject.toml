@@ -39,7 +39,7 @@ dependencies = [
     "lxml>=4.5,<5",
     "ms2pip>=4.0.0-dev,<5",
     "click>=7",
-    "cascade-config>=0.3.0,<2",
+    "cascade-config>=0.4.0,<2",
     "deeplc>=1.2.1",
     "deeplcretrainer==0.1.17",  # TODO: Release version pin
     "tomlkit",
