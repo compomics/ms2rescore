@@ -154,20 +154,19 @@ def main():
     else:
         config = parse_configurations(cli_args)
 
-    output_file_root = (
-        Path(config["ms2rescore"]["output_path"])
-        / Path(config["ms2rescore"]["psm_file"]).with_suffix("").as_uri()
+    output_file_root = Path(config["ms2rescore"]["psm_file"]).with_suffix("")
+    _setup_logging(
+        config["ms2rescore"]["log_level"], str(output_file_root) + "-ms2rescore-log.txt"
     )
-    _setup_logging(config["ms2rescore"]["log_level"], output_file_root + "-ms2rescore-log.txt")
 
     try:
-        ms2rescore = MS2Rescore(configuration=config["ms2rescore"])
+        ms2rescore = MS2Rescore(configuration=config)
         ms2rescore.run()
     except Exception as e:
         LOGGER.exception(e)
         sys.exit(1)
     finally:
-        CONSOLE.save_html(output_file_root + "-ms2rescore-log.html")
+        CONSOLE.save_html(str(output_file_root) + "-ms2rescore-log.html")
 
 
 if __name__ == "__main__":
