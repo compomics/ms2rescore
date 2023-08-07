@@ -1,4 +1,4 @@
-"""Plot MS²ReScore results."""
+"""Plot MS²Rescore results."""
 
 import logging
 import os

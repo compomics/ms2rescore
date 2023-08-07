@@ -32,8 +32,8 @@ LOGGER = logging.getLogger(__name__)
 CONSOLE = Console(record=True)
 
 
-def _build_credits():
-    """Build credits."""
+def _print_credits():
+    """Print software credits to terminal."""
     text = Text()
     text.append("\n")
     text.append("MS²Rescore", style="bold link https://github.com/compomics/ms2rescore")
@@ -45,8 +45,7 @@ def _build_credits():
     )
     text.append("\n")
     text.stylize("cyan")
-    return text
-
+    CONSOLE.print(text)
 
 def _setup_logging(passed_level: str, log_file: Union[str, Path]):
     """Setup logging for writing to log file and Rich Console."""
@@ -146,7 +145,7 @@ def _parse_arguments() -> argparse.Namespace:
 
 def main():
     """Run MS²Rescore command-line interface."""
-    CONSOLE.print(_build_credits())
+    _print_credits()
 
     cli_args = _parse_arguments()
     if cli_args.config_file:
@@ -154,10 +153,15 @@ def main():
     else:
         config = parse_configurations(cli_args)
 
-    output_file_root = Path(config["ms2rescore"]["psm_file"]).with_suffix("")
-    _setup_logging(
-        config["ms2rescore"]["log_level"], str(output_file_root) + "-ms2rescore-log.txt"
-    )
+    if config["ms2rescore"]["output_path"]:
+        output_file_root = (
+            Path(config["ms2rescore"]["output_path"])
+            / Path(config["ms2rescore"]["psm_file"]).stem
+        ).as_posix()
+    else:
+        output_file_root = Path(config["ms2rescore"]["psm_file"]).with_suffix("").as_posix()
+
+    _setup_logging(config["ms2rescore"]["log_level"], output_file_root + "-ms2rescore-log.txt")
 
     try:
         ms2rescore = MS2Rescore(configuration=config)

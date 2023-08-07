@@ -230,10 +230,10 @@ class _ProgressControl(ctk.CTkFrame):
         self.stop_callback = stop_callback
         self.stop_button_pressed = False
 
-        self.grid_columnconfigure(0, weight=2)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, minsize=140)
 
-        self.progress_bar = ctk.CTkProgressBar(self)  # , width=150)
+        self.progress_bar = ctk.CTkProgressBar(self)
 
         self.start_button = ctk.CTkButton(master=self, command=self._start_callback, text="Start")
         self.stop_button = ctk.CTkButton(master=self, command=self._stop_callback, text="Stop")
@@ -259,7 +259,7 @@ class _ProgressControl(ctk.CTkFrame):
         self.stop_button.grid(row=0, column=1, sticky="ew")
 
         # Show and activate progress bar
-        self.progress_bar.grid(row=0, column=0, sticky="ew")
+        self.progress_bar.grid(row=0, column=0, sticky="ew", padx=10)
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
 

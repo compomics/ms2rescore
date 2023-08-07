@@ -26,8 +26,9 @@ denotes the official Unimod name.
 
 To correctly parse the various notations to ProForma, :py:mod:`psm_utils.io` readers
 require :py:obj:`modification_definitions` that map each specific search engine
-modification label to a valid ProForma label. :py:obj:`modification_definitions` is defined as a :py:obj:`list` of :py:obj:`dict`'s.
-Each :py:obj:`dict` should contain the following key-value pairs:
+modification label to a valid ProForma label. :py:obj:`modification_definitions` is defined as a
+:py:obj:`list` of :py:obj:`dict`'s. Each :py:obj:`dict` should contain the following key-value
+pairs:
 
     - ``site``: Amino acids or peptide termini where the modification occurs. Should be
       the IUPAC one-letter code for amino acid residues and `N-term` or `C-term` for

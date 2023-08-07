@@ -5,7 +5,6 @@ import multiprocessing
 import warnings
 from itertools import chain
 from typing import List, Optional, Union
-import math
 
 import numpy as np
 import pandas as pd
@@ -304,7 +303,7 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
         features = dict(
             zip(
                 self.feature_names,
-                [0.0 if math.isnan(ft) else ft for ft in feature_values],
+                [0.0 if np.isnan(ft) else ft for ft in feature_values],
             )
         )
 

@@ -116,7 +116,7 @@ def _update_psm_scores(psm_list: psm_utils.PSMList, target_pout: str, decoy_pout
 
 
 def _write_pin_file(psm_list: psm_utils.PSMList, filepath: str):
-    """Write PIN file for rescoring"""
+    """Write PIN file for rescoring."""
     logger.debug(f"Writing PIN file to {filepath}")
     psm_utils.io.write_file(
         psm_list,

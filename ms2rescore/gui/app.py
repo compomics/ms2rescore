@@ -356,7 +356,7 @@ class MS2PIPConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = ctk.CTkLabel(self, text="MS²PIP", fg_color="gray30", corner_radius=6)
+        self.title = widgets.Heading(self, text="MS²PIP")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.enabled = widgets.LabeledSwitch(self, label="Enable MS²PIP", default=True)
@@ -393,7 +393,7 @@ class DeepLCConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = ctk.CTkLabel(self, text="DeepLC", fg_color="gray30", corner_radius=6)
+        self.title = widgets.Heading(self, text="DeepLC")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.enabled = widgets.LabeledSwitch(self, label="Enable DeepLC", default=True)
@@ -461,6 +461,7 @@ def function(config):
 
 
 def app():
+    """Start the application."""
     root = Function2CTk(
         sidebar_frame=SideBar,
         config_frame=ConfigFrame,

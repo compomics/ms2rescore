@@ -10,7 +10,7 @@ import psm_utils.io
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
 from ms2rescore.feature_generators import FEATURE_GENERATORS
-from ms2rescore.rescoring_engines import percolator
+from ms2rescore.rescoring_engines import mokapot, percolator
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,11 @@ class MS2Rescore:
         # Ensure that spectrum IDs are strings (Pydantic 2.0 does not coerce int to str)
         psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
 
+        # Store values for comparison later
+        psm_data_before = psm_list.to_dataframe()[
+            ["score", "qvalue", "pep", "is_decoy", "rank"]
+        ].copy()
+
         # Add rescoring features
         feature_names = dict()
         for fgen_name, fgen_config in self.config["feature_generators"].items():
@@ -114,6 +119,7 @@ class MS2Rescore:
             logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
             psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
 
+        # Rescore PSMs
         if "percolator" in self.config["rescoring_engine"]:
             percolator.rescore(
                 psm_list,
@@ -124,7 +130,31 @@ class MS2Rescore:
             )
 
         elif "mokapot" in self.config["rescoring_engine"]:
-            raise NotImplementedError()
+            mokapot.rescore(psm_list, mokapot_kwargs=self.config["rescoring_engine"]["mokapot"])
+
+        psm_data_after = psm_list.to_dataframe()[
+            ["score", "qvalue", "pep", "is_decoy", "rank"]
+        ].copy()
+
+        # Compare results
+        id_psms_before = (
+            (psm_data_before["qvalue"] < 0.01) & (psm_data_before["is_decoy"] == False)
+        ).sum()
+        id_psms_after = (
+            (psm_data_after["qvalue"] < 0.01) & (psm_data_after["is_decoy"] == False)
+        ).sum()
+        diff = id_psms_after - id_psms_before
+        diff_perc = diff / id_psms_before
+        logger.info(f"Identified {diff} ({diff_perc:.2%}) more PSMs at 1% FDR after rescoring.")
+
+        # Write output
+        logger.info(f"Writing output to {self.output_file_root}.psms.tsv...")
+        psm_utils.io.write_file(
+            psm_list,
+            self.output_file_root + ".psms.tsv",
+            filetype="tsv",
+            show_progressbar=True,
+        )
 
 
 def _match_psm_ids(old_id, regex_pattern):

@@ -7,6 +7,16 @@ from typing import Union
 import customtkinter as ctk
 
 
+class Heading(ctk.CTkLabel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.configure(
+            fg_color=("gray80", "gray30"),
+            text_color=("black", "white"),
+            corner_radius=6,
+        )
+
+
 class LabeledEntry(ctk.CTkFrame):
     def __init__(self, *args, label="Enter text", placeholder_text="Enter text...", **kwargs):
         super().__init__(*args, **kwargs)
@@ -58,10 +68,8 @@ class LabeledRadioButtons(ctk.CTkFrame):
 
         self._radio_buttons = []
         for i, option in enumerate(options):
-            radio_button = ctk.CTkRadioButton(
-                self, text=option, variable=self.value, value=option
-            )
-            radio_button.grid(row=i+1, column=0, padx=0, pady=(0, 5), sticky="w")
+            radio_button = ctk.CTkRadioButton(self, text=option, variable=self.value, value=option)
+            radio_button.grid(row=i + 1, column=0, padx=0, pady=(0, 5), sticky="w")
             self._radio_buttons.append(radio_button)
 
     def get(self):
@@ -316,7 +324,13 @@ class TableInput(ctk.CTkFrame):
         for i, header in enumerate(self.header_labels):
             header_row.grid_columnconfigure(i, weight=1, uniform=self.uniform_hash)
             padx = (0, 5) if i < len(self.header_labels) - 1 else (0, 0)
-            label = ctk.CTkLabel(header_row, text=header, fg_color="gray30", corner_radius=6)
+            label = ctk.CTkLabel(
+                header_row,
+                text=header,
+                fg_color=("gray80", "gray30"),
+                text_color=("black", "white"),
+                corner_radius=6,
+            )
             label.grid(row=0, column=i, padx=padx, sticky="ew")
 
         # Input rows
