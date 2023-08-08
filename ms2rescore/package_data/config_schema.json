@@ -27,9 +27,9 @@
                     }
                 },
                 "rescoring_engine": {
-                    "description": "Rescoring engine to use and its configuration.",
+                    "description": "Rescoring engine to use and its configuration. Leave empty to skip rescoring and write features to file.",
                     "type": "object",
-                    "minProperties": 1,
+                    "minProperties": 0,
                     "maxProperties": 1,
                     "patternProperties": {
                         ".*": { "$ref": "#/$defs/rescoring_engine" },

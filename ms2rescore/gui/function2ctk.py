@@ -1,4 +1,4 @@
-"""Graphical user interface for MS²Rescore."""
+"""Function2CTk: Turn function into a CustomTkinter-based GUI."""
 
 import logging
 import logging.handlers
@@ -52,8 +52,8 @@ class Function2CTk(ctk.CTk):
         self.function = function
 
         # # App config
-        # self.geometry(f"{1250}x{700}")
-        # self.minsize(1000, 700)
+        self.geometry(f"{1250}x{700}")
+        self.minsize(1000, 700)
 
         # 2x3 grid, only logging column expands with window
         self.grid_columnconfigure(0, weight=0, minsize=500)  # Left: Sidebar

@@ -48,6 +48,83 @@ def _print_credits():
     text.stylize("cyan")
     CONSOLE.print(text)
 
+
+def _parse_arguments() -> argparse.Namespace:
+    """Parse CLI arguments."""
+    parser = argparse.ArgumentParser(
+        description="MS²Rescore: Sensitive PSM rescoring with predicted features.",
+        formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=42),
+    )
+    parser.add_argument("-v", "--version", action="version", version=__version__)
+    parser.add_argument(
+        "-p",
+        "--psm-file",
+        metavar="FILE",
+        action="store",
+        type=str,
+        dest="psm_file",
+        help="path to PSM file (PIN, mzIdentML, MaxQuant msms, X!Tandem XML...)",
+    )
+    parser.add_argument(
+        "-t",
+        "--psm-file-type",
+        metavar="STR",
+        action="store",
+        type=str,
+        dest="psm_file_type",
+        default=None,
+        help="PSM file type (default: 'infer')",
+    )
+    parser.add_argument(
+        "-s",
+        "--spectrum-path",
+        metavar="FILE/DIR",
+        action="store",
+        type=str,
+        dest="spectrum_path",
+        help="path to MGF/mzML spectrum file or directory with spectrum files (default: derived\
+            from identification file)",
+    )
+    parser.add_argument(
+        "-c",
+        "--config-file",
+        metavar="FILE",
+        action="store",
+        type=str,
+        dest="config_file",
+        help="path to MS²Rescore configuration file (see README.md)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output-path",
+        metavar="FILE",
+        action="store",
+        type=str,
+        dest="output_path",
+        help="Path and stem for output file names (default: derive from identification file)",
+    )
+    parser.add_argument(
+        "-l",
+        "--log-level",
+        metavar="STR",
+        action="store",
+        type=str,
+        dest="log_level",
+        help="logging level (default: `info`)",
+    )
+    parser.add_argument(
+        "-n",
+        "--processes",
+        metavar="INT",
+        action="store",
+        type=int,
+        dest="processes",
+        default=None,
+        help="number of parallel processes available to MS²Rescore",
+    )
+
+    return parser.parse_args()
+
 def _setup_logging(passed_level: str, log_file: Union[str, Path]):
     """Setup logging for writing to log file and Rich Console."""
     if passed_level not in LOG_MAPPING:
@@ -66,86 +143,22 @@ def _setup_logging(passed_level: str, log_file: Union[str, Path]):
     )
 
 
-def _parse_arguments() -> argparse.Namespace:
-    """Parse CLI arguments."""
-    parser = argparse.ArgumentParser(
-        description="MS²Rescore: Sensitive PSM rescoring with predicted MS²\
-            peak intensities."
-    )
-    parser.add_argument("-v", "--version", action="version", version=__version__)
-    parser.add_argument(
-        "-p",
-        metavar="FILE",
-        action="store",
-        type=str,
-        dest="psm_file",
-        help="path to PSM file (pin, mzid, msms.txt, tandem xml...)",
-    )
-    parser.add_argument(
-        "-m",
-        metavar="FILE",
-        action="store",
-        type=str,
-        dest="spectrum_path",
-        help="path to MGF file or directory with MGF files (default: derived from\
-            identification file)",
-    )
-    parser.add_argument(
-        "-c",
-        metavar="FILE",
-        action="store",
-        type=str,
-        dest="config_file",
-        help="path to MS²Rescore configuration file (see README.md)",
-    )
-    parser.add_argument(
-        "-o",
-        metavar="FILE",
-        action="store",
-        type=str,
-        dest="output_path",
-        help="name for output files (default: derive from identification file)",
-    )
-    parser.add_argument(
-        "-l",
-        metavar="LEVEL",
-        action="store",
-        type=str,
-        dest="log_level",
-        help="logging level (default: `info`)",
-    )
-    parser.add_argument(
-        "-n",
-        metavar="VALUE",
-        action="store",
-        type=int,
-        dest="processes",
-        default=None,
-        help="number of parallel processes available to MS²Rescore",
-    )
-    parser.add_argument(
-        "--psm_file_type",
-        metavar="FILE",
-        action="store",
-        type=str,
-        dest="psm_file_type",
-        default=None,
-        help="determines psm parser to use from PSM_utils (default: 'infer')",
-    )
-
-    return parser.parse_args()
-
-
 def main():
     """Run MS²Rescore command-line interface."""
     _print_credits()
 
+    # Parse CLI arguments and configuration file
     cli_args = _parse_arguments()
-    if cli_args.config_file:
-        config = parse_configurations([cli_args.config_file, cli_args])
-    else:
-        config = parse_configurations(cli_args)
+    try:
+        if cli_args.config_file:
+            config = parse_configurations([cli_args.config_file, cli_args])
+        else:
+            config = parse_configurations(cli_args)
+    except MS2RescoreConfigurationError as e:
+        LOGGER.critical(e)
+        sys.exit(1)
 
+    # Setup logging
     if config["ms2rescore"]["output_path"]:
         output_file_root = (
             Path(config["ms2rescore"]["output_path"])
@@ -156,6 +169,7 @@ def main():
 
     _setup_logging(config["ms2rescore"]["log_level"], output_file_root + "-ms2rescore-log.txt")
 
+    # Run MS²Rescore
     try:
         rescore(configuration=config)
     except Exception as e:

@@ -40,13 +40,14 @@ def rescore(configuration: Optional[Dict] = None) -> None:
     output_path = config["output_path"] or "."
     output_file_root = str(Path(output_path) / Path(config["psm_file"]).stem)
 
-
     logger.debug("Using %i of %i available CPUs.", int(config["processes"]), int(cpu_count()))
 
     # Read PSMs
     logger.info("Reading PSMs...")
     psm_list = psm_utils.io.read_file(
-        config["psm_file"], filetype=config["psm_file_type"], show_progressbar=True,
+        config["psm_file"],
+        filetype=config["psm_file_type"],
+        show_progressbar=True,
     )
 
     logger.debug("Finding decoys...")
@@ -109,6 +110,20 @@ def rescore(configuration: Optional[Dict] = None) -> None:
         logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
         psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
 
+    # If no rescoring engine is specified, write PSMs and features to PIN file
+    if not config["rescoring_engine"]:
+        logger.info(
+            "No rescoring engine specified. Writing PSMs and features to PIN file: "
+            f"{output_file_root}.psms.pin"
+        )
+        psm_utils.io.write_file(
+            psm_list,
+            output_file_root + ".psms.pin",
+            filetype="percolator",
+            feature_names=all_feature_names,
+        )
+        return None
+
     # Rescore PSMs
     if "percolator" in config["rescoring_engine"]:
         percolator.rescore(
@@ -122,18 +137,20 @@ def rescore(configuration: Optional[Dict] = None) -> None:
     elif "mokapot" in config["rescoring_engine"]:
         mokapot.rescore(psm_list, mokapot_kwargs=config["rescoring_engine"]["mokapot"])
 
-    psm_data_after = psm_list.to_dataframe()[["score", "qvalue", "pep", "is_decoy", "rank"]].copy()
-
     # Compare results
+    psm_data_after = psm_list.to_dataframe()[["score", "qvalue", "pep", "is_decoy", "rank"]].copy()
     id_psms_before = (
-        (psm_data_before["qvalue"] < 0.01) & (psm_data_before["is_decoy"] == False)
+        (psm_data_before["qvalue"] < 0.01) & (psm_data_before["is_decoy"] == False)  # noqa: E712
     ).sum()
     id_psms_after = (
-        (psm_data_after["qvalue"] < 0.01) & (psm_data_after["is_decoy"] == False)
+        (psm_data_after["qvalue"] < 0.01) & (psm_data_after["is_decoy"] == False)  # noqa: E712
     ).sum()
     diff = id_psms_after - id_psms_before
-    diff_perc = diff / id_psms_before
-    logger.info(f"Identified {diff} ({diff_perc:.2%}) more PSMs at 1% FDR after rescoring.")
+    if id_psms_before > 0:
+        diff_perc = diff / id_psms_before
+        logger.info(f"Identified {diff} ({diff_perc:.2%}) more PSMs at 1% FDR after rescoring.")
+    else:
+        logger.info(f"Identified {diff} more PSMs at 1% FDR after rescoring.")
 
     # Write output
     logger.info(f"Writing output to {output_file_root}.psms.tsv...")

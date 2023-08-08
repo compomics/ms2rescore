@@ -3,10 +3,9 @@
 import importlib.resources
 import json
 import multiprocessing as mp
-import tempfile
 from argparse import Namespace
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Union
 
 import tomlkit
 from cascade_config import CascadeConfig
@@ -56,7 +55,7 @@ def _validate_processes(config: Dict) -> Dict:
     return config
 
 
-def parse_configurations(configurations) -> Dict:
+def parse_configurations(configurations: List[Union[dict, str, Path, Namespace]]) -> Dict:
     """
     Parse and validate MS²Rescore configuration files and CLI arguments.
 

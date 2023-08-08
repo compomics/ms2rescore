@@ -166,14 +166,16 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
         logger.debug("Calculating features from predicted spectra")
         with multiprocessing.Pool(int(self.processes)) as pool:
             # Use imap, so we can use a progress bar
-            all_features = track(
-                pool.imap(self._calculate_features_single, ms2pip_results, chunksize=1000),
-                total=len(ms2pip_results),
-                description="Calculating features...",
-                transient=True,
-            )
             counts_failed = 0
-            for result, features in zip(ms2pip_results, all_features):
+            for result, features in zip(
+                ms2pip_results,
+                track(
+                    pool.imap(self._calculate_features_single, ms2pip_results, chunksize=1000),
+                    total=len(ms2pip_results),
+                    description="Calculating features...",
+                    transient=True,
+                ),
+            ):
                 if features:
                     # Cannot use result.psm directly, as it is a copy from MS²PIP multiprocessing
                     try:
@@ -182,7 +184,9 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
                         psm_list[result.psm_index]["rescoring_features"] = features
                 else:
                     counts_failed += 1
-        logger.warning(f"Failed to calculate features for {counts_failed} PSMs")
+
+        if counts_failed > 0:
+            logger.warning(f"Failed to calculate features for {counts_failed} PSMs")
 
     def _calculate_features_single(self, processing_result: ProcessingResult) -> Union[dict, None]:
         """Calculate MS²PIP-based features for single PSM."""
@@ -190,7 +194,6 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
             processing_result.observed_intensity is None
             or processing_result.predicted_intensity is None
         ):
-            warnings.warn("No MS²PIP prediction for PSM")
             return None
 
         # Suppress RuntimeWarnings about invalid values

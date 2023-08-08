@@ -1,7 +1,7 @@
-"""Graphical user interface for MS²Rescore using Gooey."""
+"""Graphical user interface for MS²Rescore using CustomTkinter."""
+
 import importlib.resources
 import logging
-import logging.handlers
 import multiprocessing
 import os
 import webbrowser
@@ -33,18 +33,9 @@ logger.setLevel(logging.INFO)
 
 try:
     import matplotlib.pyplot as plt
-
     plt.set_loglevel("warning")
 except ImportError:
     pass
-
-LOG_MAPPING = {
-    "critical": logging.CRITICAL,
-    "error": logging.ERROR,
-    "warning": logging.WARNING,
-    "info": logging.INFO,
-    "debug": logging.DEBUG,
-}
 
 ctk.set_default_color_theme(_THEME_FILE)
 
@@ -135,10 +126,6 @@ class ConfigFrame(ctk.CTkTabview):
     def __init__(self, *args, **kwargs):
         """MS²Rescore configuration frame."""
         super().__init__(*args, **kwargs)
-
-        # self.configure(fg_color="transparent")
-        # self.grid_rowconfigure(0, weight=1)
-        # self.grid_columnconfigure(0, weight=1)
 
         for tab in ["Main", "Advanced", "Feature generators", "Rescoring engine"]:
             self.add(tab)

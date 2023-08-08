@@ -12,6 +12,10 @@ from pyteomics.mass import nist_mass
 
 logger = logging.getLogger(__name__)
 
+logging.getLogger("numba").setLevel(logging.WARNING)
+logging.getLogger("mokapot.model").setLevel(logging.WARNING)
+logging.getLogger("mokapot.dataset").setLevel(logging.WARNING)
+
 
 def rescore(
     psm_list: psm_utils.PSMList,
@@ -59,7 +63,6 @@ def rescore(
 def convert_psm_list(
     psm_list: psm_utils.PSMList,
     feature_names: List[str],
-    keep_lower_rank_psms: bool = False,
 ) -> LinearPsmDataset:
     """
     Convert a PSM list to a Mokapot dataset.
@@ -70,21 +73,15 @@ def convert_psm_list(
         PSMList to rescore.
     feature_names
         List of feature names to use. Items must be keys in the PSM `rescoring_features` dict.
-    keep_lower_rank_psms
-        If ``True``, keep all PSMs with rank <= 2. Defaults to ``False``.
 
     Returns
     -------
     mokapot.dataset.LinearPsmDataset
 
     """
-    if None in psm_list["rank"]:
-        psm_list.set_ranks()
 
     psm_df = psm_list.to_dataframe()
     psm_df = psm_df.reset_index(drop=True).reset_index()
-    if not keep_lower_rank_psms:
-        psm_df = psm_df[psm_df["rank"] == 1]
 
     psm_df["peptide"] = (
         psm_df["peptidoform"].astype(str).str.replace(r"(/\d+$)", "", n=1, regex=True)
