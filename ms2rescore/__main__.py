@@ -99,14 +99,6 @@ def _parse_arguments() -> argparse.Namespace:
         help="path to MS²Rescore configuration file (see README.md)",
     )
     parser.add_argument(
-        "-t",
-        metavar="PATH",
-        action="store",
-        type=str,
-        dest="tmp_path",
-        help="path to directory to place temporary files",
-    )
-    parser.add_argument(
         "-o",
         metavar="FILE",
         action="store",

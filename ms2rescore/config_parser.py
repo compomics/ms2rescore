@@ -43,14 +43,6 @@ def _validate_filenames(config: Dict) -> Dict:
         output_path = Path(id_file).parent
     config["ms2rescore"]["output_path"] = str(output_path)
 
-    # tmp_path should either be None, or path to dir. If not, make path.
-    if config["ms2rescore"]["tmp_path"]:
-        tmp_path = Path(config["ms2rescore"]["tmp_path"])
-        tmp_path.mkdir(parents=True, exist_ok=True)
-    else:
-        tmp_path = tempfile.mkdtemp()
-    config["ms2rescore"]["tmp_path"] = str(tmp_path)
-
     return config
 
 

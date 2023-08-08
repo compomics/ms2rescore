@@ -39,8 +39,6 @@ def rescore(configuration: Optional[Dict] = None) -> None:
     # Set output and temporary paths
     output_path = config["output_path"] or "."
     output_file_root = str(Path(output_path) / Path(config["psm_file"]).stem)
-    tmp_path = config["tmp_path"] or TemporaryDirectory().name
-    tmp_file_root = str(Path(tmp_path) / Path(config["psm_file"]).stem)
 
 
     logger.debug("Using %i of %i available CPUs.", int(config["processes"]), int(cpu_count()))

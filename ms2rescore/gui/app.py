@@ -290,11 +290,6 @@ class AdvancedConfiguration(ctk.CTkFrame):
         )
         self.weightsfile.grid(row=5, column=0, columnspan=2, sticky="nsew")
 
-        self.tmp_path = widgets.LabeledFileSelect(
-            self, label="Folder for temporary files", file_option="directory"
-        )
-        self.tmp_path.grid(row=6, column=0, columnspan=2, sticky="nsew")
-
         self.file_prefix = widgets.LabeledFileSelect(
             self, label="Filename for output files", file_option="savefile"
         )
@@ -314,7 +309,6 @@ class AdvancedConfiguration(ctk.CTkFrame):
             "psm_id_pattern": self.psm_id_pattern.get(),
             "spectrum_id_pattern": self.spectrum_id_pattern.get(),
             "weightsfile": self.weightsfile.get(),
-            "tmp_path": self.tmp_path.get(),
             "output_path": self.file_prefix.get(),
             "config_file": self.config_file.get(),
         }

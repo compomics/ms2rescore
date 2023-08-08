@@ -61,10 +61,6 @@
                     "description": "Path to spectrum file or directory with spectrum files",
                     "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
-                "tmp_path": {
-                    "description": "Path to directory to place temporary files",
-                    "oneOf": [{ "type": "string" }, { "type": "null" }]
-                },
                 "output_path": {
                     "description": "Path and root name for output files",
                     "oneOf": [{ "type": "string" }, { "type": "null" }]
