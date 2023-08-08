@@ -12,4 +12,4 @@ filterwarnings(
     module="psims.mzmlb",
 )
 
-from ms2rescore.ms2rescore_main import MS2Rescore
+from ms2rescore.core import rescore

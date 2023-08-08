@@ -10,7 +10,8 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.text import Text
 
-from ms2rescore import MS2Rescore, __version__
+from ms2rescore import __version__
+from ms2rescore.core import rescore
 from ms2rescore.config_parser import parse_configurations
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 
@@ -164,8 +165,7 @@ def main():
     _setup_logging(config["ms2rescore"]["log_level"], output_file_root + "-ms2rescore-log.txt")
 
     try:
-        ms2rescore = MS2Rescore(configuration=config)
-        ms2rescore.run()
+        rescore(configuration=config)
     except Exception as e:
         LOGGER.exception(e)
         sys.exit(1)

@@ -13,14 +13,14 @@ from ms2pip.constants import MODELS as ms2pip_models
 from PIL import Image
 from psm_utils.io import FILETYPES
 
-import ms2rescore
 import ms2rescore.gui.widgets as widgets
 import ms2rescore.package_data as pkg_data
 import ms2rescore.package_data.img as pkg_data_img
+from ms2rescore import __version__ as ms2rescore_version
 from ms2rescore.config_parser import parse_configurations
+from ms2rescore.core import rescore
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 from ms2rescore.gui.function2ctk import Function2CTk
-from ms2rescore.ms2rescore_main import MS2Rescore
 
 with importlib.resources.path(pkg_data_img, "config_icon.png") as resource:
     _IMG_DIR = Path(resource).parent
@@ -106,7 +106,7 @@ class SideBar(ctk.CTkFrame):
         self.github_button.grid(row=4, column=0, padx=20, pady=(10, 10))
 
         # Bottom row: version
-        self.version_label = ctk.CTkLabel(self, text=ms2rescore.__version__)
+        self.version_label = ctk.CTkLabel(self, text=ms2rescore_version)
         self.version_label.grid(row=5, column=0, padx=20, pady=(10, 10))
 
 
@@ -164,9 +164,7 @@ class ConfigFrame(ctk.CTkTabview):
         advanced_config = self.advanced_config.get()
 
         # TODO Move to rescoring engine config
-        percolator_config = {
-            "init-weights": advanced_config.pop("weightsfile")
-        }
+        percolator_config = {"init-weights": advanced_config.pop("weightsfile")}
 
         config = {"ms2rescore": main_config}
         config["ms2rescore"].update(advanced_config)
@@ -456,8 +454,7 @@ def function(config):
     """Function to be executed in a separate process."""
     config = config.copy()
     config = parse_configurations(config)
-    rescore = MS2Rescore(configuration=config)
-    rescore.run()
+    rescore(configuration=config)
 
 
 def app():
