@@ -48,6 +48,8 @@ def rescore(
         "decoy-results-psms": output_file_root + "_decoy_psms.pout",
         "results-peptides": output_file_root + "_target_peptides.pout",
         "decoy-results-peptides": output_file_root + "_decoy_peptides.pout",
+        "results-proteins": output_file_root + "_target_proteins.pout",
+        "decoy-results-proteins": output_file_root + "_decoy_proteins.pout",
         "weights": output_file_root + ".weights",
         "verbose": LOG_LEVEL_MAP[log_level],
         "num-threads": processes,

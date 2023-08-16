@@ -1,8 +1,9 @@
 """Mokapot integration for MS²Rescore."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional, Tuple
 
+import mokapot
 import numpy as np
 import pandas as pd
 import psm_utils
@@ -19,7 +20,12 @@ logging.getLogger("mokapot.dataset").setLevel(logging.WARNING)
 
 def rescore(
     psm_list: psm_utils.PSMList,
-    mokapot_kwargs: Optional[Dict[str, Any]] = None,
+    output_file_root: str = "ms2rescore",
+    fasta_file: Optional[str] = None,
+    write_weights: bool = False,
+    write_txt: bool = False,
+    write_flashlfq: bool = False,
+    **kwargs: Any,
 ):
     """
     Rescore PSMs with Mokapot.
@@ -28,16 +34,33 @@ def rescore(
     ----------
     psm_list
         PSMs to be rescored.
-    mokapot_kwargs
-        Additional keyword arguments for Mokapot. Defaults to ``None``.
+    output_file_root
+        Root of output file names. Defaults to ``"ms2rescore"``.
+    fasta_file
+        Path to FASTA file with protein sequences to use for protein inference. Defaults to
+        ``None``.
+    write_weights
+        Write model weights to a text file. Defaults to ``False``.
+    write_txt
+        Write Mokapot results to a text file. Defaults to ``False``.
+    write_flashlfq
+        Write Mokapot results to a FlashLFQ-compatible file. Defaults to ``False``.
+    **kwargs
+        Additional keyword arguments are passed to the Mokapot ~:py:function:`mokapot.brew.brew`
+        function.
 
     """
     # Convert PSMList to Mokapot dataset
-    feature_names = psm_list[0].rescoring_features.keys()
+    feature_names = list(psm_list[0].rescoring_features.keys())
     lin_psm_data = convert_psm_list(psm_list, feature_names)
 
+    # Add proteins
+    if fasta_file:
+        proteins = mokapot.read_fasta(fasta_file)
+        lin_psm_data.add_proteins(proteins)
+
     # Rescore
-    confidence_results, model = brew(lin_psm_data, **mokapot_kwargs)
+    confidence_results, models = brew(lin_psm_data, **kwargs)
 
     # Reshape confidence estimates to match PSMList
     mokapot_values_targets = (
@@ -58,6 +81,14 @@ def rescore(
     psm_list["score"] = q[:, 0]
     psm_list["qvalue"] = q[:, 1]
     psm_list["pep"] = q[:, 2]
+
+    # Write results
+    if write_weights:
+        save_model_weights(models, feature_names, output_file_root)
+    if write_txt:
+        confidence_results.to_txt(file_root=output_file_root, decoys=True)
+    if write_flashlfq:
+        confidence_results.to_flashlfq(output_file_root + ".mokapot.flashlfq.txt")
 
 
 def convert_psm_list(
@@ -127,6 +158,28 @@ def convert_psm_list(
     )
 
     return lin_psm_data
+
+
+def save_model_weights(
+    models: Tuple[mokapot.model.Model], feature_names: List[str], output_file_root: str
+):
+    """
+    Save model weights to a file.
+
+    Parameters
+    ----------
+    models
+        Tuple of Mokapot models (one for each fold) to save.
+    feature_names
+        List of feature names that were used to train the models.
+    output_file_root
+        Root of output file names.
+
+    """
+    pd.DataFrame(
+        np.stack([m.estimator.coef_[0] for m in models]),
+        columns=list(feature_names),
+    ).to_csv(output_file_root + ".mokapot.weights.tsv", sep="\t", index=False)
 
 
 def _mz_to_mass(mz: float, charge: int) -> float:

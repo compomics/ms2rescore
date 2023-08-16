@@ -8,6 +8,7 @@
         "ms2rescore": {
             "description": "General MS²Rescore settings.",
             "type": "object",
+            "required": ["psm_file"],
             "additionalProperties": false,
             "properties": {
                 "feature_generators": {
@@ -173,9 +174,30 @@
             "$defs": {
                 "mokapot": {
                     "$schema": "#/definitions/rescoring_engine",
-                    "description": "Mokapot rescoring engine configuration",
+                    "description": "Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function.",
                     "type": "object",
-                    "additionalProperties": true
+                    "additionalProperties": true,
+                    "properties": {
+                        "fasta_file": {
+                            "description": "Path to FASTA file with protein sequences to use for protein inference",
+                            "oneOf": [{ "type": "string" }, { "type": "null" }]
+                        },
+                        "write_weights": {
+                            "description": "Write Mokapot weights to a text file",
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "write_txt": {
+                            "description": "Write Mokapot results to a text file",
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "write_flashlfq": {
+                            "description": "Write Mokapot results to a FlashLFQ-compatible file",
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
                 },
                 "percolator": {
                     "$schema": "#/definitions/rescoring_engine",

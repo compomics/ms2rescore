@@ -11,7 +11,14 @@
             },
             "maxquant": {}
         },
-        "rescoring_engine": { "mokapot": {} },
+        "rescoring_engine": {
+            "mokapot": {
+                "fasta_file": null,
+                "write_weights": true,
+                "write_txt": true,
+                "write_flashlfq": true
+            }
+        },
         "config_file": null,
         "psm_file": null,
         "psm_file_type": "infer",
