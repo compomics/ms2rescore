@@ -67,11 +67,13 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         """
         super().__init__(*args, **kwargs)
 
-        self.higher_psm_score_better = lower_score_is_better
+        self.lower_psm_score_better = lower_score_is_better
         self.calibration_set_size = calibration_set_size
         self.spectrum_path = spectrum_path
         self.processes = processes
         self.deeplc_kwargs = kwargs or {}
+
+        self._verbose = logging.DEBUG >= logger.level
 
         # Lazy-load DeepLC
         from deeplc import DeepLC
@@ -114,7 +116,9 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
             for run, psms in runs.items():
                 logger.info(f"Running DeepLC for PSMs from run `{run}`...")
                 # Prepare PSM file
-                with contextlib.redirect_stdout(open(os.devnull, "w")):
+                with contextlib.redirect_stdout(
+                    open(os.devnull, "w")
+                ) if not self._verbose else contextlib.nullcontext():
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
                     if not all(psm_list["retention_time"]):
@@ -199,8 +203,8 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         psm_list_targets = psm_list[~psm_list["is_decoy"]]
         n_psms = self.get_number_of_calibration_psms(psm_list_targets)
         indices = np.argsort(psm_list_targets["score"])
-        indices = indices[-n_psms:] if self.higher_psm_score_better else indices[:n_psms]
-        return psm_list[indices]
+        indices = indices[:n_psms] if self.lower_psm_score_better else indices[-n_psms:]
+        return psm_list_targets[indices]
 
     def get_number_of_calibration_psms(self, psm_list):
         """Get number of calibration PSMs given `calibration_set_size` and total number of PSMs."""
