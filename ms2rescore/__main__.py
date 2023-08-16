@@ -72,7 +72,6 @@ def _parse_arguments() -> argparse.Namespace:
         action="store",
         type=str,
         dest="psm_file_type",
-        default=None,
         help="PSM file type (default: 'infer')",
     )
     parser.add_argument(
@@ -119,7 +118,6 @@ def _parse_arguments() -> argparse.Namespace:
         action="store",
         type=int,
         dest="processes",
-        default=None,
         help="number of parallel processes available to MS²Rescore",
     )
 
@@ -159,15 +157,7 @@ def main():
         sys.exit(1)
 
     # Setup logging
-    if config["ms2rescore"]["output_path"]:
-        output_file_root = (
-            Path(config["ms2rescore"]["output_path"])
-            / Path(config["ms2rescore"]["psm_file"]).stem
-        ).as_posix()
-    else:
-        output_file_root = Path(config["ms2rescore"]["psm_file"]).with_suffix("").as_posix()
-
-    _setup_logging(config["ms2rescore"]["log_level"], output_file_root + "-ms2rescore-log.txt")
+    _setup_logging(config["ms2rescore"]["log_level"], config["ms2rescore"]["output_path"] + ".log.txt")
 
     # Run MS²Rescore
     try:
@@ -176,7 +166,7 @@ def main():
         LOGGER.exception(e)
         sys.exit(1)
     finally:
-        CONSOLE.save_html(str(output_file_root) + "-ms2rescore-log.html")
+        CONSOLE.save_html(config["ms2rescore"]["output_path"] + ".log.html")
 
 
 if __name__ == "__main__":

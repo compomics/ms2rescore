@@ -1,10 +1,9 @@
+import json
 import logging
 import re
 import subprocess
 from multiprocessing import cpu_count
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from typing import Dict, Optional
+from typing import Dict
 
 import psm_utils.io
 
@@ -17,28 +16,22 @@ logger = logging.getLogger(__name__)
 id_file_parser = None
 
 
-def rescore(configuration: Optional[Dict] = None) -> None:
+def rescore(configuration: Dict) -> None:
     """
     Run full MS²Rescore workflow with passed configuration.
 
     Parameters
     ----------
-    configuration : dict, optional
-        dict containing general ms2rescore configuration; should at least contain
-        `identification_file`; required if `parse_cli_args` is False
+    configuration
+        Dictionary containing general ms2rescore configuration.
 
     """
-
     config = configuration["ms2rescore"]  # TODO: Remove top-level key?
+    output_file_root = config["output_path"]
 
-    if not config["psm_file"]:
-        raise MS2RescoreConfigurationError("No PSM file specified. Please specify a PSM file")
-    elif not Path(config["psm_file"]).is_file():
-        raise MS2RescoreConfigurationError(f"PSM file {config['psm_file']} not found.")
-
-    # Set output and temporary paths
-    output_path = config["output_path"] or "."
-    output_file_root = str(Path(output_path) / Path(config["psm_file"]).stem)
+    # Write full configuration including defaults to file
+    with open(output_file_root + ".full-config.json", "w") as f:
+        json.dump(configuration, f, indent=4)
 
     logger.debug("Using %i of %i available CPUs.", int(config["processes"]), int(cpu_count()))
 
@@ -106,19 +99,19 @@ def rescore(configuration: Optional[Dict] = None) -> None:
             f"rescoring features."
         )
 
+    # Write feature names to file
+    _write_feature_names(feature_names, output_file_root)
+
     if config["rename_to_usi"]:
         logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
         psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
 
     # If no rescoring engine is specified, write PSMs and features to PIN file
     if not config["rescoring_engine"]:
-        logger.info(
-            "No rescoring engine specified. Writing PSMs and features to PIN file: "
-            f"{output_file_root}.psms.pin"
-        )
+        logger.info(f"Writing added features to PIN file: {output_file_root}.psms.pin")
         psm_utils.io.write_file(
             psm_list,
-            output_file_root + ".psms.pin",
+            output_file_root + ".pin",
             filetype="percolator",
             feature_names=all_feature_names,
         )
@@ -133,9 +126,12 @@ def rescore(configuration: Optional[Dict] = None) -> None:
             processes=config["processes"],
             percolator_kwargs=config["rescoring_engine"]["percolator"],
         )
-
     elif "mokapot" in config["rescoring_engine"]:
-        mokapot.rescore(psm_list, mokapot_kwargs=config["rescoring_engine"]["mokapot"])
+        mokapot.rescore(
+            psm_list, output_file_root=output_file_root, **config["rescoring_engine"]["mokapot"]
+        )
+    else:
+        logger.info("No known rescoring engine specified. Skipping rescoring.")
 
     # Compare results
     psm_data_after = psm_list.to_dataframe()[["score", "qvalue", "pep", "is_decoy", "rank"]].copy()
@@ -160,6 +156,15 @@ def rescore(configuration: Optional[Dict] = None) -> None:
         filetype="tsv",
         show_progressbar=True,
     )
+
+
+def _write_feature_names(feature_names, output_file_root):
+    """Write feature names to file."""
+    with open(output_file_root + ".feature_names.tsv", "w") as f:
+        f.write("feature_generator\tfeature_name\n")
+        for fgen, fgen_features in feature_names.items():
+            for feature in fgen_features:
+                f.write(f"{fgen}\t{feature}\n")
 
 
 def _match_psm_ids(old_id, regex_pattern):

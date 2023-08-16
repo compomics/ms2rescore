@@ -14,33 +14,48 @@ from ms2rescore import package_data
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 
 
+def _parse_output_path(configured_path, psm_file_path):
+    """Parse output path and make parent dirs if required."""
+    psm_file_stem = Path(psm_file_path).stem + ".ms2rescore"
+    if configured_path:
+        configured_path = Path(configured_path)
+        # If existing dir, add psm_file stem
+        if configured_path.is_dir():
+            return (configured_path / psm_file_stem).as_posix()
+        # If parent is existing dir, use as is (user intended as path + stem)
+        elif configured_path.parent.is_dir():
+            return configured_path.as_posix()
+        # If none-existing dir, create dirs and add psm_file stem
+        else:
+            configured_path.mkdir(parents=True, exist_ok=True)
+            return (configured_path / psm_file_stem).as_posix()
+    else:
+        # If none, use psm_file path and stem
+        return (Path(psm_file_path).parent / psm_file_stem).as_posix()
+
+
 def _validate_filenames(config: Dict) -> Dict:
     """Validate and infer input/output filenames."""
-    # psm_file should be provided
-    if not config["ms2rescore"]["psm_file"]:
-        raise MS2RescoreConfigurationError("`psm_file` should be provided.")
-
     # psm_file should exist
     id_file = Path(config["ms2rescore"]["psm_file"])
     if not id_file.is_file():
         raise FileNotFoundError(id_file)
-    config["ms2rescore"]["psm_file"] = str(id_file)
+    config["ms2rescore"]["psm_file"] = id_file.as_posix()
 
     # spectrum_path should either be None, or existing path to file or dir
     if config["ms2rescore"]["spectrum_path"]:
         spectrum_path = Path(config["ms2rescore"]["spectrum_path"])
         if not spectrum_path.exists():
             raise FileNotFoundError(spectrum_path)
-        config["ms2rescore"]["spectrum_path"] = str(spectrum_path)
+        config["ms2rescore"]["spectrum_path"] = spectrum_path.as_posix()
 
-    # Output filename should be None or its path should exist. If not, make path
-    if config["ms2rescore"]["output_path"]:
-        output_path = Path(config["ms2rescore"]["output_path"])
-        if not output_path.is_dir():
-            output_path.mkdir(parents=True, exist_ok=True)
-    else:
-        output_path = Path(id_file).parent
-    config["ms2rescore"]["output_path"] = str(output_path)
+    # Parse output_path
+    config["ms2rescore"]["output_path"] = _parse_output_path(
+        config["ms2rescore"]["output_path"], config["ms2rescore"]["psm_file"]
+    )
+
+    # Parse config_file as posix path
+    config["ms2rescore"]["config_file"] = Path(config["ms2rescore"]["config_file"]).as_posix()
 
     return config
 
