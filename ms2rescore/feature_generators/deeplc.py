@@ -6,7 +6,7 @@ import os
 from collections import defaultdict
 from inspect import getfullargspec
 from itertools import chain
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -24,15 +24,6 @@ logger = logging.getLogger(__name__)
 
 class DeepLCFeatureGenerator(FeatureGeneratorBase):
     """DeepLC retention time-based feature generator."""
-
-    feature_names = [
-        "observed_retention_time",
-        "predicted_retention_time",
-        "rt_diff",
-        "observed_retention_time_best",
-        "predicted_retention_time_best",
-        "rt_diff_best",
-    ]
 
     def __init__(
         self,
@@ -92,6 +83,17 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
 
         self.deeplc_predictor = None
         self.selected_model = None
+
+    @property
+    def feature_names(self) -> List[str]:
+        return [
+            "observed_retention_time",
+            "predicted_retention_time",
+            "rt_diff",
+            "observed_retention_time_best",
+            "predicted_retention_time_best",
+            "rt_diff_best",
+        ]
 
     def add_features(self, psm_list: PSMList) -> None:
         """Add DeepLC-derived features to PSMs."""

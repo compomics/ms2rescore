@@ -36,6 +36,10 @@ def _parse_output_path(configured_path, psm_file_path):
 
 def _validate_filenames(config: Dict) -> Dict:
     """Validate and infer input/output filenames."""
+    # psm_file should be provided
+    if not config["ms2rescore"]["psm_file"]:
+        raise MS2RescoreConfigurationError("PSM file should be provided.")
+
     # psm_file should exist
     id_file = Path(config["ms2rescore"]["psm_file"])
     if not id_file.is_file():

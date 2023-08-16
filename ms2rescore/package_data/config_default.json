@@ -2,6 +2,7 @@
     "$schema": "./config_schema.json",
     "ms2rescore": {
         "feature_generators": {
+            "basic": {},
             "ms2pip": {
                 "model": "HCD",
                 "ms2_tolerance": 0.02

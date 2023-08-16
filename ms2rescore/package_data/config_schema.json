@@ -16,6 +16,9 @@
                     "type": "object",
                     "patternProperties": {
                         ".*": { "$ref": "#/$defs/feature_generator" },
+                        "basic": {
+                            "$ref": "#/$defs/feature_generator/$defs/basic"
+                        },
                         "ms2pip": {
                             "$ref": "#/$defs/feature_generator/$defs/ms2pip"
                         },
@@ -124,6 +127,12 @@
             "type": "object",
             "additionalProperties": true,
             "$defs": {
+                "basic": {
+                    "$schema": "#/definitions/feature_generator",
+                    "description": "Basic feature generator configuration",
+                    "type": "object",
+                    "additionalProperties": true
+                },
                 "ms2pip": {
                     "$schema": "#/definitions/feature_generator",
                     "description": "MS²PIP feature generator configuration",

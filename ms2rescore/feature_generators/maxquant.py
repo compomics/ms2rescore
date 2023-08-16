@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 from psm_utils import PSMList
@@ -13,18 +13,20 @@ logger = logging.getLogger(__name__)
 class MaxQuantFeatureGenerator(FeatureGeneratorBase):
     """MaxQuant feature generator"""
 
-    feature_names = [
-        "mean_error_top7",
-        "sq_mean_error_top7",
-        "stdev_error_top7",
-        "ln_explained_ion_current",
-        "ln_nterm_ion_current_ratio",
-        "ln_cterm_ion_current_ratio",
-        "ln_ms2_ion_current",
-    ]
-
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+
+    @property
+    def feature_names(self) -> List[str]:
+        return [
+            "mean_error_top7",
+            "sq_mean_error_top7",
+            "stdev_error_top7",
+            "ln_explained_ion_current",
+            "ln_nterm_ion_current_ratio",
+            "ln_cterm_ion_current_ratio",
+            "ln_ms2_ion_current",
+        ]
 
     def add_features(self, psm_list: PSMList):
         """Add MS²PIP-derived features to PSMs."""

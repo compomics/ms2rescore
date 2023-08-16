@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 
 from psm_utils import PSMList
 
@@ -9,7 +9,8 @@ class FeatureGeneratorBase(ABC):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def feature_names(self):
         pass
 
