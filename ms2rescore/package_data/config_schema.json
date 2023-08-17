@@ -117,6 +117,10 @@
                 "rename_to_usi": {
                     "description": "Convert spectrum IDs to their universal spectrum identifier",
                     "type": "boolean"
+                },
+                "fasta_file": {
+                        "description": "Path to FASTA file with protein sequences to use for protein inference",
+                        "oneOf": [{ "type": "string" }, { "type": "null" }]
                 }
             }
         }
@@ -186,11 +190,6 @@
                     "description": "Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function.",
                     "type": "object",
                     "additionalProperties": true,
-                    "properties": {
-                        "fasta_file": {
-                            "description": "Path to FASTA file with protein sequences to use for protein inference",
-                            "oneOf": [{ "type": "string" }, { "type": "null" }]
-                        },
                         "write_weights": {
                             "description": "Write Mokapot weights to a text file",
                             "type": "boolean",
@@ -224,4 +223,4 @@
             }
         }
     }
-}
+

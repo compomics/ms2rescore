@@ -120,6 +120,15 @@ def _parse_arguments() -> argparse.Namespace:
         dest="processes",
         help="number of parallel processes available to MS²Rescore",
     )
+    parser.add_argument(
+        "-f",
+        "--fasta-file",
+        metavar="FILE",
+        action="store",
+        type=str,
+        dest="fasta_file",
+        help="path to FASTA file",
+    )
 
     return parser.parse_args()
 
