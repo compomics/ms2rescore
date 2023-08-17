@@ -77,6 +77,17 @@ def rescore(configuration: Dict) -> None:
 
     # Add rescoring features
     feature_names = dict()
+    psm_list_feature_names = {
+        feature_name
+        for psm_list_features in psm_list["rescoring_features"]
+        for feature_name in psm_list_features.keys()
+    }
+
+    logger.debug(
+        f"PSM list already contains the following rescoring features: {psm_list_feature_names}"
+    )
+    feature_names["psm_file"] = psm_list_feature_names
+
     for fgen_name, fgen_config in config["feature_generators"].items():
         # TODO: Handle this somewhere else, more generally? Warning required?
         if fgen_name == "maxquant" and not (psm_list["source"] == "msms").all():
@@ -85,18 +96,26 @@ def rescore(configuration: Dict) -> None:
         conf.update(fgen_config)
         fgen = FEATURE_GENERATORS[fgen_name](**conf)
         fgen.add_features(psm_list)
-        feature_names[fgen_name] = fgen.feature_names
+        logger.debug(f"Adding features from {fgen_name}: {set(fgen.feature_names)}")
+        feature_names[fgen_name] = set(fgen.feature_names)
 
     # Filter out psms that do not have all added features
-    all_feature_names = set([f for fgen in feature_names.values() for f in fgen])
+    all_feature_names = {f for fgen in feature_names.values() for f in fgen}
     psms_with_features = [
         (set(psm.rescoring_features.keys()) == all_feature_names) for psm in psm_list
     ]
+
     psm_list = psm_list[psms_with_features]
+
     if psms_with_features.count(False) > 0:
+        missing_features = {
+            feature_name
+            for present_features in psm_list[[not presence for presence in psms_with_features]]
+            for feature_name in (all_feature_names - present_features)
+        }
         logger.warning(
-            f"Removed {psms_with_features.count(False)} PSMs that did not have all "
-            f"rescoring features."
+            f"Removed {psms_with_features.count(False)} PSMs that were missing one or more"
+            f"rescoring feature, {missing_features}."
         )
 
     # Write feature names to file
@@ -128,7 +147,10 @@ def rescore(configuration: Dict) -> None:
         )
     elif "mokapot" in config["rescoring_engine"]:
         mokapot.rescore(
-            psm_list, output_file_root=output_file_root, **config["rescoring_engine"]["mokapot"]
+            psm_list,
+            output_file_root=output_file_root,
+            fasta_file=config["fasta_file"],
+            **config["rescoring_engine"]["mokapot"],
         )
     else:
         logger.info("No known rescoring engine specified. Skipping rescoring.")

@@ -60,6 +60,7 @@ def rescore(
         lin_psm_data.add_proteins(proteins)
 
     # Rescore
+    logger.debug(f"Mokapot keyword arguments : {kwargs}")
     confidence_results, models = brew(lin_psm_data, **kwargs)
 
     # Reshape confidence estimates to match PSMList
@@ -121,13 +122,6 @@ def convert_psm_list(
     psm_df["charge"] = psm_df["peptidoform"].apply(lambda x: x.precursor_charge)
     psm_df["calcmass"] = psm_df["peptidoform"].apply(lambda x: x.theoretical_mass)
     psm_df["expmass"] = _mz_to_mass(psm_df["precursor_mz"], psm_df["charge"])
-    psm_df = pd.concat(
-        [
-            psm_df.drop(columns=["rescoring_features"]),
-            pd.DataFrame(list(psm_df["rescoring_features"])).fillna(0.0),
-        ],
-        axis=1,
-    )
 
     required_columns = [
         "index",
@@ -140,15 +134,17 @@ def convert_psm_list(
         "retention_time",
         "charge",
     ]
-    required_columns.extend(feature_names)
+    feature_df = pd.DataFrame(list(psm_df["rescoring_features"])).astype(float).fillna(0.0)
+    feature_df.columns = [f"feature:{f}" for f in feature_df.columns]
+    combined_df = pd.concat([psm_df[required_columns], feature_df], axis=1)
 
     lin_psm_data = LinearPsmDataset(
-        psms=psm_df[required_columns],
+        psms=combined_df,
         target_column="is_target",
         spectrum_columns="index",  # Use artificial index to allow multi-rank rescoring
         peptide_column="peptide",
         protein_column="protein_list",
-        feature_columns=feature_names,
+        feature_columns=list(feature_df.columns),
         filename_column="run",
         scan_column="index",  # Keep as spectrum_id?
         calcmass_column="calcmass",
