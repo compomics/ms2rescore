@@ -33,7 +33,7 @@ dynamic = ["version"]
 requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.16.0,<2",
-    "pandas>=0.24.0,<3",  # TODO: Check compatibility
+    "pandas>=0.24.0,<2",  # TODO: Check compatibility
     "rich>=12",
     "pyteomics>=4.1.0,<5",
     "lxml>=4.5,<5",
@@ -46,6 +46,7 @@ dependencies = [
     "psm_utils>=0.3",
     "customtkinter>=5,<6",
     "mokapot>=0.9",
+    "pydantic>=1.0,<2", # pydantic 2 or higher breaks 
 ]
 
 [project.optional-dependencies]
