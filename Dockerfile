@@ -14,4 +14,4 @@ RUN apt-get update && apt-get install python3-pip procps -y \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install ms2rescore/
 
-ENTRYPOINT [ "ms2rescore" ]
+ENTRYPOINT [""]
