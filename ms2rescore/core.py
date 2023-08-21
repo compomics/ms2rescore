@@ -105,19 +105,19 @@ def rescore(configuration: Dict) -> None:
         (set(psm.rescoring_features.keys()) == all_feature_names) for psm in psm_list
     ]
 
-    psm_list = psm_list[psms_with_features]
-
     if psms_with_features.count(False) > 0:
+        removed_psms = psm_list[[not psm for psm in psms_with_features]]
         missing_features = {
             feature_name
-            for present_features in psm_list[[not presence for presence in psms_with_features]]
-            for feature_name in (all_feature_names - present_features)
+            for psm in removed_psms
+            for feature_name in all_feature_names - set(psm.rescoring_features.keys())
         }
         logger.warning(
-            f"Removed {psms_with_features.count(False)} PSMs that were missing one or more"
-            f"rescoring feature, {missing_features}."
+            f"Removed {psms_with_features.count(False)} PSMs that were missing one or more "
+            f"rescoring feature(s), {missing_features}."
         )
 
+    psm_list = psm_list[psms_with_features]
     # Write feature names to file
     _write_feature_names(feature_names, output_file_root)
 
