@@ -4,6 +4,7 @@ steps.txt
 old_files/
 prepare_pin_files.py
 *.jar
+ms2rescore-v3.0.0.dev3.tar
 
 # Ruff
 .ruff_cache/

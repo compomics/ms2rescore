@@ -111,12 +111,16 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         )
 
         # Run MS²PIP for each spectrum file
+        total_runs = len(psm_dict.keys())
+        current_run = 1
         for runs in psm_dict.values():
             # Reset DeepLC predictor for each collection of runs
             self.deeplc_predictor = None
             self.selected_model = None
             for run, psms in runs.items():
-                logger.info(f"Running DeepLC for PSMs from run `{run}`...")
+                logger.info(
+                    f"Running DeepLC for PSMs from run ({current_run}/{total_runs}): `{run}`..."
+                )
                 # Prepare PSM file
                 with contextlib.redirect_stdout(
                     open(os.devnull, "w")
@@ -182,6 +186,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                                 "predicted_retention_time_best": predictions[i],
                                 "rt_diff_best": rt_diffs_run[i],
                             }
+            current_run += 1
 
         for psm in psm_list:
             psm["rescoring_features"].update(

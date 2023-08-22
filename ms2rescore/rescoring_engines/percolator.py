@@ -24,6 +24,7 @@ def rescore(
     output_file_root: str = "ms2rescore",
     log_level: str = "info",
     processes: int = 1,
+    fasta_file: Optional[str] = None,
     percolator_kwargs: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
@@ -57,6 +58,9 @@ def rescore(
     }
     if percolator_kwargs:
         percolator_kwargs.update(percolator_kwargs)
+
+    if fasta_file:
+        percolator_kwargs["picked-protein"] = fasta_file
 
     pin_filepath = f"{output_file_root}.pin"
     percolator_cmd = _construct_percolator_command(percolator_kwargs, pin_filepath)
