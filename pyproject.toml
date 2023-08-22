@@ -2,7 +2,7 @@
 name = "ms2rescore"
 description = "MS²Rescore: Sensitive PSM rescoring with predicted MS² peak intensities and retention times."
 readme = "README.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 keywords = [
     "MS2Rescore",
     "MS2PIP",
@@ -15,11 +15,11 @@ keywords = [
     "machine learning",
 ]
 authors = [
-    {name = "Ralf Gabriels", email = "ralf@gabriels.dev"},
-    {name = "Arthur Declercq", email = "arthur.declercq@ugent.be"},
-    {name = "Ana Sílvia C. Silva"},
-    {name = "Robbin Bouwmeester"},
-    {name = "Louise Buur"},
+    { name = "Ralf Gabriels", email = "ralf@gabriels.dev" },
+    { name = "Arthur Declercq", email = "arthur.declercq@ugent.be" },
+    { name = "Ana Sílvia C. Silva" },
+    { name = "Robbin Bouwmeester" },
+    { name = "Louise Buur" },
 ]
 classifiers = [
     "Intended Audience :: Science/Research",
@@ -33,7 +33,7 @@ dynamic = ["version"]
 requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.16.0,<2",
-    "pandas>=0.24.0,<3",  # TODO: Check compatibility
+    "pandas>=0.24.0,<2",        # TODO: Check compatibility for v2
     "rich>=12",
     "pyteomics>=4.1.0,<5",
     "lxml>=4.5,<5",
@@ -46,15 +46,11 @@ dependencies = [
     "psm_utils>=0.3",
     "customtkinter>=5,<6",
     "mokapot>=0.9",
+    "pydantic>=1.8.2,<2",       # Fix compatibility with v2 in psm_utils
 ]
 
 [project.optional-dependencies]
-dev = [
-    "ruff",
-    "black",
-    "pytest",
-    "pytest-cov"
-]
+dev = ["ruff", "black", "pytest", "pytest-cov"]
 doc = [
     "sphinx",
     "numpydoc>=1,<2",
@@ -65,10 +61,7 @@ doc = [
     "sphinx_rtd_theme",
     "sphinx-autobuild",
 ]
-plotting = [
-    "matplotlib>=3",
-    "seaborn>=0.11",
-]
+report = ["jinja2", "plotly"]
 
 [project.urls]
 GitHub = "https://github.com/compomics/ms2rescore"

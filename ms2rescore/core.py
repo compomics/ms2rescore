@@ -55,6 +55,28 @@ def rescore(configuration: Dict) -> None:
             "the `id_decoy_pattern` option is correct."
         )
 
+    # Calculate q-values if not present
+    if None in psm_list["qvalue"]:
+        logger.debug("Recalculating q-values...")
+        psm_list.calculate_qvalues(reverse=not config["lower_score_is_better"])
+
+    # Check #PSMs identified before rescoring
+    id_psms_before = (
+        (psm_list["qvalue"] <= 0.01) & (psm_list["is_decoy"] == False)  # noqa: E712
+    ).sum()
+    logger.info("Found %i identified PSMs at 1%% FDR before rescoring.", id_psms_before)
+
+    # Store scoring values for comparison later
+    for psm in psm_list:
+        psm.provenance_data.update(
+            {
+                "before_rescoring_score": psm.score,
+                "before_rescoring_qvalue": psm.qvalue,
+                "before_rescoring_pep": psm.pep,
+                "before_rescoring_rank": psm.rank,
+            }
+        )
+
     logger.debug("Parsing modifications...")
     psm_list.rename_modifications(config["modification_mapping"])
     psm_list.add_fixed_modifications(config["fixed_modifications"])
@@ -69,11 +91,6 @@ def rescore(configuration: Dict) -> None:
     # TODO: Temporary fix until implemented in psm_utils
     # Ensure that spectrum IDs are strings (Pydantic 2.0 does not coerce int to str)
     psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
-
-    # Store values for comparison later
-    psm_data_before = psm_list.to_dataframe()[
-        ["score", "qvalue", "pep", "is_decoy", "rank"]
-    ].copy()
 
     # Add rescoring features
     feature_names = dict()
@@ -134,12 +151,8 @@ def rescore(configuration: Dict) -> None:
         logger.info("No known rescoring engine specified. Skipping rescoring.")
 
     # Compare results
-    psm_data_after = psm_list.to_dataframe()[["score", "qvalue", "pep", "is_decoy", "rank"]].copy()
-    id_psms_before = (
-        (psm_data_before["qvalue"] < 0.01) & (psm_data_before["is_decoy"] == False)  # noqa: E712
-    ).sum()
     id_psms_after = (
-        (psm_data_after["qvalue"] < 0.01) & (psm_data_after["is_decoy"] == False)  # noqa: E712
+        (psm_list["qvalue"] <= 0.01) & (psm_list["is_decoy"] == False)  # noqa: E712
     ).sum()
     diff = id_psms_after - id_psms_before
     if id_psms_before > 0:
