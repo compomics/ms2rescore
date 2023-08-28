@@ -75,10 +75,7 @@ def rescore(
 
     logger.debug(f"Running percolator command {' '.join(percolator_cmd)}")
     try:
-        output = subprocess.run(
-            percolator_cmd,
-            capture_output=True,
-        )
+        output = subprocess.run(percolator_cmd, capture_output=True)
     except subprocess.CalledProcessError:
         logger.warn(f"Running Percolator resulted in an error:\n{output.stdout}")
         raise MS2RescoreError("Percolator error")

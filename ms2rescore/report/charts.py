@@ -1,6 +1,6 @@
 import warnings
 from collections import defaultdict
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 
 import mokapot
 import numpy as np
@@ -90,6 +90,29 @@ def feature_weights_by_generator(
         },
         color_discrete_map=color_discrete_map,
     )
+
+
+def ms2pip_correlation(
+    features: pd.DataFrame,
+    is_decoy: Union[pd.Series, np.ndarray],
+    qvalue: Union[pd.Series, np.ndarray],
+):
+    """Plot MS²PIP correlation for target PSMs with q-value <= 0.01."""
+    data = features["spec_pearson_norm"][(qvalue < 0.01) & (~is_decoy)]
+    fig = px.histogram(
+        x=data,
+        labels={"x": "Pearson correlation"},
+    )
+    # Draw vertical line at median
+    fig.add_vline(
+        x=data.median(),
+        line_width=3,
+        line_dash="dash",
+        line_color="red",
+        annotation_text=f"Median: {data.median():.2f}",
+        annotation_position="top left",
+    )
+    return fig
 
 
 def calculate_feature_qvalues(
@@ -205,6 +228,16 @@ def score_histogram(psm_df):
         labels={"is_decoy": "PSM type", "False": "target", "True": "decoy"},
         opacity=0.5,
     )
+
+    # Get score thresholds
+    if all(psm_df["qvalue"]):
+        score_threshold = (
+            psm_df[psm_df["qvalue"] <= 0.01]
+            .sort_values("qvalue", ascending=False)["qvalue"]
+            .iloc[0]
+        )
+        fig.add_vline(x=score_threshold, line_dash="dash", line_color="black")
+
     return fig
 
 
@@ -398,8 +431,8 @@ def identification_overlap(
         set_after = set(df_after[df_after["mokapot q-value"] <= 0.01][indexer])
 
         overlap_data["removed"][level] = -len(set_before - set_after)
-        overlap_data["shared"][level] = len(set_before | set_after)
-        overlap_data["added"][level] = len(set_after - set_before)
+        overlap_data["retained"][level] = len(set_before | set_after)
+        overlap_data["gained"][level] = len(set_after - set_before)
 
     colors = ["#953331", "#316395", "#319545"]
     fig = plotly.subplots.make_subplots(rows=3, cols=1)

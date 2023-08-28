@@ -119,8 +119,13 @@
                     "type": "boolean"
                 },
                 "fasta_file": {
-                        "description": "Path to FASTA file with protein sequences to use for protein inference",
-                        "oneOf": [{ "type": "string" }, { "type": "null" }]
+                    "description": "Path to FASTA file with protein sequences to use for protein inference",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
+                },
+                "write_report": {
+                    "description": "Write an HTML report with various QC metrics and charts",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         }
@@ -190,6 +195,7 @@
                     "description": "Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function.",
                     "type": "object",
                     "additionalProperties": true,
+                    "properties": {
                         "write_weights": {
                             "description": "Write Mokapot weights to a text file",
                             "type": "boolean",
@@ -223,4 +229,4 @@
             }
         }
     }
-
+}

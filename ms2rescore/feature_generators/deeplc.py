@@ -64,7 +64,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         self.processes = processes
         self.deeplc_kwargs = kwargs or {}
 
-        self._verbose = logging.DEBUG >= logger.level
+        self._verbose = logger.getEffectiveLevel() <= logging.DEBUG
 
         # Lazy-load DeepLC
         from deeplc import DeepLC
@@ -130,7 +130,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     if not all(psm_list["retention_time"]):
                         # Prepare spectrum filenames
                         spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
-                        retention_time_dict = parse_mgf_title_rt(spectrum_filename)
+                        retention_time_dict = parse_mgf_title_rt(spectrum_filename)  # TODO Add mzML support
                         try:
                             psm_list_run["retention_time"] = [
                                 retention_time_dict[psm_id]
