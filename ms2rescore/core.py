@@ -103,7 +103,7 @@ def rescore(configuration: Dict, psm_list: PSMList = None) -> None:
     }
 
     logger.debug(
-        f"PSM list already contains the following rescoring features: {psm_list_feature_names}"
+        f"PSMs already contain the following rescoring features: {psm_list_feature_names}"
     )
     feature_names["psm_file"] = psm_list_feature_names
 
@@ -165,10 +165,11 @@ def rescore(configuration: Dict, psm_list: PSMList = None) -> None:
             percolator_kwargs=config["rescoring_engine"]["percolator"],
         )
     elif "mokapot" in config["rescoring_engine"]:
+        if "fasta_file" not in config["rescoring_engine"]["mokapot"]:
+            config["rescoring_engine"]["mokapot"]["fasta_file"] = config["fasta_file"]
         mokapot.rescore(
             psm_list,
             output_file_root=output_file_root,
-            fasta_file=config["fasta_file"],
             **config["rescoring_engine"]["mokapot"],
         )
     else:
@@ -193,6 +194,11 @@ def rescore(configuration: Dict, psm_list: PSMList = None) -> None:
         filetype="tsv",
         show_progressbar=True,
     )
+
+    # Write report
+    if config["write_report"]:
+        from ms2rescore.report import generate
+        generate.generate_report(output_file_root, psm_list=psm_list, feature_names=feature_names)
 
 
 def _write_feature_names(feature_names, output_file_root):

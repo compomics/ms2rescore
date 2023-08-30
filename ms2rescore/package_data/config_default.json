@@ -33,6 +33,7 @@
         "fixed_modifications": {},
         "processes": -1,
         "rename_to_usi": false,
-        "fasta_file": null
+        "fasta_file": null,
+        "write_report": false
     }
 }

@@ -11,8 +11,8 @@ from rich.logging import RichHandler
 from rich.text import Text
 
 from ms2rescore import __version__
-from ms2rescore.core import rescore
 from ms2rescore.config_parser import parse_configurations
+from ms2rescore.core import rescore
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 
 try:
@@ -132,6 +132,7 @@ def _parse_arguments() -> argparse.Namespace:
 
     return parser.parse_args()
 
+
 def _setup_logging(passed_level: str, log_file: Union[str, Path]):
     """Setup logging for writing to log file and Rich Console."""
     if passed_level not in LOG_MAPPING:
@@ -144,7 +145,7 @@ def _setup_logging(passed_level: str, log_file: Union[str, Path]):
         datefmt="%Y-%m-%d %H:%M:%S",
         level=LOG_MAPPING[passed_level],
         handlers=[
-            logging.FileHandler(log_file, mode="w"),
+            logging.FileHandler(log_file, mode="w", encoding="utf-8"),
             RichHandler(rich_tracebacks=True, console=CONSOLE, show_path=False),
         ],
     )
@@ -166,7 +167,9 @@ def main():
         sys.exit(1)
 
     # Setup logging
-    _setup_logging(config["ms2rescore"]["log_level"], config["ms2rescore"]["output_path"] + ".log.txt")
+    _setup_logging(
+        config["ms2rescore"]["log_level"], config["ms2rescore"]["output_path"] + ".log.txt"
+    )
 
     # Run MS²Rescore
     try:

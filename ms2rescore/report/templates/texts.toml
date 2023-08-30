@@ -29,7 +29,7 @@ indicates the 1% FDR threshold.
 title = "Identification overlap"
 description = """
 This plot shows the unique identified PSMs, peptides, and (optionally)
-protein groups that lost, retained, and gained by rescoring.
+protein groups that were removed, retained, and gained by rescoring.
 """
 
 [charts.score_histogram]
@@ -42,7 +42,8 @@ and low-scoring (presumably incorrect) PSMs. The decoy score
 distribution is expected to show a single mode, which should
 approximate the low-scoring part of the target score distribution
 as closely as possible. This approximation can be more easily assessed
-in the percentile-percentile plot (see below).
+in the percentile-percentile plot (see below). The dashed line indicates
+the 1% FDR threshold.
 """
 
 [charts.pp_plot]
@@ -83,4 +84,24 @@ feature, q-values are calculated as if that feature was individually used for sc
 any other information. Then, the area under curve (AUC) is calculated for the empirical cumulative
 distribution function (ECDF) of the q-values. The higher the AUC, the better the feature is at
 discriminating between target and decoy PSMs without any other information.
+"""
+
+[charts.ms2pip_pearson]
+title = "MS²PIP model performance"
+description = """
+MS²PIP model performance can be estimated by calculating the Pearson correlation coefficient
+between the predicted and observed fragment ion intensities. Fragment intensities are first
+normalized to the total ion current and then log2-transformed. The following histogram shows the
+distribution of Pearson correlation coefficients for all target PSMs that passed the 1% FDR
+threshold. The red dashed line indicates the median correlation.
+"""
+
+[charts.deeplc_performance]
+title = "DeepLC model performance"
+description = """
+DeepLC model performance can be visualized by plotting the predicted retention times against the
+observed retention times (top chart), or by calculating the relative mean absolute error (RMAE). The
+bottom chart shows the distribution of RMAE values of DeepLC predictions on 460 different benchmark
+datasets. The red line indicates the RMAE value for all target PSMs that passed the 1% FDR threshold
+of the current dataset. A lower RMAE value indicates better performance.
 """

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.argument("output_prefix", type=str)
-def main(output_prefix: str):
+def main(**kwargs):
     logging.getLogger("mokapot").setLevel(logging.WARNING)
     logging.basicConfig(
         level=logging.INFO,
@@ -18,10 +18,8 @@ def main(output_prefix: str):
         format="%(message)s",
     )
 
-    output_prefix = "examples/id/msms"
-
     try:
-        generate_report(output_prefix)
+        generate_report(kwargs["output_prefix"])
     except Exception as e:
         logger.exception(e)
         exit(1)

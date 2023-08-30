@@ -13,10 +13,13 @@ from pyteomics.mass import nist_mass
 
 logger = logging.getLogger(__name__)
 
-logging.getLogger("numba").setLevel(logging.WARNING)
-logging.getLogger("mokapot.model").setLevel(logging.WARNING)
-logging.getLogger("mokapot.dataset").setLevel(logging.WARNING)
+# Set mokapot logging to WARNING if not in debug mode
+if logger.getEffectiveLevel() > logging.DEBUG:
+    logging.getLogger("mokapot").setLevel(logging.WARNING)
 
+# Keep numba logging to INFO or higher
+if logger.getEffectiveLevel() < logging.INFO:
+    logging.getLogger("numba").setLevel(logging.INFO)
 
 def rescore(
     psm_list: psm_utils.PSMList,
@@ -51,8 +54,8 @@ def rescore(
 
     """
     # Convert PSMList to Mokapot dataset
-    feature_names = list(psm_list[0].rescoring_features.keys())
-    lin_psm_data = convert_psm_list(psm_list, feature_names)
+    lin_psm_data = convert_psm_list(psm_list)
+    feature_names = list(lin_psm_data.features.columns)
 
     # Add proteins
     if fasta_file:
@@ -94,7 +97,7 @@ def rescore(
 
 def convert_psm_list(
     psm_list: psm_utils.PSMList,
-    feature_names: List[str],
+    feature_names: Optional[List[str]] = None,
 ) -> LinearPsmDataset:
     """
     Convert a PSM list to a Mokapot dataset.
@@ -145,7 +148,7 @@ def convert_psm_list(
         spectrum_columns="index",  # Use artificial index to allow multi-rank rescoring
         peptide_column="peptide",
         protein_column="protein_list",
-        feature_columns=list(feature_df.columns),
+        feature_columns=feature_names or list(feature_df.columns),
         filename_column="run",
         scan_column="spectrum_id",  # Keep as spectrum_id?
         calcmass_column="calcmass",
