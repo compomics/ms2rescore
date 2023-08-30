@@ -111,7 +111,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         )
 
         # Run MS²PIP for each spectrum file
-        total_runs = len(psm_dict.keys())
+        total_runs = len(psm_dict.values())
         current_run = 1
         for runs in psm_dict.values():
             # Reset DeepLC predictor for each collection of runs

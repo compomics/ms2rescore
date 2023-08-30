@@ -125,6 +125,7 @@ def convert_psm_list(
 
     required_columns = [
         "index",
+        "spectrum_id",
         "peptide",
         "is_target",
         "protein_list",
@@ -146,7 +147,7 @@ def convert_psm_list(
         protein_column="protein_list",
         feature_columns=list(feature_df.columns),
         filename_column="run",
-        scan_column="index",  # Keep as spectrum_id?
+        scan_column="spectrum_id",  # Keep as spectrum_id?
         calcmass_column="calcmass",
         expmass_column="expmass",
         rt_column="retention_time",

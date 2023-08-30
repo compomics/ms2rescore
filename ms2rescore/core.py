@@ -6,6 +6,7 @@ from multiprocessing import cpu_count
 from typing import Dict
 
 import psm_utils.io
+from psm_utils import PSMList
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
 from ms2rescore.feature_generators import FEATURE_GENERATORS
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 id_file_parser = None
 
 
-def rescore(configuration: Dict) -> None:
+def rescore(configuration: Dict, psm_list: PSMList = None) -> None:
     """
     Run full MS²Rescore workflow with passed configuration.
 
@@ -37,11 +38,12 @@ def rescore(configuration: Dict) -> None:
 
     # Read PSMs
     logger.info("Reading PSMs...")
-    psm_list = psm_utils.io.read_file(
-        config["psm_file"],
-        filetype=config["psm_file_type"],
-        show_progressbar=True,
-    )
+    if not psm_list:
+        psm_list = psm_utils.io.read_file(
+            config["psm_file"],
+            filetype=config["psm_file_type"],
+            show_progressbar=True,
+        )
 
     logger.debug("Finding decoys...")
     if config["id_decoy_pattern"]:
