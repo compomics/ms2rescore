@@ -27,6 +27,9 @@
                         },
                         "maxquant": {
                             "$ref": "#/$defs/feature_generator/$defs/maxquant"
+                        },
+                        "ionmob": {
+                            "$ref": "#/$defs/feature_generator/$defs/ionmob"
                         }
                     }
                 },
@@ -182,6 +185,30 @@
                     "description": "MaxQuant feature generator configuration",
                     "type": "object",
                     "additionalProperties": true
+                },
+                "ionmob": {
+                    "$schema": "#/definitions/feature_generator",
+                    "description": "Ion mobility feature generator configuration using Ionmob",
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                        "ionmob_model": {
+                            "description": "Path to Ionmob model directory",
+                            "type": "string",
+                            "default": "GRUPredictor"
+                        },
+                        "reference_dataset": {
+                            "description": "Path to Ionmob reference dataset file",
+                            "type": "string",
+                            "default": "Meier_unimod.parquet"
+                        },
+                        "tokenizer": 
+                        {
+                            "description": "Path to tokenizer json file",
+                            "type": "string",
+                            "default": "tokenizer.json"
+                        }
+                    }
                 }
             }
         },

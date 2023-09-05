@@ -2,16 +2,30 @@ import pandas as pd
 import tensorflow as tf
 from itertools import chain
 import logging
+import os
 
 from ms2rescore.feature_generators._base_classes import FeatureGeneratorBase
 from psm_utils import PSMList
 from ionmob.preprocess.data import to_tf_dataset_inference
-from ionmob.utilities import tokenizer_from_json, reduced_mobility_to_ccs, get_ccs_shift
-from ionmob.preprocess.data import calculate_mz
-from ionmob.utilities.chemistry import VARIANT_DICT
+from ionmob.utilities.utility import get_ccs_shift
+from ionmob.utilities.tokenization import tokenizer_from_json
+from ionmob.utilities.chemistry import VARIANT_DICT, reduced_mobility_to_ccs, calculate_mz
+import ionmob
 
 
 logger = logging.getLogger(__name__)
+
+ionmob_dir = os.path.dirname(os.path.realpath(ionmob.__file__))
+DEFAULT_MODELS_IONMOB = {
+    "ionmob/pretrained_models/DeepTwoMerModel",
+    "ionmob/pretrained_models/GRUPredictor",
+    "ionmob/pretrained_models/SqrtModel",
+}
+DEFAULT_MODELS_DICT = {
+    mod.split("/")[1]: os.path.join(ionmob_dir, mod) for mod in DEFAULT_MODELS_IONMOB
+}
+DEFAULT_TOKENIZER = os.path.join(ionmob_dir, "pretrained_models/tokenizer.json")
+DEFAULT_REFERENCE_DATASET = os.path.join(ionmob_dir, "pretrained_models/Tenzer_unimod.parquet")
 
 
 class IonMobFeatureGenerator(FeatureGeneratorBase):
@@ -20,10 +34,9 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
     def __init__(
         self,
         *args,
-        model: str = "pretrained_models/GRUPredictor",
-        reference_dataset="example_data/reference.parquet",
-        tokenizer_filepath="pretrained_models/tokenizers/tokenizer.json",
-        processes: 1,
+        ionmob_model: str = "GRUPredictor",
+        reference_dataset: str = DEFAULT_REFERENCE_DATASET,
+        tokenizer: str = DEFAULT_TOKENIZER,
         **kwargs,
     ) -> None:
         """
@@ -35,10 +48,13 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
 
         """
         super().__init__(*args, **kwargs)
-        self.model = tf.keras.models.load_model(model)
-        self.processes = processes
+        try:
+            self.ionmob_model = tf.keras.models.load_model(DEFAULT_MODELS_DICT[ionmob_model])
+        except KeyError:
+            self.ionmob_model = tf.keras.models.load_model(ionmob_model)
+
         self.reference_dataset = pd.read_parquet(reference_dataset)
-        self.tokenizer = tokenizer_from_json(tokenizer_filepath)
+        self.tokenizer = tokenizer_from_json(tokenizer)
 
     @property
     def feature_names(self):
@@ -79,16 +95,22 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
 
                 # prepare dataframes for CCS prediction
                 psm_list_run_df["charge"] = [
-                    peptidoform.charge for peptidoform in psm_list_run_df["peptidoform"]
+                    peptidoform.precursor_charge for peptidoform in psm_list_run_df["peptidoform"]
                 ]
                 psm_list_run_df = psm_list_run_df[
                     psm_list_run_df["charge"] < 5
                 ]  # predictions do not go higher for ionmob
 
-                psm_list_run_df["sequence-tokenized"] = psm_list_run_df["peptidoform"].apply(
-                    self.proforma_tokenizer, axis=1
+                psm_list_run_df["sequence-tokenized"] = psm_list_run_df.apply(
+                    lambda x: self.tokenize_peptidoform(x["peptidoform"]), axis=1
                 )
-                psm_list_run_df = psm_list_run_df[~(self.invalid_mods(psm_list_run_df))]
+                psm_list_run_df = psm_list_run_df[
+                    psm_list_run_df.apply(
+                        lambda x: self._is_valid_tokenized_sequence(x["sequence-tokenized"]),
+                        axis=1,
+                    )
+                ]
+
                 psm_list_run_df["mz"] = psm_list_run_df.apply(
                     lambda x: calculate_mz(x["sequence-tokenized"], x["charge"]), axis=1
                 )  # use precursor m/z from PSMs?
@@ -97,13 +119,11 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
                     lambda x: reduced_mobility_to_ccs(x["ion_mobility"], x["mz"], x["charge"]),
                     axis=1,
                 )
-
                 # calibrate CCS values
-                shift_factor = self.calculate_ccs_shift(self, psm_list_run_df)
+                shift_factor = self.calculate_ccs_shift(psm_list_run_df)
                 psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
-                    lambda r: r["ccs_observed"] + shift_factor, axis=1
+                    lambda x: x["ccs_observed"] + shift_factor, axis=1
                 )
-
                 # predict CCS values
                 tf_ds = to_tf_dataset_inference(
                     psm_list_run_df["mz"],
@@ -112,13 +132,13 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
                     self.tokenizer,
                 )
 
-                psm_list_run_df["ccs_predicted"], _ = self.model.predict(tf_ds)
+                psm_list_run_df["ccs_predicted"], _ = self.ionmob_model.predict(tf_ds)
 
                 # calculate CCS features
                 ccs_features = self._calculate_features(psm_list_run_df)
 
                 # add CCS features to PSMs
-                for psm in psms.values():
+                for psm in psm_list_run:
                     try:
                         psm["rescoring_features"].update(ccs_features[psm.spectrum_id])
                     except KeyError:
@@ -129,19 +149,20 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
         """Get ccs features for PSMs."""
 
         ccs_features = {}
-        for row in feature_df.iterrows():
-            ccs_features[row["spectrum_id"]] = {
-                "ccs_predicted": row["ccs_predicted"],
-                "ccs_observed": row["ccs_observed"],
-                "ccs_error": row["ccs_observed"] - row["ccs_predicted"],
-                "abs_ccs_error": abs(row["ccs_observed"] - row["ccs_predicted"]),
-                "perc_ccs_error": (row["abs_ccs_error"] / row["ccs_observed"]) * 100,
+        for row in feature_df.itertuples():
+            ccs_features[row.spectrum_id] = {
+                "ccs_predicted": row.ccs_predicted,
+                "ccs_observed": row.ccs_observed,
+                "ccs_error": row.ccs_observed - row.ccs_predicted,
+                "abs_ccs_error": abs(row.ccs_observed - row.ccs_predicted),
+                "perc_ccs_error": ((abs(row.ccs_observed - row.ccs_predicted)) / row.ccs_observed)
+                * 100,
             }
 
         return ccs_features
 
     @staticmethod
-    def proforma_tokenizer(peptidoform):
+    def tokenize_peptidoform(peptidoform):
         """
         Tokenize proforma sequence and add modifications.
 
@@ -156,20 +177,22 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
 
         if peptidoform.properties["n_term"]:
             tokenized_seq.append(
-                f"<START>[UNIMOD:{peptidoform.properties['n_term'].definition['id']}]"
+                f"<START>[UNIMOD:{peptidoform.properties['n_term'][0].definition['id']}]"
             )
         else:
             tokenized_seq.append("<START>")
 
-        if peptidoform.properties["c_term"]:
-            pass  # provide if c-term mods are supported
-
         for amino_acid, modification in peptidoform.parsed_sequence:
             tokenized_seq.append(amino_acid)
             if modification:
-                tokenized_seq[-1] = tokenized_seq[-1] + tokenized_seq.append(
-                    f"[UNIMOD:{modification[0].definition['id']}]"
+                tokenized_seq[-1] = (
+                    tokenized_seq[-1] + f"[UNIMOD:{modification[0].definition['id']}]"
                 )
+
+        if peptidoform.properties["c_term"]:
+            pass  # provide if c-term mods are supported
+        else:
+            tokenized_seq.append("<END>")
 
         return tokenized_seq
 
@@ -185,105 +208,33 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
             pandas.DataFrame: Peprec data with CCS values after applying the shift.
         """
         df = psm_dataframe.copy()
-        df["charge"] = [peptidoform.charge for peptidoform in df["peptidoform"]]
-        high_conf_hits = list(
-            psm_dataframe["spectrum_id"][psm_dataframe["score"].rank(pct=True) > 0.95]
-        )
+        df.rename({"ccs_observed": "ccs"}, axis=1, inplace=True)
+        high_conf_hits = list(df["spectrum_id"][df["score"].rank(pct=True) > 0.95])
         logger.debug(
             f"Number of high confidence hits for calculating shift: {len(high_conf_hits)}"
         )
 
         shift_factor = get_ccs_shift(
-            psm_dataframe[psm_dataframe["spec_id"].isin(high_conf_hits)][
-                ["charge", "sequence-tokenized", "ccs"]
-            ],
-            self.reference_data,
+            df[["charge", "sequence-tokenized", "ccs"]][df["spectrum_id"].isin(high_conf_hits)],
+            self.reference_dataset,
         )
 
         logger.debug(f"CCS shift factor: {shift_factor}")
 
         return shift_factor
 
-    def invalid_mods(self, tokenized_seq):
+    def _is_valid_tokenized_sequence(self, tokenized_seq):
         """
-        Check if peptide sequence contains invalid modifications.
+        Check if peptide sequence contains invalid tokens.
 
         Args:
             tokenized_seq (list): Tokenized peptide sequence.
 
         Returns:
-            bool: True if invalid modifications are present, False otherwise.
+            bool: False if invalid tokens are present, True otherwise.
         """
         for token in tokenized_seq:
             if token not in self.allowed_mods:
                 logger.debug(f"Invalid modification found: {token}")
-                return True
-        return False
-
-
-def add_ccs_predictions(peprec, model_path, tokenizer_filepath):
-    """
-    Add CCS predictions to peprec file.
-
-    Args:
-        peprec (pandas.DataFrame): Modified and parsed Peprec data.
-        model_path (str): Path to the CCS prediction model.
-        tokenizer_filepath (str): Path to the tokenizer file.
-
-    Returns:
-        pandas.DataFrame: Peprec data with added CCS predictions and error values.
-    """
-    logger.info(f"Adding CCS predictions to peprec file")
-
-    tokenizer = tokenizer_from_json(tokenizer_filepath)
-    tf_ds = to_tf_dataset_inference(
-        peprec["mz"], peprec["charge"], peprec["sequence-tokenized"], tokenizer
-    )
-    gruModel = tf.keras.models.load_model(model_path)
-    peprec["ccs_predicted"], _ = gruModel.predict(tf_ds)
-
-    peprec["ccs_error"] = peprec["ccs_observed"] - peprec["ccs_predicted"]
-    peprec["abs_ccs_error"] = abs(peprec["ccs_observed"] - peprec["ccs_predicted"])
-    peprec["perc_ccs_error"] = (peprec["abs_ccs_error"] / peprec["ccs_observed"]) * 100
-
-    peprec["sequence-tokenized"] = peprec.apply(lambda x: "".join(x["sequence-tokenized"]), axis=1)
-
-    return peprec
-
-
-def write_pin_files(peprec, pin, pin_filepath):
-    """
-    Write pin files.
-
-    Args:
-        peprec (pandas.DataFrame): Peprec data.
-        pin (pandas.DataFrame): Percolator In data.
-        pin_filepath (str): Path to the Percolator In file.
-
-    Returns:
-        None
-    """
-    ccs_filename, non_ccs_filename = create_filenames(pin_filepath)
-    ccs_features = [
-        "ccs_predicted",
-        "ccs_observed",
-        "ccs_error",
-        "abs_ccs_error",
-        "perc_ccs_error",
-    ]
-    final_pin = pd.merge(
-        pin, peprec[["spec_id"] + ccs_features], left_on="SpecId", right_on="spec_id"
-    ).drop("spec_id", axis=1)
-
-    final_pin = final_pin[
-        [c for c in final_pin.columns if c not in ["Peptide", "Proteins"]]
-        + ["Peptide", "Proteins"]
-    ]
-
-    logger.info(f"Writing pin files to {ccs_filename} and {non_ccs_filename}")
-    final_pin.to_csv(ccs_filename, sep="\t", index=False, header=True)
-    redo_pin_tabs(str(ccs_filename))
-    final_pin.drop(ccs_features, axis=1).to_csv(
-        non_ccs_filename, sep="\t", index=False, header=True
-    )
-    redo_pin_tabs(str(non_ccs_filename))
+                return False
+        return True
