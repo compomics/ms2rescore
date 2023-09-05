@@ -102,13 +102,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
 
         # Get easy-access nested version of PSMList
         psm_dict = psm_list.get_psm_dict()
-        peptide_rt_diff_dict = defaultdict(
-            lambda: {
-                "observed_retention_time_best": np.Inf,
-                "predicted_retention_time_best": np.Inf,
-                "rt_diff_best": np.Inf,
-            }
-        )
 
         # Run MS²PIP for each spectrum file
         total_runs = len(psm_dict.values())
@@ -118,6 +111,13 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
             self.deeplc_predictor = None
             self.selected_model = None
             for run, psms in runs.items():
+                peptide_rt_diff_dict = defaultdict(
+                    lambda: {
+                        "observed_retention_time_best": np.Inf,
+                        "predicted_retention_time_best": np.Inf,
+                        "rt_diff_best": np.Inf,
+                    }
+                )
                 logger.info(
                     f"Running DeepLC for PSMs from run ({current_run}/{total_runs}): `{run}`..."
                 )
@@ -130,7 +130,9 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     if not all(psm_list["retention_time"]):
                         # Prepare spectrum filenames
                         spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
-                        retention_time_dict = parse_mgf_title_rt(spectrum_filename)  # TODO Add mzML support
+                        retention_time_dict = parse_mgf_title_rt(
+                            spectrum_filename
+                        )  # TODO Add mzML support
                         try:
                             psm_list_run["retention_time"] = [
                                 retention_time_dict[psm_id]
@@ -186,12 +188,11 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                                 "predicted_retention_time_best": predictions[i],
                                 "rt_diff_best": rt_diffs_run[i],
                             }
+                    for psm in psm_list_run:
+                        psm["rescoring_features"].update(
+                            peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
+                        )
             current_run += 1
-
-        for psm in psm_list:
-            psm["rescoring_features"].update(
-                peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
-            )
 
     # TODO: Remove when DeepLC supports PSMList directly
     @staticmethod
