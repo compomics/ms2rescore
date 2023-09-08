@@ -11,12 +11,12 @@ are not available in the CLI or GUI, or to set default values for options that a
 CLI or GUI.
 
 If no configuration file is passed, or some options are not configured, the
-`default values <https://github.com/compomics/ms2rescore/blob/master/ms2rescore/package_data/config_default.json>`_
+`default values <https://github.com/compomics/ms2rescore/blob/main/ms2rescore/package_data/config_default.json>`_
 for these settings will be used. Options passed from the CLI and the GUI will override
 the configuration file. The full configuration is validated against a
-`JSON Schema <https://github.com/compomics/ms2rescore/blob/master/ms2rescore/package_data/config_schema.json>`_.
+`JSON Schema <https://github.com/compomics/ms2rescore/blob/main/ms2rescore/package_data/config_schema.json>`_.
 A full example configuration file can be found in
-`ms2rescore/package_data/config_default.json <https://github.com/compomics/ms2rescore/blob/master/ms2rescore/package_data/config_default.json>`_.
+`ms2rescore/package_data/config_default.json <https://github.com/compomics/ms2rescore/blob/main/ms2rescore/package_data/config_default.json>`_.
 An overview of all options can be found below.
 
 

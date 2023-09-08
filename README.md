@@ -1,9 +1,9 @@
-<img src="https://github.com/compomics/ms2rescore/raw/master/img/ms2rescore_logo.png" width="150" height="150" alt="MS²Rescore"/>
+<img src="https://github.com/compomics/ms2rescore/raw/main/img/ms2rescore_logo.png" width="150" height="150" alt="MS²Rescore"/>
 <br/><br/>
 
 [![GitHub release](https://img.shields.io/github/release-pre/compomics/ms2rescore.svg?style=flat-square)](https://github.com/compomics/ms2rescore/releases)
 [![PyPI](https://flat.badgen.net/pypi/v/ms2rescore)](https://pypi.org/project/ms2rescore/)
-[![GitHub Workflow Status](https://flat.badgen.net/github/checks/compomics/ms2rescore/master)](https://github.com/compomics/ms2rescore/actions/)
+[![GitHub Workflow Status](https://flat.badgen.net/github/checks/compomics/ms2rescore/main)](https://github.com/compomics/ms2rescore/actions/)
 [![GitHub issues](https://img.shields.io/github/issues/compomics/ms2rescore?style=flat-square)](https://github.com/compomics/ms2rescore/issues)
 [![GitHub](https://img.shields.io/github/license/compomics/ms2rescore.svg?style=flat-square)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Last commit](https://flat.badgen.net/github/last-commit/compomics/ms2rescore)](https://github.com/compomics/ms2rescore/commits/)
