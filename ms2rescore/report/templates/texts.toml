@@ -1,0 +1,107 @@
+[configuration]
+description = """
+This is the full configuration that was used, as rendered from the
+default configuration, the user-provided configuration file, and the
+command line arguments, in cascading order.
+"""
+
+[charts.score_comparison]
+title = "Score comparison"
+description = """
+This scatter plot shows the score for both target (blue) and decoy
+(red) PSMs before rescoring (x-axis) and after rescoring (y-axis). Dashed
+lines indicate the 1% FDR threshold for scores before and after rescoring.
+PSMs in the upper-left quadrant are only identified after rescoring.
+"""
+
+[charts.fdr_comparison]
+title = "False discovery rate comparison"
+description = """
+This plot shows the number of identified target PSMs
+in function of the FDR threshold. The plot starts at the top-right corner
+with the total number of PSMs in the dataset (no FDR filtering). As the
+FDR threshold becomes more stringent (towards the left of the x-axis),
+the number of identified target PSMs goes down. The dashed line
+indicates the 1% FDR threshold.
+"""
+
+[charts.identification_overlap]
+title = "Identification overlap"
+description = """
+This plot shows the unique identified PSMs, peptides, and (optionally)
+protein groups that were removed, retained, and gained by rescoring.
+"""
+
+[charts.score_histogram]
+title = "Score histogram"
+description = """
+The score histogram shows the score distribution for both target PSMs (blue)
+and decoy PSMs (red). The target score distribution is exected to show
+two modes, corresponding to high-scoring (presumably correct) PSMs
+and low-scoring (presumably incorrect) PSMs. The decoy score
+distribution is expected to show a single mode, which should
+approximate the low-scoring part of the target score distribution
+as closely as possible. This approximation can be more easily assessed
+in the percentile-percentile plot (see below). The dashed line indicates
+the 1% FDR threshold.
+"""
+
+[charts.pp_plot]
+title = "Percentile-percentile plot"
+description = """
+The percentile-percentile (PP) plot shows the empirical cumulative
+distribution function (ECDF) of the target distribution in function of
+the ECDF of the decoy distribution. In the context of peptide
+identification, it can be used to assess the quality of decoy PSMs and
+their capacity to help in correctly estimating the false discovery rate.
+
+Ideally, the PP-plot should follow a straight diagonal line up until the
+end of the decoy distribution (right-hand side of the plot), where the
+line turns vertically upwards. This means that the decoy distribution
+perfectly aligns with the first part of the target distribution (the
+low-scoring and presumably bad target PSMs) and therefore correctly
+models the bad target PSMs. This diagonal line matches the ratio of
+the number of decoy to the number of target PSMs.
+
+More information on this type of diagnostic plot can be found at
+<a href="https://statomics.github.io/TargetDecoy/articles/TargetDecoy.html" target="_blank">statomics.github.io/TargetDecoy</a>.
+"""
+
+[charts.feature_usage]
+title = "Feature usage in rescoring model"
+description = """
+This plot shows the usage of each features in the
+rescoring model. The higher the usage, the more the feature contributes to separating target and
+decoy PSMs. Note that the usage is not necessarily correlated with the individual
+performance of the feature, as some features may be redundant with others.
+"""
+
+[charts.feature_performance]
+title = "Individual feature performance"
+description = """
+The following plot shows the performance of individual features. For each
+feature, q-values are calculated as if that feature was individually used for scoring PSMs without
+any other information. Then, the area under curve (AUC) is calculated for the empirical cumulative
+distribution function (ECDF) of the q-values. The higher the AUC, the better the feature is at
+discriminating between target and decoy PSMs without any other information.
+"""
+
+[charts.ms2pip_pearson]
+title = "MS²PIP model performance"
+description = """
+MS²PIP model performance can be estimated by calculating the Pearson correlation coefficient
+between the predicted and observed fragment ion intensities. Fragment intensities are first
+normalized to the total ion current and then log2-transformed. The following histogram shows the
+distribution of Pearson correlation coefficients for all target PSMs that passed the 1% FDR
+threshold. The red dashed line indicates the median correlation.
+"""
+
+[charts.deeplc_performance]
+title = "DeepLC model performance"
+description = """
+DeepLC model performance can be visualized by plotting the predicted retention times against the
+observed retention times (top chart), or by calculating the relative mean absolute error (RMAE). The
+bottom chart shows the distribution of RMAE values of DeepLC predictions on 460 different benchmark
+datasets. The red line indicates the RMAE value for all target PSMs that passed the 1% FDR threshold
+of the current dataset. A lower RMAE value indicates better performance.
+"""

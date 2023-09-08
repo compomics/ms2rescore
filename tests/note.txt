@@ -1,1 +1,0 @@
-# Note: Use https://www.ebi.ac.uk/pride/archive/projects/PXD006932/files as test files

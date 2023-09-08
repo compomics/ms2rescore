@@ -1,0 +1,11 @@
+<h3>General statistics</h3>
+<div class="mt-2 mb-4">
+  <div class="row gy-4">{% for stats in tab.context.stats %} {% include 'stats-card.html' %} {% endfor %}</div>
+</div>
+
+<h3>Identification charts</h3>
+{% for chart in tab.context.charts %}
+<h4>{{ chart.title }}</h4>
+<p>{{ chart.description }}</p>
+<div>{{ chart.chart }}</div>
+{% endfor %}

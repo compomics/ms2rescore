@@ -1,0 +1,20 @@
+<div class="row mb-4">
+  <div class="col">
+    <p>
+      <span class="text-nowrap text-uppercase text-muted">Generated on</span><br />
+      {{ metadata.generated_on }}
+    </p>
+  </div>
+  <div class="col">
+    <p>
+      <span class="text-nowrap text-uppercase text-muted">MS<sup>2</sup>Rescore version</span><br />
+      v{{ metadata.ms2rescore_version }}
+    </p>
+  </div>
+  <div class="col">
+    <p>
+      <span class="text-nowrap text-uppercase text-muted">PSM filename</span><br />
+      <code>{{ metadata.psm_filename }}</code>
+    </p>
+  </div>
+</div>

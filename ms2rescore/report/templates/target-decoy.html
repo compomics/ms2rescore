@@ -1,0 +1,5 @@
+{% for chart in tab.context.charts %}
+<h3>{{ chart.title }}</h3>
+<p>{{ chart.description }}</p>
+<div>{{ chart.chart }}</div>
+{% endfor %}

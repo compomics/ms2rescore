@@ -1,176 +1,233 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "MS²ReScore configuration",
-    "description": "MS²ReScore JSON configuration file.",
+    "title": "MS²Rescore configuration",
     "type": "object",
-    "required": ["general", "ms2pip", "percolator"],
+    "required": ["ms2rescore"],
     "properties": {
-        "general": {
-            "description": "General MS²ReScore settings.",
+        "ms2rescore": {
+            "description": "General MS²Rescore settings.",
             "type": "object",
+            "required": ["psm_file"],
             "additionalProperties": false,
             "properties": {
-                "pipeline": {
-                    "description": "Pipeline to use, depending on input format",
-                    "type": "string",
-                    "enum": ["infer", "pin", "tandem", "maxquant", "msgfplus", "peptideshaker", "peaks"],
-                    "default": "infer"
-                },
-                "feature_sets": {
-                    "description": "Feature sets for which to generate PIN files and optionally run Percolator.",
-                    "type": "array",
-                    "items": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "enum":["searchengine", "rt", "ms2pip"]
+                "feature_generators": {
+                    "description": "Feature generators and their configurations.",
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": { "$ref": "#/definitions/feature_generator" },
+                        "basic": {
+                            "$ref": "#/definitions/basic"
                         },
-                        "minitems": 1
+                        "ms2pip": {
+                            "$ref": "#/definitions/ms2pip"
+                        },
+                        "deeplc": {
+                            "$ref": "#/definitions/deeplc"
+                        },
+                        "maxquant": {
+                            "$ref": "#/definitions/maxquant"
+                        }
                     },
-                    "minItems": 1,
-                    "uniqueItems": true,
-                    "default": ["searchengine", "rt", "ms2pip"]
+                    "default": {
+                        "basic": {},
+                        "ms2pip": {
+                            "model": "HCD",
+                            "ms2_tolerance": 0.02
+                        },
+                        "deeplc": {},
+                        "maxquant": {}
+                    }
                 },
-                "id_decoy_pattern": {
-                    "description": "Pattern used to identify the decoy PSMs in identification file. Passed to `--pattern` option of Percolator converters.",
-                    "oneOf": [{"type": "string"}, {"type": "null"}],
-                    "default": null
-                },
-                "run_percolator": {
-                    "description": "Run Percolator within MS²ReScore",
-                    "type": "boolean",
-                    "default": false
-                },
-                "num_cpu": {
-                    "description": "Number of parallel processes to use; -1 for all available",
-                    "type": "number",
-                    "multipleOf": 1,
-                    "minimum": -1,
-                    "default": -1
+                "rescoring_engine": {
+                    "description": "Rescoring engine to use and its configuration. Leave empty to skip rescoring and write features to file.",
+                    "type": "object",
+                    "minProperties": 0,
+                    "maxProperties": 1,
+                    "patternProperties": {
+                        ".*": { "$ref": "#/definitions/rescoring_engine" },
+                        "percolator": {
+                            "$ref": "#/definitions/percolator"
+                        },
+                        "mokapot": {
+                            "$ref": "#/definitions/mokapot"
+                        }
+                    },
+                    "default": {
+                        "mokapot": {}
+                    }
                 },
                 "config_file": {
                     "description": "Path to configuration file",
-                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
-                "identification_file": {
-                    "description": "Path to identification file",
-                    "type": "string"
+                "psm_file": {
+                    "description": "Path to file with peptide-spectrum matches.",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
-                "mgf_path": {
-                    "description": "Path to MGF file or directory with MGF files",
-                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                "psm_file_type": {
+                    "description": "PSM file type. By default inferred from file extension.",
+                    "type": "string",
+                    "default": "infer"
                 },
-                "tmp_path": {
-                    "description": "Path to directory to place temporary files",
-                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                "spectrum_path": {
+                    "description": "Path to spectrum file or directory with spectrum files",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
-                "output_filename": {
+                "output_path": {
                     "description": "Path and root name for output files",
-                    "oneOf": [{"type": "string"}, {"type": "null"}]
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
                 "log_level": {
                     "description": "Logging level",
                     "type": "string",
                     "enum": ["debug", "info", "warning", "error", "critical"]
                 },
-                "plotting": {
-                    "description": "Output PDF with additional Rescore plots",
+                "id_decoy_pattern": {
+                    "description": "Regex pattern used to identify the decoy PSMs in identification file.",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
+                    "default": null
+                },
+                "spectrum_id_pattern": {
+                    "description": "Regex pattern to extract index or scan number from spectrum file. Requires at least one capturing group.",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
+                    "default": "(.*)",
+                    "format": "regex"
+                },
+                "psm_id_pattern": {
+                    "description": "Regex pattern to extract index or scan number from PSM file. Requires at least one capturing group.",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
+                    "default": "(.*)",
+                    "format": "regex"
+                },
+                "lower_score_is_better": {
+                    "description": "Bool indicating if lower score is better",
+                    "type": "boolean",
+                    "default": false
+                },
+                "modification_mapping": {
+                    "description": "Mapping of modification labels to each replacement label.",
+                    "type": "object",
+                    "default": {}
+                },
+                "fixed_modifications": {
+                    "description": "Mapping of amino acids with fixed modifications to the modification name.",
+                    "type": "object",
+                    "default": {},
+                    "additionalProperties": true
+                },
+                "processes": {
+                    "description": "Number of parallel processes to use; -1 for all available",
+                    "type": "number",
+                    "multipleOf": 1,
+                    "minimum": -1,
+                    "default": -1
+                },
+                "rename_to_usi": {
+                    "description": "Convert spectrum IDs to their universal spectrum identifier",
+                    "type": "boolean"
+                },
+                "fasta_file": {
+                    "description": "Path to FASTA file with protein sequences to use for protein inference",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }]
+                },
+                "write_report": {
+                    "description": "Write an HTML report with various QC metrics and charts",
                     "type": "boolean",
                     "default": false
                 }
+            }
+        }
+    },
+    "definitions": {
+        "feature_generator": {
+            "description": "Feature generator configuration",
+            "type": "object",
+            "additionalProperties": true
+        },
+        "rescoring_engine": {
+            "description": "Rescoring engine configuration",
+            "type": "object",
+            "additionalProperties": true
+        },
+        "basic": {
+            "$ref": "#/definitions/feature_generator",
+            "description": "Basic feature generator configuration",
+            "type": "object",
+            "additionalProperties": true
         },
         "ms2pip": {
-            "description": "MS²PIP settings.",
+            "$ref": "#/definitions/feature_generator",
+            "description": "MS²PIP feature generator configuration",
             "type": "object",
-            "additionalProperties": false,
+            "additionalProperties": true,
             "properties": {
                 "model": {
                     "description": "MS²PIP model to use (see MS²PIP documentation)",
                     "type": "string",
                     "default": "HCD"
                 },
-                "frag_error": {
+                "ms2_tolerance": {
                     "description": "MS2 error tolerance in Da",
                     "type": "number",
                     "minimum": 0,
                     "default": 0.02
+                }
+            }
+        },
+        "deeplc": {
+            "$ref": "#/definitions/feature_generator",
+            "description": "DeepLC feature generator configuration",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "calibration_set_size": {
+                    "description": "Calibration set size",
+                    "oneOf": [{ "type": "integer" }, { "type": "number" }],
+                    "default": 0.15
+                }
+            }
+        },
+        "maxquant": {
+            "$ref": "#/definitions/feature_generator",
+            "description": "MaxQuant feature generator configuration",
+            "type": "object",
+            "additionalProperties": true
+        },
+        "mokapot": {
+            "$ref": "#/definitions/rescoring_engine",
+            "description": "Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "write_weights": {
+                    "description": "Write Mokapot weights to a text file",
+                    "type": "boolean",
+                    "default": false
                 },
-                "modifications": {
-                    "description": "Array of peptide mass modifications",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/modifications"
-                    }
+                "write_txt": {
+                    "description": "Write Mokapot results to a text file",
+                    "type": "boolean",
+                    "default": false
+                },
+                "write_flashlfq": {
+                    "description": "Write Mokapot results to a FlashLFQ-compatible file",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         },
         "percolator": {
-            "description": "Command line options directly passed to Percolator (see the Percolator wiki)",
-            "type": "object"
-        },
-        "maxquant_to_rescore":{
-            "description": "Settings specific to the MaxQuant pipeline",
+            "$ref": "#/definitions/rescoring_engine",
+            "description": "Percolator rescoring engine configuration",
             "type": "object",
-            "required": ["modification_mapping", "fixed_modifications"],
-            "additionalProperties": false,
-
+            "additionalProperties": true,
             "properties": {
-                "mgf_title_pattern":{
-                    "description": "regex pattern to extract index or scan number from maxquant mgf TITLE field",
-                    "type": "string",
-                    "default": "TITLE=.*scan=([0-9]+).*$",
-                    "format": "regex"
-                },
-                "modification_mapping": {
-                    "description": "Mapping of MaxQuant modification labels to modifications names for MS²PIP",
-                    "type": "object",
-                    "default": {}
-                },
-                "fixed_modifications": {
-                    "description": "Mapping of amino acids with fixed modifications to the modification name",
-                    "type": "object",
-                    "default": {}
-                }
-            }
-        }
-    },
-    "definitions": {
-        "modifications": {
-            "description": "Peptide mass modifications, per amino acid",
-            "type": "object",
-            "required": ["name", "unimod_accession", "mass_shift", "amino_acid", "n_term", "c_term"],
-            "additionalProperties": false,
-            "properties": {
-                "name": {
-                    "description": "Unique name for modification",
-                    "type": "string"
-                },
-                "unimod_accession": {
-                    "description": "Unimod accession of modification",
-                    "type": "number",
-                    "multipleOf": 1
-                },
-                "mass_shift": {
-                    "description": "Mono-isotopic mass shift",
-                    "type": "number"
-                },
-                "amino_acid": {
-                    "description": "Amino acid one-letter code, or null if amino acid-agnostic (e.g. N-term acetylation)",
-                    "oneOf": [
-                        {"type": "string", "minLength": 1, "maxLength": 1},
-                        {"type": "null"}
-                    ]
-                },
-                "n_term": {
-                    "description": "Modification is N-terminal",
-                    "type": "boolean"
-                },
-                "c_term": {
-                    "description": "Modification is C-terminal (only implemented for MSGF+ mzid and Percolator PIN input formats)",
-                    "type": "boolean"
+                "init-weights": {
+                    "description": "Weights file for scoring function",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
+                    "default": false
                 }
             }
         }
     }
-}
 }

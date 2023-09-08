@@ -3,12 +3,12 @@
 import logging
 import mmap
 import os.path
-import random
-import re
+from typing import Union, Tuple, Dict
 
 from rich.progress import track
+from pyteomics.mgf import MGF
 
-from ms2rescore._exceptions import MS2RescoreError
+from ms2rescore.exceptions import MS2RescoreError
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,29 @@ class ParseMGFError(MS2RescoreError):
     pass
 
 
+def parse_mgf_title_rt(path_to_mgf: Union[str, os.PathLike]) -> Dict[str, float]:
+    """Parse MGF file to extract title and retention time fields, by spectrum index."""
+    logger.debug("Parsing MGF file to extract retention times.")
+    mgf_reader = MGF(path_to_mgf, read_charges=False, read_ions=False)
+    retention_times = {}
+    for spectrum in mgf_reader:
+        try:
+            title = spectrum["params"]["title"]
+        except KeyError:
+            raise ParseMGFError("MGF file missing title field.")
+        try:
+            rt = float(spectrum["params"]["rtinseconds"])
+        except KeyError:
+            rt = None
+        retention_times[title] = rt
+
+    print(retention_times)
+    if any(list(retention_times.values())):
+        return retention_times
+    else:
+        raise ParseMGFError("MGF file missing rtinseconds field.")
+
+
 def get_num_lines(file_path):
     fp = open(file_path, "r+")
     buf = mmap.mmap(fp.fileno(), 0)
@@ -26,120 +49,3 @@ def get_num_lines(file_path):
     while buf.readline():
         lines += 1
     return lines
-
-
-def title_parser(line, mgf_title_pattern=None, method='full', run=None):
-    """
-    Take an MGF TITLE line and return the spectrum title.
-
-    Depending on the software tool that was used to write the MGF files and the
-    search engine, we need to extract different parts of the TITLE field. E.g,
-    for MaxQuant, everything up until the first space is required
-
-    line: string, line from MGF file containing 'TITLE='
-    method: string, one of the following:
-    - 'full': take everything after 'TITLE='
-    - 'run_index': takes 'index=' from TITLE and add run (PEAKS)
-    - 'first_space': take everything between 'TITLE=' and first space.
-    - 'first_space_no_charge': take everything between 'TITLE=' and first space,
-      but leave out everything after last dot. (required for MaxQuant pipeline).
-    - 'run.scan.scan': Extract scan number and merge with run name (for MaxQuant IDs).
-    """
-
-    if method == 'full':
-        title = line[6:].strip()
-    elif method == 'run_index':
-        if not run:
-            raise TypeError("If `method` is `full_run`, `run` cannot be None.")
-        title = run + ':' + re.match(r"TITLE=(index=[0-9]*)",line).group(1)
-    elif method == 'first_space':
-        title = line[6:].split(' ')[0].strip()
-    elif method == 'first_space_no_charge':
-        title = '.'.join(line[6:].split(' ')[0].split('.')[:-1]).strip()
-    elif method == 'run.scan.scan':
-        if not run:
-            raise TypeError("If `method` is `run.scan.scan`, `run` cannot be None.")
-        scan_m = re.match(mgf_title_pattern, line)
-        if scan_m:
-            scan = scan_m.group(1)
-        else:
-            raise ParseMGFError(
-                f"Could not extract scan number from TITLE field: `{line.strip()}`"
-            )
-        title = '.'.join([run, scan, scan])
-    else:
-        raise ValueError("method '{}' is not a valid title parsing method".format(
-            method
-        ))
-    return title
-
-
-def parse_mgf(df_in, mgf_folder, mgf_title_pattern=None, outname='scan_mgf_result.mgf',
-              filename_col='mgf_filename', spec_title_col='spec_id',
-              title_parsing_method='full',
-              show_progress_bar=True):
-
-    if not os.path.isdir(mgf_folder):
-        raise NotADirectoryError(mgf_folder)
-
-    if df_in[spec_title_col].duplicated().any():
-        logger.warning("Duplicate spec_id's found in PeptideRecord.")
-
-    if df_in[filename_col].iloc[0][-4:].lower() == '.mgf':
-        file_suffix = ''
-    else:
-        file_suffix = '.mgf'
-
-    runs = df_in[filename_col].unique()
-    logger.info("Parsing %i MGF files to single MGF containing all PSMs.", len(runs))
-
-    with open(outname, 'w') as out:
-        count = 0
-        for run in track(
-            runs,
-            description="Parsing MGF file",
-            disable=True if not show_progress_bar else False,
-            transient=True
-        ):
-            current_mgf_file = os.path.join(mgf_folder, run + file_suffix)
-            spec_set = set(df_in[(df_in[filename_col] == run)][spec_title_col].values)
-            # Temporary fix: replace charges in MGF with ID'ed charges
-            # Until MS2PIP uses ID'ed charge instead of MGF charge
-            id_charges = df_in[(df_in[filename_col] == run)].set_index('spec_id')['charge'].to_dict()
-
-            found = False
-            with open(current_mgf_file, 'r') as f:
-                for line in f:
-                    if 'TITLE=' in line:
-                        title = title_parser(line, mgf_title_pattern=mgf_title_pattern, method=title_parsing_method, run=run)
-                        if title in spec_set:
-                            found = True
-                            line = "TITLE=" + title + "\n"
-                            out.write("BEGIN IONS\n")
-                            out.write(line)
-                            count += 1
-                            continue
-                    if 'END IONS' in line:
-                        if found:
-                            out.write(line + '\n')
-                            found = False
-                            continue
-                    # Temporary fix (see above, write charge if pepmass is written)
-                    if 'PEPMASS=' in line:
-                        if found:
-                            charge = id_charges[title]
-                            out.write(line)
-                            out.write("CHARGE=" + str(charge) + "+\n")
-                            continue
-                    if 'CHARGE=' in line:
-                        continue
-                    # Only print lines when spectrum is found and intensity != 0
-                    if found and line[-5:] != ' 0.0\n':
-                        out.write(line)
-
-    num_expected = len(df_in[spec_title_col].unique())
-    logger.debug(
-        "%i/%i spectra found and written to new MGF file.", count, num_expected
-    )
-    if not count == num_expected:
-        raise ParseMGFError("Not all PSMs could be found in the provided MGF files.")

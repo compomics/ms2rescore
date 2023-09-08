@@ -4,6 +4,6 @@ Raw file converted to MGF with the Compomics ThermoRawFileParser (https://github
 
 Searched with MaxQuant v1.6.2.3 with all parameters as described in the dataset's original article, with FDR-filtering set to 1 (no filtering)
 Also searched with MS-GF+ v2019.02.28
-MS²ReScore tested with Percolator version 3.02.1
+MS²Rescore tested with Percolator version 3.02.1
 
 Fasta file downloaded from https://www.uniprot.org/proteomes/UP000005640 and https://www.thegpm.org/crap/

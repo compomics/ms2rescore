@@ -1,0 +1,16 @@
+<div class="col">
+  <div class="card {{ stats.card_color }}">
+    <div class="card-statistic-3 p-4">
+      <h5 class="card-title mb-4">{{ stats.item }}</h5>
+      <div class="d-flex align-items-bottom justify-content-between text-nowrap mb-2">
+        <div class="pe-1"><span class="h2">{{ stats.number }} </span><span>{{ stats.diff }}</span></div>
+        <div class="d-flex flex-column align-items-end">
+          <div class="mt-auto">{{ stats.percentage }} <i class="fa {% if stats.is_increase %} fa-arrow-up {% else %} fa-arrow-down {% endif %}"></i></div>
+        </div>
+      </div>
+      <div class="progress" style="height: 12px; background-color: {{ stats.bar_color }}">
+        <div class="progress-bar" style="width: {{ stats.bar_percentage }}%; background-color: #c6c6c6"></div>
+      </div>
+    </div>
+  </div>
+</div>
