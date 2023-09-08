@@ -20,6 +20,12 @@ Generate a report from MS²Rescore result file(s):
 
 .. code-block:: console
 
+    ms2rescore-report [OPTIONS] OUTPUT_PREFIX
+
+or
+
+.. code-block:: console
+
     python -m ms2rescore.report [OPTIONS] OUTPUT_PREFIX
 
 
@@ -27,6 +33,12 @@ Generate a report from MS²Rescore result file(s):
 Start graphical user interface
 ------------------------------
 Start the graphical user interface. For more info, see :ref:`Graphical user interface`.
+
+.. code-block:: console
+
+    ms2rescore-gui
+
+or
 
 .. code-block:: console
 
