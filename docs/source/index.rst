@@ -1,21 +1,31 @@
-.. mdinclude:: ../../README.md
-
+.. include::  ../../README.md
+   :parser: myst_parser.sphinx_
 
 .. toctree::
    :caption: About
    :hidden:
    :includehidden:
 
-   Readme <self>
+   About <self>
+   installation
    contributing
 
-.. toctree ::
+.. toctree::
    :caption: User guide
    :hidden:
    :includehidden:
    :glob:
 
    userguide/*
+
+
+.. toctree::
+   :caption: Tutorials
+   :hidden:
+   :includehidden:
+   :glob:
+
+   tutorials/*
 
 
 .. toctree::
@@ -32,7 +42,7 @@
    :hidden:
    :includehidden:
 
-   cli/cli
+   cli
 
 
 

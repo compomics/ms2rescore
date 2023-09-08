@@ -8,7 +8,7 @@
                 "ms2_tolerance": 0.02
             },
             "deeplc": {
-                "deeplc_retrain": true
+                "deeplc_retrain": false
             },
             "maxquant": {}
         },

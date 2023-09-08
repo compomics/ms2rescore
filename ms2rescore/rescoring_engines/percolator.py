@@ -1,3 +1,22 @@
+"""
+Percolator integration for MS²Rescore
+
+Percolator was the first tool to introduce semi-supervised learning for PSM rescoring. It is
+still widely used and has been integrated in many proteomics data analysis pipelines. This module
+integrates with Percolator through its command line interface. Percolator must be installed
+separately and the ``percolator`` command must be available in the PATH for this module to work.
+See `github.com/percolator/percolator <https://github.com/percolator/percolator>`_	for
+more information.
+
+If you use Percolator through MS²Rescore, please cite:
+
+.. epigraph::
+    The M, MacCoss MJ, Noble WS, Käll L. Fast and Accurate Protein False Discovery Rates on
+    Large-Scale Proteomics Data Sets with Percolator 3.0. *J Am Soc Mass Spectrom* (2016).
+    `doi:10.1007/s13361-016-1460-7 <https://doi.org/10.1007/s13361-016-1460-7>`_
+
+"""
+
 import logging
 import subprocess
 from typing import Any, Dict, Optional
@@ -30,6 +49,19 @@ def rescore(
     """
     Rescore PSMs with Percolator.
 
+    Aside from updating the PSM ``score``, ``qvalue``, and ``pep`` values, the following output
+    files are written:
+
+        - Target PSMs: ``{output_file_root}_target_psms.pout``
+        - Decoy PSMs: ``{output_file_root}_decoy_psms.pout``
+        - Target Peptides: ``{output_file_root}_target_peptides.pout``
+        - Decoy Peptides: ``{output_file_root}_decoy_peptides.pout``
+        - Target Proteins: ``{output_file_root}_target_proteins.pout``
+        - Decoy Proteins: ``{output_file_root}_decoy_proteins.pout``
+
+    Percolator is run through its command line interface. Percolator must be installed separately
+    and the ``percolator`` command must be available in the PATH for this module to work.
+
     Parameters
     ----------
     psm_list
@@ -40,6 +72,8 @@ def rescore(
         Log level for Percolator. Defaults to ``info``.
     processes
         Number of processes to use. Defaults to 1.
+    fasta_file
+        Path to FASTA file for protein inference. Defaults to ``None``.
     percolator_kwargs
         Additional keyword arguments for Percolator. Defaults to ``None``.
 
@@ -157,3 +191,12 @@ def _decode_string(encoded_string):
             pass
     else:
         raise MS2RescoreError("Could not infer encoding of Percolator logs.")
+
+
+def _validate_cli_dependency(command):
+    """Validate that command returns zero exit status."""
+    if subprocess.getstatusoutput(command)[0] != 0:
+        raise MS2RescoreError(
+            f"Could not run command '{command}'. Please ensure that the program is installed and "
+            "available in your PATH."
+        )

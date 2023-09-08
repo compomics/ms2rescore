@@ -18,9 +18,8 @@ class ParseMGFError(MS2RescoreError):
 
     pass
 
-def parse_mgf_title_rt(
-    path_to_mgf: Union[str, os.PathLike]
-) -> Dict[str, float]:
+
+def parse_mgf_title_rt(path_to_mgf: Union[str, os.PathLike]) -> Dict[str, float]:
     """Parse MGF file to extract title and retention time fields, by spectrum index."""
     logger.debug("Parsing MGF file to extract retention times.")
     mgf_reader = MGF(path_to_mgf, read_charges=False, read_ions=False)
@@ -41,6 +40,7 @@ def parse_mgf_title_rt(
         return retention_times
     else:
         raise ParseMGFError("MGF file missing rtinseconds field.")
+
 
 def get_num_lines(file_path):
     fp = open(file_path, "r+")

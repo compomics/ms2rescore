@@ -1,4 +1,19 @@
-"""DeepLC retention time-based feature generator."""
+"""
+DeepLC retention time-based feature generator.
+
+DeepLC is a fully modification-aware peptide retention time predictor. It uses a deep convolutional
+neural network to predict retention times based on the atomic composition of the (modified) amino
+acid residues in the peptide. See
+`github.com/compomics/deeplc <https://github.com/compomics/deeplc>`_ for more information.
+
+If you use DeepLC through MS²Rescore, please cite:
+
+.. epigraph::
+    Bouwmeester, R., Gabriels, R., Hulstaert, N. et al. DeepLC can predict retention times for
+    peptides that carry unknown modifications. *Nat Methods* 18, 1363-1369 (2021).
+    `doi:10.1038/s41592-021-01301-5 <https://doi.org/10.1038/s41592-021-01301-5>`_
+
+"""
 
 import contextlib
 import logging
@@ -14,7 +29,7 @@ from psm_utils import PSMList
 from psm_utils.io import peptide_record
 
 from ms2rescore.exceptions import MS2RescoreError
-from ms2rescore.feature_generators._base_classes import FeatureGeneratorBase
+from ms2rescore.feature_generators.base import FeatureGeneratorBase
 from ms2rescore.parse_mgf import parse_mgf_title_rt
 from ms2rescore.utils import infer_spectrum_path
 
@@ -37,7 +52,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         """
         Generate DeepLC-based features for rescoring.
 
-        DeepLC retraining is on by default. Add `deeplc_retrain: False` as a keyword argument to
+        DeepLC retraining is on by default. Add ``deeplc_retrain: False`` as a keyword argument to
         disable retraining.
 
         Parameters
@@ -54,6 +69,11 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
             Number of processes to use in DeepLC. Defaults to 1.
         kwargs: dict
             Additional keyword arguments are passed to DeepLC.
+
+        Attributes
+        ----------
+        feature_names: list[str]
+            Names of the features that will be added to the PSMs.
 
         """
         super().__init__(*args, **kwargs)
@@ -82,7 +102,11 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
             self.deeplc_kwargs["deeplc_retrain"] = True
 
         self.deeplc_predictor = None
-        self.selected_model = None
+        if "path_model" in self.deeplc_kwargs:
+            self.user_model = self.deeplc_kwargs.pop("path_model")
+            logging.debug(f"Using user-provided DeepLC model {self.user_model}.")
+        else:
+            self.user_model = None
 
     @property
     def feature_names(self) -> List[str]:
@@ -102,22 +126,22 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
 
         # Get easy-access nested version of PSMList
         psm_dict = psm_list.get_psm_dict()
-        peptide_rt_diff_dict = defaultdict(
-            lambda: {
-                "observed_retention_time_best": np.Inf,
-                "predicted_retention_time_best": np.Inf,
-                "rt_diff_best": np.Inf,
-            }
-        )
 
         # Run MS²PIP for each spectrum file
-        total_runs = len(psm_dict.keys())
+        total_runs = len(psm_dict.values())
         current_run = 1
         for runs in psm_dict.values():
             # Reset DeepLC predictor for each collection of runs
             self.deeplc_predictor = None
             self.selected_model = None
             for run, psms in runs.items():
+                peptide_rt_diff_dict = defaultdict(
+                    lambda: {
+                        "observed_retention_time_best": np.Inf,
+                        "predicted_retention_time_best": np.Inf,
+                        "rt_diff_best": np.Inf,
+                    }
+                )
                 logger.info(
                     f"Running DeepLC for PSMs from run ({current_run}/{total_runs}): `{run}`..."
                 )
@@ -130,7 +154,9 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     if not all(psm_list["retention_time"]):
                         # Prepare spectrum filenames
                         spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
-                        retention_time_dict = parse_mgf_title_rt(spectrum_filename)  # TODO Add mzML support
+                        retention_time_dict = parse_mgf_title_rt(
+                            spectrum_filename
+                        )  # TODO Add mzML support
                         try:
                             psm_list_run["retention_time"] = [
                                 retention_time_dict[psm_id]
@@ -141,13 +167,13 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                                 "Could not map all spectrum ids to retention times"
                             )
 
-                    psm_list_calibration = self.get_calibration_psms(psm_list_run)
+                    psm_list_calibration = self._get_calibration_psms(psm_list_run)
 
                     logger.debug("Calibrating DeepLC")
                     self.deeplc_predictor = self.DeepLC(
                         n_jobs=self.processes,
-                        verbose=False,
-                        path_model=self.selected_model,
+                        verbose=self._verbose,
+                        path_model=self.user_model or self.selected_model,
                         **self.deeplc_kwargs,
                     )
                     self.deeplc_predictor.calibrate_preds(
@@ -155,7 +181,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     )
                     # Still calibrate for each run, but do not try out all model options.
                     # Just use model that was selected based on first run
-                    if not self.selected_model:
+                    if not self.user_model and not self.selected_model:
                         self.selected_model = list(self.deeplc_predictor.model.keys())
                         logger.debug(
                             f"Selected DeepLC model {self.selected_model} based on "
@@ -186,12 +212,11 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                                 "predicted_retention_time_best": predictions[i],
                                 "rt_diff_best": rt_diffs_run[i],
                             }
+                    for psm in psm_list_run:
+                        psm["rescoring_features"].update(
+                            peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
+                        )
             current_run += 1
-
-        for psm in psm_list:
-            psm["rescoring_features"].update(
-                peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
-            )
 
     # TODO: Remove when DeepLC supports PSMList directly
     @staticmethod
@@ -205,15 +230,15 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         )[["tr", "seq", "modifications"]]
         return peprec
 
-    def get_calibration_psms(self, psm_list: PSMList):
+    def _get_calibration_psms(self, psm_list: PSMList):
         """Get N best scoring target PSMs for calibration."""
         psm_list_targets = psm_list[~psm_list["is_decoy"]]
-        n_psms = self.get_number_of_calibration_psms(psm_list_targets)
+        n_psms = self._get_number_of_calibration_psms(psm_list_targets)
         indices = np.argsort(psm_list_targets["score"])
         indices = indices[:n_psms] if self.lower_psm_score_better else indices[-n_psms:]
         return psm_list_targets[indices]
 
-    def get_number_of_calibration_psms(self, psm_list):
+    def _get_number_of_calibration_psms(self, psm_list):
         """Get number of calibration PSMs given `calibration_set_size` and total number of PSMs."""
         if isinstance(self.calibration_set_size, float):
             if not 0 < self.calibration_set_size <= 1:

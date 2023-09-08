@@ -2,12 +2,12 @@
 
 from collections import defaultdict
 from csv import DictReader
-from typing import Optional, Tuple
 from pathlib import Path
+from typing import Optional, Tuple
 
+import pandas as pd
 import psm_utils
 from mokapot import LinearConfidence, LinearPsmDataset, read_fasta
-import pandas as pd
 
 
 def read_feature_names(feature_names_path: Path) -> dict:
@@ -18,6 +18,18 @@ def read_feature_names(feature_names_path: Path) -> dict:
         for line in reader:
             feature_names[line["feature_generator"]].append(line["feature_name"])
     return feature_names
+
+
+def get_feature_values(
+    psm_list: psm_utils.PSMList, feature_names: Optional[list] = None
+) -> pd.DataFrame:
+    """Get feature values for all PSMs in a PSM list."""
+    if not feature_names:
+        feature_names = list(psm_list[0].rescoring_features.keys())
+    features = pd.DataFrame(
+        {fname: psm.rescoring_features[fname] for fname in feature_names} for psm in psm_list
+    ).astype("float32")
+    return features
 
 
 def get_confidence_estimates(
@@ -64,4 +76,3 @@ def get_confidence_estimates(
         confidence[when] = lin_psm_dataset.assign_confidence()
 
     return confidence["before"], confidence["after"]
-

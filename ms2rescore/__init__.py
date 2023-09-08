@@ -13,3 +13,4 @@ filterwarnings(
 )
 
 from ms2rescore.core import rescore
+from ms2rescore.config_parser import parse_configurations

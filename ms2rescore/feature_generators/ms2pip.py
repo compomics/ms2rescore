@@ -1,4 +1,27 @@
-"""MS²PIP fragmentation intensity-based feature generator."""
+"""
+MS²PIP fragmentation intensity-based feature generator.
+
+MS²PIP is a machine learning tool that predicts the MS2 spectrum of a peptide given its sequence.
+It is previously identified MS2 spectra and their corresponding peptide sequences. Because MS²PIP
+uses the highly performant - but traditional - machine learning approach XGBoost, it can already
+produce accurate predictions even if trained on smaller spectral libraries. This makes MS²PIP a
+very flexible platform to train new models on custom datasets. Nevertheless, MS²PIP comes with
+several pre-trained models. See
+`github.com/compomics/ms2pip <https://github.com/compomics/ms2pip>`_ for more information.
+
+Because traditional proteomics search engines do not fully consider MS2 peak intensities in their
+scoring functions, adding rescoring features derived from spectrum prediction tools has proved to
+be a very effective way to further improve the sensitivity of peptide-spectrum matching.
+
+If you use MS²PIP through MS²Rescore, please cite:
+
+.. epigraph::
+    Declercq, A., Bouwmeester, R., Chiva, C., Sabidó, E., Hirschler, A., Carapito, C., Martens, L.,
+    Degroeve, S., Gabriels, R. Updated MS²PIP web server supports cutting-edge proteomics
+    applications. *Nucleic Acids Research* (2023)
+    `doi:10.1093/nar/gkad335 <https://doi.org/10.1093/nar/gkad335>`_
+
+"""
 
 import logging
 import multiprocessing
@@ -13,14 +36,14 @@ from ms2pip.result import ProcessingResult
 from psm_utils import PSMList
 from rich.progress import track
 
-from ms2rescore.feature_generators._base_classes import FeatureGeneratorBase
+from ms2rescore.feature_generators.base import FeatureGeneratorBase
 from ms2rescore.utils import infer_spectrum_path
 
 logger = logging.getLogger(__name__)
 
 
 class MS2PIPFeatureGenerator(FeatureGeneratorBase):
-    """MS²PIP fragmentation intensity-based feature generator."""
+    """Generate MS²PIP-based features."""
 
     def __init__(
         self,
@@ -33,21 +56,27 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
         **kwargs,
     ) -> None:
         """
-        MS²PIP fragmentation intensity-based feature generator.
+        Generate MS²PIP-based features.
 
         Parameters
         ----------
         model
-            MS²PIP prediction model to use. Defaults to "HCD".
+            MS²PIP prediction model to use. Defaults to :py:const:`HCD`.
         ms2_tolerance
-            MS2 mass tolerance in Da. Defaults to 0.02.
+            MS2 mass tolerance in Da. Defaults to :py:const:`0.02`.
         spectrum_path
-            Path to spectrum file or directory with spectrum files. If None, inferred from `run`
-            field in PSMs. Defaults to None.
+            Path to spectrum file or directory with spectrum files. If None, inferred from ``run``
+            field in PSMs. Defaults to :py:const:`None`.
         spectrum_id_pattern : str, optional
-            Regular expression pattern to extract spectrum ID from spectrum file. Defaults to ".*".
+            Regular expression pattern to extract spectrum ID from spectrum file. Defaults to
+            :py:const:`.*`.
         processes : int, optional
             Number of processes to use. Defaults to 1.
+
+        Attributes
+        ----------
+        feature_names: list[str]
+            Names of the features that will be added to the PSMs.
 
         """
         super().__init__(*args, **kwargs)

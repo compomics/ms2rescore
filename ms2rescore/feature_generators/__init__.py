@@ -1,4 +1,6 @@
-"""Feature generation for MS²Rescore."""
+"""
+Feature generators to add rescoring features to PSMs from various (re)sources and prediction tools.
+"""
 
 from ms2rescore.feature_generators.basic import BasicFeatureGenerator
 from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator

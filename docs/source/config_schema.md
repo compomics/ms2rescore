@@ -1,0 +1,78 @@
+# MS²Rescore configuration
+
+## Properties
+
+- **`ms2rescore`** *(object)*: General MS²Rescore settings. Cannot contain additional properties.
+  - **`feature_generators`** *(object)*: Feature generators and their configurations. Default: `{"basic": {}, "ms2pip": {"model": "HCD", "ms2_tolerance": 0.02}, "deeplc": {}, "maxquant": {}}`.
+    - **`.*`**: Refer to *[#/definitions/feature_generator](#definitions/feature_generator)*.
+    - **`basic`**: Refer to *[#/definitions/basic](#definitions/basic)*.
+    - **`ms2pip`**: Refer to *[#/definitions/ms2pip](#definitions/ms2pip)*.
+    - **`deeplc`**: Refer to *[#/definitions/deeplc](#definitions/deeplc)*.
+    - **`maxquant`**: Refer to *[#/definitions/maxquant](#definitions/maxquant)*.
+  - **`rescoring_engine`** *(object)*: Rescoring engine to use and its configuration. Leave empty to skip rescoring and write features to file. Default: `{"mokapot": {}}`.
+    - **`.*`**: Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
+    - **`percolator`**: Refer to *[#/definitions/percolator](#definitions/percolator)*.
+    - **`mokapot`**: Refer to *[#/definitions/mokapot](#definitions/mokapot)*.
+  - **`config_file`**: Path to configuration file.
+    - **One of**
+      - *string*
+      - *null*
+  - **`psm_file`**: Path to file with peptide-spectrum matches.
+    - **One of**
+      - *string*
+      - *null*
+  - **`psm_file_type`** *(string)*: PSM file type. By default inferred from file extension. Default: `"infer"`.
+  - **`spectrum_path`**: Path to spectrum file or directory with spectrum files.
+    - **One of**
+      - *string*
+      - *null*
+  - **`output_path`**: Path and root name for output files.
+    - **One of**
+      - *string*
+      - *null*
+  - **`log_level`** *(string)*: Logging level. Must be one of: `["debug", "info", "warning", "error", "critical"]`.
+  - **`id_decoy_pattern`**: Regex pattern used to identify the decoy PSMs in identification file. Default: `null`.
+    - **One of**
+      - *string*
+      - *null*
+  - **`spectrum_id_pattern`**: Regex pattern to extract index or scan number from spectrum file. Requires at least one capturing group. Default: `"(.*)"`.
+    - **One of**
+      - *string*
+      - *null*
+  - **`psm_id_pattern`**: Regex pattern to extract index or scan number from PSM file. Requires at least one capturing group. Default: `"(.*)"`.
+    - **One of**
+      - *string*
+      - *null*
+  - **`lower_score_is_better`** *(boolean)*: Bool indicating if lower score is better. Default: `false`.
+  - **`modification_mapping`** *(object)*: Mapping of modification labels to each replacement label. Default: `{}`.
+  - **`fixed_modifications`** *(object)*: Mapping of amino acids with fixed modifications to the modification name. Can contain additional properties. Default: `{}`.
+  - **`processes`** *(number)*: Number of parallel processes to use; -1 for all available. Minimum: `-1`. Default: `-1`.
+  - **`rename_to_usi`** *(boolean)*: Convert spectrum IDs to their universal spectrum identifier.
+  - **`fasta_file`**: Path to FASTA file with protein sequences to use for protein inference.
+    - **One of**
+      - *string*
+      - *null*
+  - **`write_report`** *(boolean)*: Write an HTML report with various QC metrics and charts. Default: `false`.
+## Definitions
+
+- <a id="definitions/feature_generator"></a>**`feature_generator`** *(object)*: Feature generator configuration. Can contain additional properties.
+- <a id="definitions/rescoring_engine"></a>**`rescoring_engine`** *(object)*: Rescoring engine configuration. Can contain additional properties.
+- <a id="definitions/basic"></a>**`basic`** *(object)*: Basic feature generator configuration. Can contain additional properties. Refer to *[#/definitions/feature_generator](#definitions/feature_generator)*.
+- <a id="definitions/ms2pip"></a>**`ms2pip`** *(object)*: MS²PIP feature generator configuration. Can contain additional properties. Refer to *[#/definitions/feature_generator](#definitions/feature_generator)*.
+  - **`model`** *(string)*: MS²PIP model to use (see MS²PIP documentation). Default: `"HCD"`.
+  - **`ms2_tolerance`** *(number)*: MS2 error tolerance in Da. Minimum: `0`. Default: `0.02`.
+- <a id="definitions/deeplc"></a>**`deeplc`** *(object)*: DeepLC feature generator configuration. Can contain additional properties. Refer to *[#/definitions/feature_generator](#definitions/feature_generator)*.
+  - **`calibration_set_size`**: Calibration set size. Default: `0.15`.
+    - **One of**
+      - *integer*
+      - *number*
+- <a id="definitions/maxquant"></a>**`maxquant`** *(object)*: MaxQuant feature generator configuration. Can contain additional properties. Refer to *[#/definitions/feature_generator](#definitions/feature_generator)*.
+- <a id="definitions/mokapot"></a>**`mokapot`** *(object)*: Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function. Can contain additional properties. Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
+  - **`write_weights`** *(boolean)*: Write Mokapot weights to a text file. Default: `false`.
+  - **`write_txt`** *(boolean)*: Write Mokapot results to a text file. Default: `false`.
+  - **`write_flashlfq`** *(boolean)*: Write Mokapot results to a FlashLFQ-compatible file. Default: `false`.
+- <a id="definitions/percolator"></a>**`percolator`** *(object)*: Percolator rescoring engine configuration. Can contain additional properties. Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
+  - **`init-weights`**: Weights file for scoring function. Default: `false`.
+    - **One of**
+      - *string*
+      - *null*

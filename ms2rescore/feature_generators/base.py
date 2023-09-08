@@ -4,7 +4,7 @@ from psm_utils import PSMList
 
 
 class FeatureGeneratorBase(ABC):
-    """Base class for feature generators."""
+    """Base class from which all feature generators must inherit."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()

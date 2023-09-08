@@ -16,6 +16,11 @@ thread in
 `GitHub Discussions <https://github.com/compomics/ms2rescore/discussions>`_
 or in `GitHub Issues <https://github.com/compomics/ms2rescore/issues>`_.
 
+Welcome contributions include:
+- New features, such as the addition of new feature generators
+- Improvements of existing functionality
+- Bugfixes
+
 
 
 Development setup
@@ -32,6 +37,18 @@ Local install
 
     pip install --editable .[dev,doc]
 
+
+Pre-commit hooks
+****************
+
+Pre-commit hooks ensure that certain checks are performed before making a new commit. For instance,
+the ``black`` pre-commit hook is used to format all Python code, and ``jsonschema2md`` is used to
+automatically generate Markdown documentation for the configuration file. Setup the pre-commit
+hooks with:
+
+.. code-block:: sh
+
+    pre-commit install
 
 
 Unit tests

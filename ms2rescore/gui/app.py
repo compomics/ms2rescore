@@ -33,6 +33,7 @@ logger.setLevel(logging.INFO)
 
 try:
     import matplotlib.pyplot as plt
+
     plt.set_loglevel("warning")
 except ImportError:
     pass
@@ -61,12 +62,20 @@ class SideBar(ctk.CTkFrame):
         self.citations = CitationFrame(
             self,
             [
-                ("Declercq et al. 2022 MCP", "https://doi.org/10.1016/j.mcpro.2022.100266"),
-                ("Declercq et al. 2023 NAR", "https://doi.org/10.1093/nar/gkad335"),
                 (
-                    "Bouwmeester et al. 2021 Nat Methods",
+                    "MS²Rescore: Declercq et al. 2022 MCP",
+                    "https://doi.org/10.1016/j.mcpro.2022.100266",
+                ),
+                ("MS²PIP: Declercq et al. 2023 NAR", "https://doi.org/10.1093/nar/gkad335"),
+                (
+                    "DeepLC: Bouwmeester et al. 2021 Nat Methods",
                     "https://doi.org/10.1038/s41592-021-01301-5",
                 ),
+                (
+                    "Mokapot: Fondrie et al. 2021 JPR",
+                    "https://doi.org/10.1021/acs.jproteome.0c01010",
+                ),
+                ("Percolator: Käll et al. 2007 Nat Methods", "https://doi.org/10.1038/nmeth1113"),
             ],
         )
         self.citations.configure(fg_color="transparent")
@@ -113,6 +122,7 @@ class CitationFrame(ctk.CTkFrame):
                 self,
                 text=ref,
                 text_color=("#000000", "#fefdff"),
+                hover_color=("#3a7ebf", "#1f538d"),
                 fg_color="transparent",
                 anchor="w",
                 height=8,
@@ -176,22 +186,20 @@ class MainConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.psm_file = widgets.LabeledFileSelect(
-            self, label="Select identification file", file_option="openfile"
-        )
-        self.psm_file.grid(row=0, column=0, pady=(0, 10), sticky="nsew")
+        self.psm_file_config = PSMFileConfigFrame(self)
+        self.psm_file_config.grid(row=0, column=0, pady=(0, 10), sticky="nsew")
 
         self.spectrum_path = widgets.LabeledFileSelect(
             self, label="Select MGF/mzML file or directory", file_option="file/dir"
         )
         self.spectrum_path.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
 
-        self.psm_file_type = widgets.LabeledOptionMenu(
+        self.fasta_file = widgets.LabeledFileSelect(
             self,
-            label="PSM file type",
-            values=["infer"] + list(FILETYPES.keys()),
+            label="Select FASTA file (optional, required for protein inference)",
+            file_option="openfile",
         )
-        self.psm_file_type.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
+        self.fasta_file.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
 
         self.processes = widgets.LabeledOptionMenu(
             self,
@@ -219,9 +227,9 @@ class MainConfiguration(ctk.CTkFrame):
     def get(self) -> Dict:
         """Get the configured values as a dictionary."""
         return {
-            "psm_file": self.psm_file.get(),
+            **self.psm_file_config.get(),
             "spectrum_path": self.spectrum_path.get(),
-            "psm_file_type": self.psm_file_type.get(),
+            "fasta_file": self.fasta_file.get(),
             "processes": int(self.processes.get()),
             "modification_mapping": self._parse_modification_mapping(
                 self.modification_mapping.get()
@@ -247,6 +255,35 @@ class MainConfiguration(ctk.CTkFrame):
                 amino_acids = [aa.upper() for aa in mod[1].strip().split(",")]
                 fixed_modifications[mod[0]] = amino_acids
         return fixed_modifications
+
+
+class PSMFileConfigFrame(ctk.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """PSM file configuration frame with labeled file select and option menu."""
+        super().__init__(*args, **kwargs)
+
+        self.configure(fg_color="transparent")
+        self.grid_columnconfigure(0, weight=1)
+
+        self.psm_file = widgets.LabeledFileSelect(
+            self, label="Select identification file", file_option="openfile"
+        )
+        self.psm_file.grid(row=0, column=0, pady=0, padx=(0, 5), sticky="nsew")
+
+        self.psm_file_type = widgets.LabeledOptionMenu(
+            self,
+            vertical=True,
+            label="PSM file type",
+            values=["infer"] + list(FILETYPES.keys()),
+        )
+        self.psm_file_type.grid(row=0, column=1, pady=(5, 0), sticky="nsew")
+
+    def get(self) -> Dict:
+        """Get the configured values as a dictionary."""
+        return {
+            "psm_file": self.psm_file.get(),
+            "psm_file_type": self.psm_file_type.get(),
+        }
 
 
 class AdvancedConfiguration(ctk.CTkFrame):
@@ -404,7 +441,7 @@ class DeepLCConfiguration(ctk.CTkFrame):
 
         enabled = self.enabled.get()
         config = {
-            "transfer_learning": self.transfer_learning.get(),
+            "deeplc_retrain": self.transfer_learning.get(),
             "calibration_set_size": calibration_set_size,
         }
         return enabled, config

@@ -7,6 +7,14 @@ ms2rescore.rescoring_engines
 
 
 
+Mokapot
+#######
+
+.. automodule:: ms2rescore.rescoring_engines.mokapot
+   :members:
+
+
+
 Percolator
 ##########
 

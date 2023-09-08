@@ -33,7 +33,7 @@ dynamic = ["version"]
 requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.16.0,<2",
-    "pandas>=0.24.0,<2",        # TODO: Check compatibility for v2
+    "pandas>=0.24.0,<3",                 # TODO: Check compatibility for v2
     "rich>=12",
     "pyteomics>=4.1.0,<5",
     "lxml>=4.5,<5",
@@ -41,27 +41,29 @@ dependencies = [
     "click>=7",
     "cascade-config>=0.4.0,<2",
     "deeplc>=1.2.1",
-    "deeplcretrainer==0.1.17",  # TODO: Release version pin
-    "tomlkit",
+    "deeplcretrainer==0.1.17",           # TODO: Release version pin
+    "tomli>=2; python_version < '3.11'",
     "psm_utils>=0.3",
     "customtkinter>=5,<6",
     "mokapot>=0.9",
-    "pydantic>=1.8.2,<2",       # Fix compatibility with v2 in psm_utils
+    "pydantic>=1.8.2,<2",                # Fix compatibility with v2 in psm_utils
+    "jinja2>=3",
+    "plotly>=5",
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "black", "pytest", "pytest-cov"]
+dev = ["ruff", "black", "pytest", "pytest-cov", "pre-commit"]
 doc = [
     "sphinx",
     "numpydoc>=1,<2",
-    "recommonmark",
-    "sphinx-mdinclude",
+    "myst-parser",
     "toml",
     "semver>=2",
     "sphinx_rtd_theme",
     "sphinx-autobuild",
+    "nbsphinx",
+    "sphinx-argparse",
 ]
-report = ["jinja2", "plotly"]
 
 [project.urls]
 GitHub = "https://github.com/compomics/ms2rescore"

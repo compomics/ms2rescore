@@ -1,7 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "MS²Rescore configuration",
-    "description": "MS²Rescore JSON configuration file.",
     "type": "object",
     "required": ["ms2rescore"],
     "properties": {
@@ -15,19 +14,28 @@
                     "description": "Feature generators and their configurations.",
                     "type": "object",
                     "patternProperties": {
-                        ".*": { "$ref": "#/$defs/feature_generator" },
+                        ".*": { "$ref": "#/definitions/feature_generator" },
                         "basic": {
-                            "$ref": "#/$defs/feature_generator/$defs/basic"
+                            "$ref": "#/definitions/basic"
                         },
                         "ms2pip": {
-                            "$ref": "#/$defs/feature_generator/$defs/ms2pip"
+                            "$ref": "#/definitions/ms2pip"
                         },
                         "deeplc": {
-                            "$ref": "#/$defs/feature_generator/$defs/deeplc"
+                            "$ref": "#/definitions/deeplc"
                         },
                         "maxquant": {
-                            "$ref": "#/$defs/feature_generator/$defs/maxquant"
+                            "$ref": "#/definitions/maxquant"
                         }
+                    },
+                    "default": {
+                        "basic": {},
+                        "ms2pip": {
+                            "model": "HCD",
+                            "ms2_tolerance": 0.02
+                        },
+                        "deeplc": {},
+                        "maxquant": {}
                     }
                 },
                 "rescoring_engine": {
@@ -36,12 +44,12 @@
                     "minProperties": 0,
                     "maxProperties": 1,
                     "patternProperties": {
-                        ".*": { "$ref": "#/$defs/rescoring_engine" },
+                        ".*": { "$ref": "#/definitions/rescoring_engine" },
                         "percolator": {
-                            "$ref": "#/$defs/rescoring_engine/$defs/percolator"
+                            "$ref": "#/definitions/percolator"
                         },
                         "mokapot": {
-                            "$ref": "#/$defs/rescoring_engine/$defs/mokapot"
+                            "$ref": "#/definitions/mokapot"
                         }
                     },
                     "default": {
@@ -130,101 +138,94 @@
             }
         }
     },
-    "$defs": {
+    "definitions": {
         "feature_generator": {
             "description": "Feature generator configuration",
             "type": "object",
-            "additionalProperties": true,
-            "$defs": {
-                "basic": {
-                    "$schema": "#/definitions/feature_generator",
-                    "description": "Basic feature generator configuration",
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "ms2pip": {
-                    "$schema": "#/definitions/feature_generator",
-                    "description": "MS²PIP feature generator configuration",
-                    "type": "object",
-                    "additionalProperties": true,
-                    "properties": {
-                        "model": {
-                            "description": "MS²PIP model to use (see MS²PIP documentation)",
-                            "type": "string",
-                            "default": "HCD"
-                        },
-                        "ms2_tolerance": {
-                            "description": "MS2 error tolerance in Da",
-                            "type": "number",
-                            "minimum": 0,
-                            "default": 0.02
-                        }
-                    }
-                },
-                "deeplc": {
-                    "$schema": "#/definitions/feature_generator",
-                    "description": "DeepLC feature generator configuration",
-                    "type": "object",
-                    "additionalProperties": true,
-                    "properties": {
-                        "calibration_set_size": {
-                            "description": "Calibration set size",
-                            "oneOf": [
-                                { "type": "integer" },
-                                { "type": "number" }
-                            ],
-                            "default": 0.15
-                        }
-                    }
-                },
-                "maxquant": {
-                    "$schema": "#/definitions/feature_generator",
-                    "description": "MaxQuant feature generator configuration",
-                    "type": "object",
-                    "additionalProperties": true
-                }
-            }
+            "additionalProperties": true
         },
         "rescoring_engine": {
             "description": "Rescoring engine configuration",
             "type": "object",
+            "additionalProperties": true
+        },
+        "basic": {
+            "$ref": "#/definitions/feature_generator",
+            "description": "Basic feature generator configuration",
+            "type": "object",
+            "additionalProperties": true
+        },
+        "ms2pip": {
+            "$ref": "#/definitions/feature_generator",
+            "description": "MS²PIP feature generator configuration",
+            "type": "object",
             "additionalProperties": true,
-            "$defs": {
-                "mokapot": {
-                    "$schema": "#/definitions/rescoring_engine",
-                    "description": "Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function.",
-                    "type": "object",
-                    "additionalProperties": true,
-                    "properties": {
-                        "write_weights": {
-                            "description": "Write Mokapot weights to a text file",
-                            "type": "boolean",
-                            "default": false
-                        },
-                        "write_txt": {
-                            "description": "Write Mokapot results to a text file",
-                            "type": "boolean",
-                            "default": false
-                        },
-                        "write_flashlfq": {
-                            "description": "Write Mokapot results to a FlashLFQ-compatible file",
-                            "type": "boolean",
-                            "default": false
-                        }
-                    }
+            "properties": {
+                "model": {
+                    "description": "MS²PIP model to use (see MS²PIP documentation)",
+                    "type": "string",
+                    "default": "HCD"
                 },
-                "percolator": {
-                    "$schema": "#/definitions/rescoring_engine",
-                    "description": "Percolator rescoring engine configuration",
-                    "type": "object",
-                    "additionalProperties": true,
-                    "properties": {
-                        "init-weights": {
-                            "description": "Weights file for scoring function",
-                            "oneOf": [{ "type": "string" }, { "type": "null" }],
-                            "default": false
-                        }
-                    }
+                "ms2_tolerance": {
+                    "description": "MS2 error tolerance in Da",
+                    "type": "number",
+                    "minimum": 0,
+                    "default": 0.02
+                }
+            }
+        },
+        "deeplc": {
+            "$ref": "#/definitions/feature_generator",
+            "description": "DeepLC feature generator configuration",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "calibration_set_size": {
+                    "description": "Calibration set size",
+                    "oneOf": [{ "type": "integer" }, { "type": "number" }],
+                    "default": 0.15
+                }
+            }
+        },
+        "maxquant": {
+            "$ref": "#/definitions/feature_generator",
+            "description": "MaxQuant feature generator configuration",
+            "type": "object",
+            "additionalProperties": true
+        },
+        "mokapot": {
+            "$ref": "#/definitions/rescoring_engine",
+            "description": "Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "write_weights": {
+                    "description": "Write Mokapot weights to a text file",
+                    "type": "boolean",
+                    "default": false
+                },
+                "write_txt": {
+                    "description": "Write Mokapot results to a text file",
+                    "type": "boolean",
+                    "default": false
+                },
+                "write_flashlfq": {
+                    "description": "Write Mokapot results to a FlashLFQ-compatible file",
+                    "type": "boolean",
+                    "default": false
+                }
+            }
+        },
+        "percolator": {
+            "$ref": "#/definitions/rescoring_engine",
+            "description": "Percolator rescoring engine configuration",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "init-weights": {
+                    "description": "Weights file for scoring function",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
+                    "default": false
                 }
             }
         }
