@@ -9,7 +9,7 @@ from ms2rescore import __version__
 
 # Package info
 exe_name = "ms2rescore"
-script_name = "ms2rescore/gui.py"
+script_name = "ms2rescore/gui/__main__.py"
 icon = "./img/ms2rescore.ico"
 location = os.getcwd()
 project = "ms2rescore"
