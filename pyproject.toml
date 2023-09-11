@@ -53,7 +53,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["ruff", "black", "pytest", "pytest-cov", "pre-commit"]
-doc = [
+docs = [
     "sphinx",
     "numpydoc>=1,<2",
     "myst-parser",

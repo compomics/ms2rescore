@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../../"))
 
-from psm_utils import __version__  # noqa: E402
+from ms2rescore import __version__  # noqa: E402
 
 # Project information
 project = "ms2rescore"
