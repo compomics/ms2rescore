@@ -3,6 +3,7 @@ import tensorflow as tf
 from itertools import chain
 import logging
 import os
+from pathlib import Path
 
 from ms2rescore.feature_generators._base_classes import FeatureGeneratorBase
 from psm_utils import PSMList
@@ -15,17 +16,18 @@ import ionmob
 
 logger = logging.getLogger(__name__)
 
-ionmob_dir = os.path.dirname(os.path.realpath(ionmob.__file__))
+ionmob_dir = Path(ionmob.__file__).parent
+
 DEFAULT_MODELS_IONMOB = {
-    "ionmob/pretrained_models/DeepTwoMerModel",
-    "ionmob/pretrained_models/GRUPredictor",
-    "ionmob/pretrained_models/SqrtModel",
+    Path("pretrained_models/DeepTwoMerModel"),
+    Path("pretrained_models/GRUPredictor"),
+    Path("pretrained_models/SqrtModel"),
 }
 DEFAULT_MODELS_DICT = {
-    mod.split("/")[1]: os.path.join(ionmob_dir, mod) for mod in DEFAULT_MODELS_IONMOB
+    str(mod_path.stem): ionmob_dir.joinpath(mod_path) for mod_path in DEFAULT_MODELS_IONMOB
 }
-DEFAULT_TOKENIZER = os.path.join(ionmob_dir, "pretrained_models/tokenizer.json")
-DEFAULT_REFERENCE_DATASET = os.path.join(ionmob_dir, "pretrained_models/Tenzer_unimod.parquet")
+DEFAULT_TOKENIZER = ionmob_dir.joinpath("pretrained_models/tokenizers/tokenizer.json")
+DEFAULT_REFERENCE_DATASET = ionmob_dir.joinpath("example_data/Tenzer_unimod.parquet")
 
 
 class IonMobFeatureGenerator(FeatureGeneratorBase):
@@ -49,7 +51,9 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
         """
         super().__init__(*args, **kwargs)
         try:
-            self.ionmob_model = tf.keras.models.load_model(DEFAULT_MODELS_DICT[ionmob_model])
+            self.ionmob_model = tf.keras.models.load_model(
+                DEFAULT_MODELS_DICT[ionmob_model].__str__()
+            )
         except KeyError:
             self.ionmob_model = tf.keras.models.load_model(ionmob_model)
 
