@@ -2,10 +2,9 @@ import pandas as pd
 import tensorflow as tf
 from itertools import chain
 import logging
-import os
 from pathlib import Path
 
-from ms2rescore.feature_generators._base_classes import FeatureGeneratorBase
+from ms2rescore.feature_generators.base import FeatureGeneratorBase
 from psm_utils import PSMList
 from ionmob.preprocess.data import to_tf_dataset_inference
 from ionmob.utilities.utility import get_ccs_shift

@@ -353,7 +353,7 @@ class FeatureGeneratorConfig(ctk.CTkFrame):
         self.deeplc_config.grid(row=1, column=0, pady=(0, 20), sticky="nsew")
 
         self.ionmob_config = IonmobConfiguration(self)
-        self.ionmob_config.grid(row=1, column=0, pady=(0, 20), sticky="nsew")
+        self.ionmob_config.grid(row=2, column=0, pady=(0, 20), sticky="nsew")
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
@@ -459,7 +459,7 @@ class IonmobConfiguration(ctk.CTkFrame):
         super().__init__(*args, **kwargs)
 
         self.configure(fg_color="transparent")
-        self.grid._columnconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
 
         self.title = widgets.Heading(self, text="Ionmob")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
@@ -478,7 +478,7 @@ class IonmobConfiguration(ctk.CTkFrame):
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
         enabled = self.enabled.get()
-        config = {"model": self.model.get()}
+        config = {"ionmob_model": self.model.get()}
         return enabled, config
 
 
