@@ -33,6 +33,7 @@ logger.setLevel(logging.INFO)
 
 try:
     import matplotlib.pyplot as plt
+
     plt.set_loglevel("warning")
 except ImportError:
     pass
@@ -315,15 +316,21 @@ class FeatureGeneratorConfig(ctk.CTkFrame):
         self.deeplc_config = DeepLCConfiguration(self)
         self.deeplc_config.grid(row=1, column=0, pady=(0, 20), sticky="nsew")
 
+        self.ionmob_config = IonmobConfiguration(self)
+        self.ionmob_config.grid(row=1, column=0, pady=(0, 20), sticky="nsew")
+
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
         ms2pip_enabled, ms2pip_config = self.ms2pip_config.get()
         deeplc_enabled, deeplc_config = self.deeplc_config.get()
+        ionmob_enabled, ionmob_config = self.ionmob_config.get()
         config = {}
         if ms2pip_enabled:
             config["ms2pip"] = ms2pip_config
         if deeplc_enabled:
             config["deeplc"] = deeplc_config
+        if ionmob_enabled:
+            config["ionmob"] = ionmob_config
         return config
 
 
@@ -407,6 +414,35 @@ class DeepLCConfiguration(ctk.CTkFrame):
             "transfer_learning": self.transfer_learning.get(),
             "calibration_set_size": calibration_set_size,
         }
+        return enabled, config
+
+
+class IonmobConfiguration(ctk.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """IonMob configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.configure(fg_color="transparent")
+        self.grid._columnconfigure(0, weight=1)
+
+        self.title = widgets.Heading(self, text="Ionmob")
+        self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
+
+        self.enabled = widgets.LabeledSwitch(self, label="Enable Ionmob", default=True)
+        self.enabled.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
+
+        self.model = widgets.LabeledEntry(
+            self,
+            label="Name of built-in model or path to custom model",
+            placeholder_text="GRUPredictor",
+            default_value="GRUPredictor",
+        )
+        self.model.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+
+    def get(self) -> Dict:
+        """Return the configuration as a dictionary."""
+        enabled = self.enabled.get()
+        config = {"model": self.model.get()}
         return enabled, config
 
 
