@@ -85,8 +85,8 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
         """
         logger.info("Adding Ionmob-derived features to PSMs.")
         psm_dict = psm_list.get_psm_dict()
-        current_run = 0
-        total_runs = len(psm_dict.values())
+        current_run = 1
+        total_runs = len(list(chain.from_iterable([runs.keys() for runs in psm_dict.values()])))
 
         for runs in psm_dict.values():
             for run, psms in runs.items():
