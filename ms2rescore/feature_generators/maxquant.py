@@ -1,3 +1,13 @@
+"""
+Feature generator for PSMs from the MaxQuant search engine.
+
+MaxQuant msms.txt files contain various metrics from peptide-spectrum matching that can be used
+to generate rescoring features. These include features related to the mass errors of the seven
+fragment ions with the highest intensities, and features related to the ion current of the
+identified fragment ions.
+
+"""
+
 import logging
 from typing import List, Tuple
 
@@ -5,15 +15,29 @@ import numpy as np
 from psm_utils import PSMList
 
 from ms2rescore.exceptions import MS2RescoreError
-from ms2rescore.feature_generators._base_classes import FeatureGeneratorBase
+from ms2rescore.feature_generators.base import FeatureGeneratorBase
 
 logger = logging.getLogger(__name__)
 
 
 class MaxQuantFeatureGenerator(FeatureGeneratorBase):
-    """MaxQuant feature generator"""
+    """Generate MaxQuant-derived features."""
 
     def __init__(self, *args, **kwargs) -> None:
+        """
+        Generate MaxQuant-derived features.
+
+        Attributes
+        ----------
+        feature_names: list[str]
+            Names of the features that will be added to the PSMs.
+
+        Raises
+        ------
+        MissingMetadataError
+            If the required metadata entries are not present in the PSMs.
+
+        """
         super().__init__(*args, **kwargs)
 
     @property
@@ -29,7 +53,15 @@ class MaxQuantFeatureGenerator(FeatureGeneratorBase):
         ]
 
     def add_features(self, psm_list: PSMList):
-        """Add MS²PIP-derived features to PSMs."""
+        """
+        Add MS²PIP-derived features to PSMs.
+
+        Parameters
+        ----------
+        psm_list
+            PSMs to add features to.
+
+        """
         logger.info("Adding MaxQuant-derived features to PSMs.")
 
         # Infer mass deviations column name

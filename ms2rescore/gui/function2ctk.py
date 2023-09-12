@@ -6,7 +6,7 @@ import multiprocessing
 import sys
 import tkinter as tk
 import traceback
-from typing import Callable
+from typing import Callable, Union
 
 import customtkinter as ctk
 
@@ -29,7 +29,7 @@ class Function2CTk(ctk.CTk):
     def __init__(
         self,
         sidebar_frame: ctk.CTkFrame,
-        config_frame: ctk.CTkFrame,
+        config_frame: Union[ctk.CTkTabview, ctk.CTkFrame],
         function: callable,
         *args,
         **kwargs,
@@ -39,11 +39,11 @@ class Function2CTk(ctk.CTk):
 
         Parameters
         ----------
-        sidebar_frame : ctk.CTkFrame
+        sidebar_frame
             Frame to render as sidebar.
-        config_frame : ctk.CTkTabview | ctk.CTkFrame
+        config_frame
             Frame to render as configuration. If ctk.Frame, the frame will be wrapped in a tabview.
-        function : callable
+        function
             Function to call when start button is pressed.
 
         """
@@ -72,11 +72,7 @@ class Function2CTk(ctk.CTk):
             self.config_frame = config_frame(self)
             self.config_frame.grid(row=0, column=1, padx=10, pady=(0, 10), sticky="nsew")
         else:
-            self.config_tabview_wrap = ctk.CTkTabview(
-                self,
-                segmented_button_selected_color="gray30",
-                segmented_button_selected_hover_color="gray30",
-            )
+            self.config_tabview_wrap = ctk.CTkTabview(self)
             self.config_tabview_wrap.grid(row=0, column=1, padx=10, pady=(0, 10), sticky="nsew")
             self.config_tabview_wrap.add("Configuration")
             self.config_tabview_wrap.set("Configuration")

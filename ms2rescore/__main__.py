@@ -49,7 +49,7 @@ def _print_credits():
     CONSOLE.print(text)
 
 
-def _parse_arguments() -> argparse.Namespace:
+def _argument_parser() -> argparse.ArgumentParser:
     """Parse CLI arguments."""
     parser = argparse.ArgumentParser(
         description="MS²Rescore: Sensitive PSM rescoring with predicted features.",
@@ -130,7 +130,7 @@ def _parse_arguments() -> argparse.Namespace:
         help="path to FASTA file",
     )
 
-    return parser.parse_args()
+    return parser
 
 
 def _setup_logging(passed_level: str, log_file: Union[str, Path]):
@@ -156,7 +156,8 @@ def main():
     _print_credits()
 
     # Parse CLI arguments and configuration file
-    cli_args = _parse_arguments()
+    parser = _argument_parser()
+    cli_args = parser.parse_args()
     try:
         if cli_args.config_file:
             config = parse_configurations([cli_args.config_file, cli_args])

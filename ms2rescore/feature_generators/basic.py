@@ -1,20 +1,35 @@
 """Generate basic features that can be extracted from any PSM list."""
 
 import logging
-from typing import List
+from typing import Dict, Iterable, List, Tuple
 
 import numpy as np
 from psm_utils import PSMList
 
-from ms2rescore.feature_generators._base_classes import FeatureGeneratorBase
+from ms2rescore.feature_generators.base import FeatureGeneratorBase
 
 logger = logging.getLogger(__name__)
 
 
 class BasicFeatureGenerator(FeatureGeneratorBase):
-    """Generate basic features that can be extracted from any PSM list."""
-
     def __init__(self, *args, **kwargs) -> None:
+        """
+        Generate basic features that can be extracted from any PSM list, including search engine
+        score, charge state, and MS1 error.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to the base class.
+        **kwargs
+            Keyword arguments passed to the base class.
+
+        Attributes
+        ----------
+        feature_names: list[str]
+            Names of the features that will be added to the PSMs.
+
+        """
         super().__init__(*args, **kwargs)
         self._feature_names = None
 
@@ -25,37 +40,63 @@ class BasicFeatureGenerator(FeatureGeneratorBase):
         return self._feature_names
 
     def add_features(self, psm_list: PSMList) -> None:
-        """Add basic features to a PSM list."""
+        """
+        Add basic features to a PSM list.
+
+        Parameters
+        ----------
+        psm_list
+            PSM list to add features to.
+
+        """
         logger.info("Adding basic features to PSMs.")
+
+        self._feature_names = []  # Reset feature names
+
         charge_states = np.array([psm.peptidoform.precursor_charge for psm in psm_list])
-        min_charge = np.min(charge_states)
-        max_charge = np.max(charge_states)
+        precursor_mzs = psm_list["precursor_mz"]
+        scores = psm_list["score"]
 
-        self._feature_names = [
-            "search_engine_score",
-            "charge_n",
-            "abs_ms1_error_ppm",
-        ]
-        self._feature_names.extend([f"charge_{i}" for i in range(min_charge, max_charge + 1)])
+        has_charge = None not in charge_states
+        has_mz = None not in precursor_mzs and has_charge
+        has_score = None not in scores
 
-        for psm in psm_list:
-            # Charge state as one-hot encoding
-            charge = psm.peptidoform.precursor_charge
-            charge_encoding = {
-                f"charge_{i}": 1 if charge is i else 0 for i in range(min_charge, max_charge + 1)
-            }
+        if has_charge:
+            charge_n = charge_states
+            charge_one_hot, one_hot_names = _one_hot_encode_charge(charge_states)
+            self._feature_names.extend(["charge_n"] + one_hot_names)
 
-            # Absolute MS1 error in ppm
-            obs_mz = psm["precursor_mz"]
-            the_mz = psm.peptidoform.theoretical_mz
-            abs_ms1_error_ppm = abs((obs_mz - the_mz) / the_mz * 10**6)
+        if has_mz:  # Charge also required for theoretical m/z
+            theo_mz = np.array([psm.peptidoform.theoretical_mz for psm in psm_list])
+            abs_ms1_error_ppm = np.abs((precursor_mzs - theo_mz) / theo_mz * 10**6)
+            self._feature_names.append("abs_ms1_error_ppm")
 
-            # Add features to PSM
+        if has_score:
+            self._feature_names.append("search_engine_score")
+
+        for i, psm in enumerate(psm_list):
             psm.rescoring_features.update(
-                {
-                    "search_engine_score": psm.score,
-                    "charge_n": charge,
-                    "abs_ms1_error_ppm": abs_ms1_error_ppm,
-                }
+                dict(
+                    **{"charge_n": charge_n[i]} if has_charge else {},
+                    **charge_one_hot[i] if has_charge else {},
+                    **{"abs_ms1_error_ppm": abs_ms1_error_ppm[i]} if has_mz else {},
+                    **{"search_engine_score": scores[i]} if has_score else {},
+                )
             )
-            psm.rescoring_features.update(charge_encoding)
+
+
+def _one_hot_encode_charge(
+    charge_states: np.ndarray,
+) -> Tuple[Iterable[Dict[str, int]], List[str]]:
+    """One-hot encode charge states."""
+    n_entries = len(charge_states)
+    min_charge = np.min(charge_states)
+    max_charge = np.max(charge_states)
+
+    mask = np.zeros((n_entries, max_charge - min_charge + 1), dtype=bool)
+    mask[np.arange(n_entries), charge_states - min_charge] = 1
+    one_hot = mask.view("i1")
+
+    heading = [f"charge_{i}" for i in range(min_charge, max_charge + 1)]
+
+    return [dict(zip(heading, row)) for row in one_hot], heading

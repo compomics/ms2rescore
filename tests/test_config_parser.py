@@ -12,7 +12,10 @@ def test__parse_output_path():
         ("examples/id", "examples/id/psm_file.ms2rescore"),  # Existing dir
         ("examples/id/custom_stem", "examples/id/custom_stem"),  # Parent is existing dir
         ("some/other_dir", "some/other_dir/psm_file.ms2rescore"),  # None-existing dir
-        ("some/other_dir/", "some/other_dir/psm_file.ms2rescore"),  # None-existing dir, with trailing slash
+        (
+            "some/other_dir/",
+            "some/other_dir/psm_file.ms2rescore",
+        ),  # None-existing dir, with trailing slash
         (None, "some/dir/psm_file.ms2rescore"),
     ]
 

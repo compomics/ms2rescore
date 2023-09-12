@@ -7,7 +7,11 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Dict, List, Union
 
-import tomlkit
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
 from cascade_config import CascadeConfig
 
 from ms2rescore import package_data
@@ -59,7 +63,8 @@ def _validate_filenames(config: Dict) -> Dict:
     )
 
     # Parse config_file as posix path
-    config["ms2rescore"]["config_file"] = Path(config["ms2rescore"]["config_file"]).as_posix()
+    if config["ms2rescore"]["config_file"]:
+        config["ms2rescore"]["config_file"] = Path(config["ms2rescore"]["config_file"]).as_posix()
 
     return config
 
@@ -109,8 +114,7 @@ def parse_configurations(configurations: List[Union[dict, str, Path, Namespace]]
             if Path(config).suffix.lower() == ".json":
                 cascade_conf.add_json(config)
             elif Path(config).suffix.lower() == ".toml":
-                with open(config, "rt") as toml_file:
-                    cascade_conf.add_dict(tomlkit.load(toml_file))
+                cascade_conf.add_dict(dict(tomllib.load(Path(config).open("rb"))))
             else:
                 raise MS2RescoreConfigurationError(
                     "Unknown file extension for configuration file. Should be `json` or " "`toml`."

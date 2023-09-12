@@ -88,17 +88,25 @@ class LabeledRadioButtons(ctk.CTkFrame):
 
 
 class LabeledOptionMenu(ctk.CTkFrame):
-    def __init__(self, *args, label="Select option", values=[], default_value=None, **kwargs):
+    def __init__(
+        self, *args, vertical=False, label="Select option", values=[], default_value=None, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.grid_columnconfigure(0, weight=1)
 
         self.value = ctk.StringVar(value=default_value or values[0])
 
         self._label = ctk.CTkLabel(self, text=label)
-        self._label.grid(row=0, column=0, padx=0, pady=5, sticky="w")
+        self._label.grid(row=0, column=0, padx=0, pady=0 if vertical else 5, sticky="w")
 
         self._option_menu = ctk.CTkOptionMenu(self, variable=self.value, values=values)
-        self._option_menu.grid(row=0, column=1, padx=0, pady=5, sticky="e")
+        self._option_menu.grid(
+            row=1 if vertical else 0,
+            column=0 if vertical else 1,
+            padx=0,
+            pady=0 if vertical else 5,
+            sticky="e",
+        )
 
     def get(self):
         return self.value.get()

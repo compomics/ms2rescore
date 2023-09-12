@@ -1,3 +1,5 @@
+"""Generate an HTML report with various QC charts for of MS²Rescore results."""
+
 import importlib.resources
 import json
 import logging
@@ -9,14 +11,22 @@ from typing import Dict, Optional
 import pandas as pd
 import plotly.express as px
 import psm_utils.io
-import tomlkit
 from jinja2 import Environment, FileSystemLoader
 from psm_utils.psm_list import PSMList
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 import ms2rescore
 import ms2rescore.report.charts as charts
 import ms2rescore.report.templates as templates
-from ms2rescore.report.utils import get_confidence_estimates, read_feature_names
+from ms2rescore.report.utils import (
+    get_confidence_estimates,
+    get_feature_values,
+    read_feature_names,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +41,7 @@ PLOTLY_HTML_KWARGS = {
 }
 
 
-with importlib.resources.open_text(templates, "texts.toml") as f:
-    TEXTS = tomlkit.load(f)
+TEXTS = tomllib.loads(importlib.resources.read_text(templates, "texts.toml"))
 
 
 def generate_report(
@@ -40,7 +49,22 @@ def generate_report(
     psm_list: Optional[psm_utils.PSMList] = None,
     feature_names: Optional[Dict[str, list]] = None,
 ):
-    """Generate report."""
+    """
+    Generate the report.
+
+    Parameters
+    ----------
+    output_path_prefix
+        Prefix of the MS²Rescore output file names. For example, if the PSM file is
+        ``/path/to/file.psms.tsv``, the prefix is ``/path/to/file.ms2rescore``.
+    psm_list
+        PSMs to be used for the report. If not provided, the PSMs will be read from the
+        PSM file that matches the ``output_path_prefix``.
+    feature_names
+        Feature names to be used for the report. If not provided, the feature names will be
+        read from the feature names file that matches the ``output_path_prefix``.
+
+    """
     files = _collect_files(output_path_prefix)
 
     # Read PSMs
@@ -62,8 +86,8 @@ def generate_report(
     target_decoy_context = _get_target_decoy_context(psm_list)
     features_context = _get_features_context(psm_list, files, feature_names=feature_names)
     config_context = _get_config_context(config)
+    log_context = _get_log_context(files)
 
-    logger.info("Collecting content...")
     context = {
         "metadata": {
             "generated_on": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
@@ -99,7 +123,7 @@ def generate_report(
                 "id": "main_tab_log",
                 "title": "Log",
                 "template": "log.html",
-                "context": {"log": files["log"].read_text(encoding="utf-8")},
+                "context": log_context,
             },
         ],
     }
@@ -115,7 +139,9 @@ def _collect_files(output_path_prefix):
         "configuration": Path(output_path_prefix + ".full-config.json").resolve(),
         "feature names": Path(output_path_prefix + ".feature_names.tsv").resolve(),
         "feature weights": Path(output_path_prefix + ".mokapot.weights.tsv").resolve(),
-        "log": Path(output_path_prefix + ".log.html").resolve(),
+        "log": Path(output_path_prefix + ".log.html").resolve()
+        if Path(output_path_prefix + ".log.html").is_file()
+        else Path(output_path_prefix + ".log.txt").resolve(),
     }
     for file, path in files.items():
         if Path(path).is_file():
@@ -138,6 +164,8 @@ def _get_stats_context(confidence_before, confidence_after):
             after = confidence_after.accepted[level.lower()]
         except KeyError:
             continue  # Level not present (e.g. no fasta provided)
+        if not before or not after:
+            continue
         increase = (after - before) / before * 100
         stats.append(
             {
@@ -156,7 +184,7 @@ def _get_stats_context(confidence_before, confidence_after):
 
 def _get_overview_context(confidence_before, confidence_after) -> dict:
     """Return context for overview tab."""
-    logger.info("Generating overview charts...")
+    logger.debug("Generating overview charts...")
     return {
         "stats": _get_stats_context(confidence_before, confidence_after),
         "charts": [
@@ -191,7 +219,7 @@ def _get_overview_context(confidence_before, confidence_after) -> dict:
 def _get_target_decoy_context(psm_list) -> dict:
     # fasta_file = "../../examples/fasta/uniprot-proteome-human-contaminants.fasta"
     # confidence_estimates = _get_confidence_estimates(psm_list, fasta_file)
-    logger.info("Generating target-decoy charts...")
+    logger.debug("Generating target-decoy charts...")
     psm_df = psm_list.to_dataframe()
     return {
         "charts": [
@@ -209,21 +237,13 @@ def _get_target_decoy_context(psm_list) -> dict:
     }
 
 
-def _get_config_context(config: dict) -> dict:
-    """Return context for config tab."""
-    return {
-        "description": TEXTS["configuration"]["description"],
-        "config": json.dumps(config, indent=4),
-    }
-
-
 def _get_features_context(
     psm_list: PSMList,
     files: Dict[str, Path],
     feature_names: Optional[Dict[str, list]] = None,
 ) -> dict:
     """Return context for features tab."""
-    logger.info("Generating feature-related charts...")
+    logger.debug("Generating feature-related charts...")
     context = {"charts": []}
 
     # Get feature names, mapping with generator, and flat list
@@ -261,7 +281,7 @@ def _get_features_context(
         )
 
     # Individual feature performance
-    features = charts.get_feature_values(psm_list, feature_names_flat)
+    features = get_feature_values(psm_list, feature_names_flat)
     _, feature_ecdf_auc = charts.calculate_feature_qvalues(features, psm_list["is_decoy"])
     feature_ecdf_auc["feature_generator"] = feature_ecdf_auc["feature"].map(feature_names_inv)
 
@@ -290,13 +310,18 @@ def _get_features_context(
     # DeepLC specific charts
     if "deeplc" in feature_names:
         import deeplc.plot
+
         scatter_chart = deeplc.plot.scatter(
-            df=features[(psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)],  # noqa: E712
+            df=features[
+                (psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)
+            ],  # noqa: E712
             predicted_column="predicted_retention_time_best",
             observed_column="observed_retention_time_best",
         )
         baseline_chart = deeplc.plot.distribution_baseline(
-            df=features[(psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)],  # noqa: E712
+            df=features[
+                (psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)
+            ],  # noqa: E712
             predicted_column="predicted_retention_time_best",
             observed_column="observed_retention_time_best",
         )
@@ -310,6 +335,26 @@ def _get_features_context(
         )
 
     return context
+
+
+def _get_config_context(config: dict) -> dict:
+    """Return context for config tab."""
+    return {
+        "description": TEXTS["configuration"]["description"],
+        "config": json.dumps(config, indent=4),
+    }
+
+
+def _get_log_context(files: Dict[str, Path]) -> dict:
+    """Return context for log tab."""
+    if not files["log"]:
+        return {"log": "<i>Log file could not be found.</i>"}
+
+    if files["log"].suffix == ".html":
+        return {"log": files["log"].read_text(encoding="utf-8")}
+
+    if files["log"].suffix == ".txt":
+        return {"log": "<pre><code>" + files["log"].read_text(encoding="utf-8") + "</code></pre>"}
 
 
 def _render_and_write(output_path_prefix: str, **context):

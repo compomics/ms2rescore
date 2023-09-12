@@ -1,7 +1,6 @@
 import json
 import logging
 import re
-import subprocess
 from multiprocessing import cpu_count
 from typing import Dict
 
@@ -10,6 +9,7 @@ from psm_utils import PSMList
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
 from ms2rescore.feature_generators import FEATURE_GENERATORS
+from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
 
 logger = logging.getLogger(__name__)
@@ -197,7 +197,6 @@ def rescore(configuration: Dict, psm_list: PSMList = None) -> None:
 
     # Write report
     if config["write_report"]:
-        from ms2rescore.report import generate
         generate.generate_report(output_file_root, psm_list=psm_list, feature_names=feature_names)
 
 
@@ -219,13 +218,4 @@ def _match_psm_ids(old_id, regex_pattern):
         raise MS2RescoreError(
             "`psm_id_pattern` could not be matched to all PSM spectrum IDs."
             " Ensure that the regex contains a capturing group?"
-        )
-
-
-def _validate_cli_dependency(command):
-    """Validate that command returns zero exit status."""
-    if subprocess.getstatusoutput(command)[0] != 0:
-        raise MS2RescoreError(
-            f"Could not run command '{command}'. Please ensure that the command is installed and "
-            "available in your PATH."
         )

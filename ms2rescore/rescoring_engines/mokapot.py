@@ -1,4 +1,23 @@
-"""Mokapot integration for MS²Rescore."""
+"""
+Mokapot integration for MS²Rescore.
+
+:py:mod:`mokapot` is a full-Python implementation of the semi-supervised learning algorithms
+introduced with Percolator. It builds upon the flexible scikit-learn package, which makes it
+highly efficient for routine applications, but also customizable for experimental research
+settings. Using Mokapot through MS²Rescore brings several advantages over Percolator: It can be
+easily installed in the same Python environment, and it is generally faster as the communication
+between the tools happens completely within Python, without the need to write and read files
+or communicate through the command line. See
+`mokapot.readthedocs.io <https://mokapot.readthedocs.io/>`_ for more information.
+
+If you use Mokapot through MS²Rescore, please cite:
+
+.. epigraph::
+   Fondrie W. E. & Noble W. S. mokapot: Fast and Flexible Semisupervised
+   Learning for Peptide Detection. *J Proteome Res* (2021).
+   `doi:10.1021/acs.jproteome.0c01010 <https://doi.org/10.1021/acs.jproteome.0c01010>`_
+
+"""
 
 import logging
 from typing import Any, List, Optional, Tuple
@@ -21,6 +40,7 @@ if logger.getEffectiveLevel() > logging.DEBUG:
 if logger.getEffectiveLevel() < logging.INFO:
     logging.getLogger("numba").setLevel(logging.INFO)
 
+
 def rescore(
     psm_list: psm_utils.PSMList,
     output_file_root: str = "ms2rescore",
@@ -29,9 +49,17 @@ def rescore(
     write_txt: bool = False,
     write_flashlfq: bool = False,
     **kwargs: Any,
-):
+) -> None:
     """
     Rescore PSMs with Mokapot.
+
+    The function provides a high-level interface to use Mokapot within MS²Rescore. It first
+    converts the :py:class:`~psm_utils.psm_list.PSMList` to a
+    :py:class:`~mokapot.dataset.LinearPsmDataset`, and then optionally adds protein information
+    from a FASTA file. The dataset is then passed to the :py:func:`~mokapot.brew` function, which
+    returns the new scores, q-values, and PEPs. These are then written back to the original
+    :py:class:`~psm_utils.psm_list.PSMList`. Optionally, results can be written to a Mokapot text
+    file, a FlashLFQ-compatible file, or the model weights can be saved.
 
     Parameters
     ----------
@@ -49,8 +77,7 @@ def rescore(
     write_flashlfq
         Write Mokapot results to a FlashLFQ-compatible file. Defaults to ``False``.
     **kwargs
-        Additional keyword arguments are passed to the Mokapot ~:py:function:`mokapot.brew.brew`
-        function.
+        Additional keyword arguments are passed to the Mokapot :py:func:`~mokapot.brew` function.
 
     """
     # Convert PSMList to Mokapot dataset
@@ -88,7 +115,14 @@ def rescore(
 
     # Write results
     if write_weights:
-        save_model_weights(models, feature_names, output_file_root)
+        try:
+            save_model_weights(models, feature_names, output_file_root)
+        except AttributeError:
+            logger.warning(
+                "Could not extract Mokapot model weights with the `coef_` attribute. Most likely, "
+                "a model type different from the default (linear SVM) was used. No weights will "
+                "be saved."
+            )
     if write_txt:
         confidence_results.to_txt(file_root=output_file_root, decoys=True)
     if write_flashlfq:
@@ -109,12 +143,7 @@ def convert_psm_list(
     feature_names
         List of feature names to use. Items must be keys in the PSM `rescoring_features` dict.
 
-    Returns
-    -------
-    mokapot.dataset.LinearPsmDataset
-
     """
-
     psm_df = psm_list.to_dataframe()
     psm_df = psm_df.reset_index(drop=True).reset_index()
 
@@ -141,6 +170,8 @@ def convert_psm_list(
     feature_df = pd.DataFrame(list(psm_df["rescoring_features"])).astype(float).fillna(0.0)
     feature_df.columns = [f"feature:{f}" for f in feature_df.columns]
     combined_df = pd.concat([psm_df[required_columns], feature_df], axis=1)
+
+    feature_names = [f"feature:{f}" for f in feature_names] if feature_names else None
 
     lin_psm_data = LinearPsmDataset(
         psms=combined_df,
@@ -176,10 +207,17 @@ def save_model_weights(
         Root of output file names.
 
     """
-    pd.DataFrame(
-        np.stack([m.estimator.coef_[0] for m in models]),
-        columns=list(feature_names),
-    ).to_csv(output_file_root + ".mokapot.weights.tsv", sep="\t", index=False)
+    try:
+        coefficients = np.stack([m.estimator.coef_[0] for m in models])
+    except AttributeError as e:
+        raise AttributeError(
+            "Could not extract Mokapot model weights with the `coef_` attribute. Most likely, "
+            "a model type different from the default (linear SVM) was used."
+        ) from e
+
+    pd.DataFrame(coefficients, columns=list(feature_names)).to_csv(
+        output_file_root + ".mokapot.weights.tsv", sep="\t", index=False
+    )
 
 
 def _mz_to_mass(mz: float, charge: int) -> float:

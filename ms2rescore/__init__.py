@@ -1,6 +1,6 @@
 """MS²Rescore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs."""
 
-__version__ = "3.0.0-dev4"
+__version__ = "3.0.0b1"
 
 from warnings import filterwarnings
 
@@ -12,4 +12,5 @@ filterwarnings(
     module="psims.mzmlb",
 )
 
-from ms2rescore.core import rescore
+from ms2rescore.config_parser import parse_configurations  # noqa: F401 E402
+from ms2rescore.core import rescore  # noqa: F401 E402
