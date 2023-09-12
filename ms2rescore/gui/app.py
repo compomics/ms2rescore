@@ -4,6 +4,7 @@ import importlib.resources
 import logging
 import multiprocessing
 import os
+import sys
 import webbrowser
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -346,21 +347,27 @@ class FeatureGeneratorConfig(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
+        self.basic_config = BasicFeatureConfiguration(self)
+        self.basic_config.grid(row=0, column=0, pady=(0, 20), sticky="nsew")
+
         self.ms2pip_config = MS2PIPConfiguration(self)
-        self.ms2pip_config.grid(row=0, column=0, pady=(0, 20), sticky="nsew")
+        self.ms2pip_config.grid(row=1, column=0, pady=(0, 20), sticky="nsew")
 
         self.deeplc_config = DeepLCConfiguration(self)
-        self.deeplc_config.grid(row=1, column=0, pady=(0, 20), sticky="nsew")
+        self.deeplc_config.grid(row=2, column=0, pady=(0, 20), sticky="nsew")
 
         self.ionmob_config = IonmobConfiguration(self)
-        self.ionmob_config.grid(row=2, column=0, pady=(0, 20), sticky="nsew")
+        self.ionmob_config.grid(row=3, column=0, pady=(0, 20), sticky="nsew")
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
+        basic_enabled, basic_config = self.basic_config.get()
         ms2pip_enabled, ms2pip_config = self.ms2pip_config.get()
         deeplc_enabled, deeplc_config = self.deeplc_config.get()
         ionmob_enabled, ionmob_config = self.ionmob_config.get()
         config = {}
+        if basic_enabled:
+            config["basic"] = basic_config
         if ms2pip_enabled:
             config["ms2pip"] = ms2pip_config
         if deeplc_enabled:
@@ -368,6 +375,27 @@ class FeatureGeneratorConfig(ctk.CTkFrame):
         if ionmob_enabled:
             config["ionmob"] = ionmob_config
         return config
+
+
+class BasicFeatureConfiguration(ctk.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """Basic configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.configure(fg_color="transparent")
+        self.grid_columnconfigure(0, weight=1)
+
+        self.title = widgets.Heading(self, text="Basic features")
+        self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
+
+        self.enabled = widgets.LabeledSwitch(self, label="Enable Basic features", default=True)
+        self.enabled.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
+
+    def get(self) -> Dict:
+        """Return the configuration as a dictionary."""
+        enabled = self.enabled.get()
+        config = {}
+        return enabled, config
 
 
 class MS2PIPConfiguration(ctk.CTkFrame):
@@ -500,7 +528,7 @@ class RescoringEngineConfig(ctk.CTkFrame):
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
-        return {"rescoring_engine": {self.radio_button.get().lower(): {}}}
+        return {self.radio_button.get().lower(): {}}
 
 
 def function(config):
@@ -517,7 +545,7 @@ def app():
         config_frame=ConfigFrame,
         function=function,
     )
-
+    root.protocol("WM_DELETE_WINDOW", sys.exit)
     root.geometry(f"{1250}x{700}")
     root.minsize(1000, 700)
     root.title("MS²Rescore")
