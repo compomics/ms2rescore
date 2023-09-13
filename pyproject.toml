@@ -37,10 +37,10 @@ dependencies = [
     "rich>=12",
     "pyteomics>=4.1.0,<5",
     "lxml>=4.5,<5",
-    "ms2pip>=4.0.0-dev,<5",
+    "ms2pip>=4.0.0-dev1,<5",
     "click>=7",
     "cascade-config>=0.4.0,<2",
-    "deeplc>=1.2.1",
+    "deeplc>=2.2.1",
     "deeplcretrainer==0.1.17",           # TODO: Release version pin
     "tomli>=2; python_version < '3.11'",
     "psm_utils>=0.3",
@@ -49,6 +49,7 @@ dependencies = [
     "pydantic>=1.8.2,<2",                # Fix compatibility with v2 in psm_utils
     "jinja2>=3",
     "plotly>=5",
+    "ionmob",
 ]
 
 [project.optional-dependencies]

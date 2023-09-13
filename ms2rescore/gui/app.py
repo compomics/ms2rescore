@@ -301,19 +301,24 @@ class AdvancedConfiguration(ctk.CTkFrame):
         self.usi = widgets.LabeledSwitch(self, label="Rename PSM IDs to their USI")
         self.usi.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
 
+        self.generate_report = widgets.LabeledSwitch(
+            self, label="Generate MS²Rescore report", default=True
+        )
+        self.generate_report.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
+
         self.id_decoy_pattern = widgets.LabeledEntry(self, label="Decoy protein regex pattern")
-        self.id_decoy_pattern.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
+        self.id_decoy_pattern.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
 
         self.psm_id_pattern = widgets.LabeledEntry(self, label="PSM ID regex pattern")
-        self.psm_id_pattern.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+        self.psm_id_pattern.grid(row=4, column=0, pady=(0, 10), sticky="nsew")
 
         self.spectrum_id_pattern = widgets.LabeledEntry(self, label="Spectrum ID regex pattern")
-        self.spectrum_id_pattern.grid(row=4, column=0, pady=(0, 10), sticky="nsew")
+        self.spectrum_id_pattern.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
 
         self.weightsfile = widgets.LabeledFileSelect(
             self, label="Pretrained Percolator weights", file_option="openfile"
         )
-        self.weightsfile.grid(row=5, column=0, columnspan=2, sticky="nsew")
+        self.weightsfile.grid(row=6, column=0, columnspan=2, sticky="nsew")
 
         self.file_prefix = widgets.LabeledFileSelect(
             self, label="Filename for output files", file_option="savefile"
@@ -336,6 +341,7 @@ class AdvancedConfiguration(ctk.CTkFrame):
             "weightsfile": self.weightsfile.get(),
             "output_path": self.file_prefix.get(),
             "config_file": self.config_file.get(),
+            "write_report": self.generate_report.get(),
         }
 
 
@@ -526,9 +532,65 @@ class RescoringEngineConfig(ctk.CTkFrame):
         )
         self.radio_button.grid(row=0, column=0, pady=(0, 10), sticky="nsew")
 
+        self.mokapot_config = MokapotRescoringConfiguration(self)
+        self.mokapot_config.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
+
+        self.percolator_config = PercolatorRescoringConfiguration(self)
+        self.percolator_config.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
+
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
-        return {self.radio_button.get().lower(): {}}
+        if self.radio_button.get().lower() == "mokapot":
+            return {self.radio_button.get().lower(): self.mokapot_config.get()}
+        elif self.radio_button.get().lower() == "percolator":
+            return {self.radio_button.get().lower(): self.mokapot_config.get()}
+
+
+class MokapotRescoringConfiguration(ctk.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """Rescoring engine configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.configure(fg_color="transparent")
+        self.grid_columnconfigure(0, weight=1)
+
+        self.title = widgets.Heading(self, text="Mokapot cofiguration")
+        self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
+
+        self.write_weights = widgets.LabeledSwitch(self, label="Write weightsfile", default=True)
+        self.write_weights.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
+
+        self.write_txt = widgets.LabeledSwitch(self, label="Write txt output file", default=True)
+        self.write_txt.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
+
+        self.write_flashlfq = widgets.LabeledSwitch(self, label="Write flashlfq", default=False)
+        self.write_flashlfq.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+
+    def get(self) -> Dict:
+        """Return the configuration as a dictionary."""
+        config = {
+            "write_weights": self.write_weights.get(),
+            "write_txt": self.write_txt.get(),
+            "write_flashlfq": self.write_flashlfq.get(),
+        }
+        return config
+
+
+class PercolatorRescoringConfiguration(ctk.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """Rescoring engine configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.configure(fg_color="transparent")
+        self.grid_columnconfigure(0, weight=1)
+
+        self.title = widgets.Heading(self, text="Percolator cofiguration")
+        self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
+
+    def get(self) -> Dict:
+        """Return the configuration as a dictionary."""
+        config = {}
+        return config
 
 
 def function(config):

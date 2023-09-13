@@ -217,7 +217,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                         psm["rescoring_features"].update(
                             peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
                         )
-            current_run += 1
+                current_run += 1
 
     # TODO: Remove when DeepLC supports PSMList directly
     @staticmethod
