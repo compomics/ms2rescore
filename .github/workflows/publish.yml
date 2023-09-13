@@ -8,12 +8,12 @@ jobs:
   python-package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -31,7 +31,7 @@ jobs:
           ms2rescore --help
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: python-package
           path: dist/*
@@ -45,9 +45,9 @@ jobs:
     runs-on: windows-latest
     needs: python-package
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
@@ -71,7 +71,7 @@ jobs:
         run: ISCC.exe ./ms2rescore_innosetup.iss /DMyAppVersion=$(ms2rescore -v)
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: dist
           path: dist/*.exe
