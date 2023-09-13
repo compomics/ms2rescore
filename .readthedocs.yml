@@ -9,10 +9,6 @@ sphinx:
   configuration: docs/source/conf.py
   builder: dirhtml
 
-formats:
-  - pdf
-  - epub
-
 python:
   install:
     - method: pip

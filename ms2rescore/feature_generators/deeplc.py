@@ -99,7 +99,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
 
         # Set default DeepLC arguments
         if "deeplc_retrain" not in self.deeplc_kwargs:
-            self.deeplc_kwargs["deeplc_retrain"] = True
+            self.deeplc_kwargs["deeplc_retrain"] = False
 
         self.deeplc_predictor = None
         if "path_model" in self.deeplc_kwargs:
