@@ -17,6 +17,7 @@ thread in
 or in `GitHub Issues <https://github.com/compomics/ms2rescore/issues>`_.
 
 Welcome contributions include:
+
 - New features, such as the addition of new feature generators
 - Improvements of existing functionality
 - Bugfixes
@@ -110,13 +111,16 @@ Release workflow
     #. Update the changelog (if not already done) in ``CHANGELOG.md`` according to
        `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_.
     #. Merge all final changes with the ``main`` branch.
-    #. On ``main``, set a new tag with the version number, e.g. ``git tag v0.1.5``.
-    #. Push to GitHub, with the tag: ``git push; git push --tags``.
+    #. On GitHub, draft a new release with the new version number and the
+       changes that are listed in ``CHANGELOG.md``.
 
-- When a new tag is pushed to (or made on) GitHub that matches ``v*``, the
-  following GitHub Actions are triggered:
+- When a new release is published on GitHub, the following GitHub Actions are triggered:
 
     #. The Python package is build and published to PyPI.
-    #. Using the `Git Release <https://github.com/marketplace/actions/git-release>`_
-       action, a new GitHub release is made with the changes that are listed in
-       ``CHANGELOG.md``.
+    #. The Windows installer is build with pyInstaller and InnoSetup and published to the GitHub
+       release.
+
+- A webhook triggers a new build of the documentation on Read the Docs.
+
+- The Bioconda recipe is automatically updated by the Bioconda bot, and subsequently both the Conda
+  Python package and the Docker image are build.
