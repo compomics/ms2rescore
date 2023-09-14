@@ -129,7 +129,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
 
         # Run DeepLC for each spectrum file
         current_run = 1
-        total_runs = len(list(chain.from_iterable([runs.keys() for runs in psm_dict.values()])))
+        total_runs = sum(len(runs) for runs in psm_dict.values())
 
         for runs in psm_dict.values():
             # Reset DeepLC predictor for each collection of runs

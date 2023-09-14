@@ -1,65 +1,96 @@
+import contextlib
+import logging
+import os
+from itertools import chain
+from pathlib import Path
+from typing import Dict, Optional
+
 import pandas as pd
 import tensorflow as tf
-from itertools import chain
-import logging
-from pathlib import Path
-import contextlib
-import os
+from psm_utils import Peptidoform, PSMList
 
-from ms2rescore.feature_generators.base import FeatureGeneratorBase
-from psm_utils import PSMList
-from ionmob.preprocess.data import to_tf_dataset_inference
-from ionmob.utilities.utility import get_ccs_shift
-from ionmob.utilities.tokenization import tokenizer_from_json
-from ionmob.utilities.chemistry import VARIANT_DICT, reduced_mobility_to_ccs, calculate_mz
-import ionmob
+from ms2rescore.feature_generators.base import FeatureGeneratorBase, FeatureGeneratorException
 
+try:
+    from ionmob import __file__ as ionmob_file
+    from ionmob.preprocess.data import to_tf_dataset_inference
+    from ionmob.utilities.chemistry import VARIANT_DICT, calculate_mz, reduced_mobility_to_ccs
+    from ionmob.utilities.tokenization import tokenizer_from_json
+    from ionmob.utilities.utility import get_ccs_shift
+except ImportError:
+    IONMOB_INSTALLED = False
+else:
+    IONMOB_INSTALLED = True
 
 logger = logging.getLogger(__name__)
 
-ionmob_dir = Path(ionmob.__file__).parent
-
-DEFAULT_MODELS_IONMOB = {
-    Path("pretrained_models/DeepTwoMerModel"),
-    Path("pretrained_models/GRUPredictor"),
-    Path("pretrained_models/SqrtModel"),
-}
-DEFAULT_MODELS_DICT = {
-    str(mod_path.stem): ionmob_dir.joinpath(mod_path) for mod_path in DEFAULT_MODELS_IONMOB
-}
-DEFAULT_TOKENIZER = ionmob_dir.joinpath("pretrained_models/tokenizers/tokenizer.json")
-DEFAULT_REFERENCE_DATASET = ionmob_dir.joinpath("example_data/Tenzer_unimod.parquet")
+if IONMOB_INSTALLED:
+    IONMOB_DIR = Path(ionmob_file).parent
+    DEFAULT_MODELS_IONMOB = {
+        Path("pretrained_models/DeepTwoMerModel"),
+        Path("pretrained_models/GRUPredictor"),
+        Path("pretrained_models/SqrtModel"),
+    }
+    DEFAULT_MODELS_DICT = {
+        mod_path.stem: IONMOB_DIR / mod_path for mod_path in DEFAULT_MODELS_IONMOB
+    }
+    DEFAULT_TOKENIZER = IONMOB_DIR / "pretrained_models/tokenizers/tokenizer.json"
+    DEFAULT_REFERENCE_DATASET = IONMOB_DIR / "example_data/Tenzer_unimod.parquet"
 
 
 class IonMobFeatureGenerator(FeatureGeneratorBase):
-    """Ionmob Collision Cross Section (CCS)-based feature generator."""
+    """Ionmob collisional cross section (CCS)-based feature generator."""
 
     def __init__(
         self,
         *args,
         ionmob_model: str = "GRUPredictor",
-        reference_dataset: str = DEFAULT_REFERENCE_DATASET,
-        tokenizer: str = DEFAULT_TOKENIZER,
+        reference_dataset: Optional[str] = None,
+        tokenizer: Optional[str] = None,
         **kwargs,
     ) -> None:
         """
-        Ionmob Collision Cross Section (CCS)-based feature generator.
+        Ionmob collisional cross section (CCS)-based feature generator.
 
         Parameters
         ----------
-        #TODO
+        *args
+            Additional arguments passed to the base class.
+        ionmob_model
+            Path to a trained Ionmob model or one of the default models (``DeepTwoMerModel``,
+            ``GRUPredictor``, or ``SqrtModel``). Default: ``GRUPredictor``.
+        reference_dataset
+            Path to a reference dataset for CCS shift calculation. Uses the default reference
+            dataset if not specified.
+        tokenizer
+            Path to a tokenizer or one of the default tokenizers. Uses the default tokenizer if
+            not specified.
+        **kwargs
+            Additional keyword arguments passed to the base class.
 
         """
         super().__init__(*args, **kwargs)
-        try:
-            self.ionmob_model = tf.keras.models.load_model(
-                DEFAULT_MODELS_DICT[ionmob_model].__str__()
-            )
-        except KeyError:
-            self.ionmob_model = tf.keras.models.load_model(Path(ionmob_model).absolute().__str__())
 
-        self.reference_dataset = pd.read_parquet(reference_dataset)
-        self.tokenizer = tokenizer_from_json(tokenizer)
+        # Check if Ionmob could be imported
+        if not IONMOB_INSTALLED:
+            raise ImportError(
+                "Ionmob not installed. Please install Ionmob to use this feature generator."
+            )
+
+        # Get model from file or one of the default models
+        if Path(ionmob_model).is_file():
+            self.ionmob_model = tf.keras.models.load_model(ionmob_model)
+        elif ionmob_model in DEFAULT_MODELS_DICT:
+            self.ionmob_model = tf.keras.models.load_model(
+                DEFAULT_MODELS_DICT[ionmob_model].as_posix()
+            )
+        else:
+            raise IonmobException(
+                f"Invalid Ionmob model: {ionmob_model}. Should be path to a model file or one of "
+                f"the default models: {DEFAULT_MODELS_DICT.keys()}."
+            )
+        self.reference_dataset = pd.read_parquet(reference_dataset or DEFAULT_REFERENCE_DATASET)
+        self.tokenizer = tokenizer_from_json(tokenizer or DEFAULT_TOKENIZER)
 
         self._verbose = logger.getEffectiveLevel() <= logging.DEBUG
 
@@ -74,7 +105,8 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
         ]
 
     @property
-    def allowed_mods(self):
+    def allowed_modifications(self):
+        """Return a list of modifications that are allowed in ionmob."""
         return [token for aa_tokens in VARIANT_DICT.values() for token in aa_tokens]
 
     def add_features(self, psm_list: PSMList) -> None:
@@ -90,7 +122,7 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
         logger.info("Adding Ionmob-derived features to PSMs.")
         psm_dict = psm_list.get_psm_dict()
         current_run = 1
-        total_runs = len(list(chain.from_iterable([runs.keys() for runs in psm_dict.values()])))
+        total_runs = sum(len(runs) for runs in psm_dict.values())
 
         for runs in psm_dict.values():
             for run, psms in runs.items():
@@ -103,7 +135,7 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
                     psm_list_run_df = psm_list_run.to_dataframe()
 
-                    # prepare dataframes for CCS prediction
+                    # prepare data frames for CCS prediction
                     psm_list_run_df["charge"] = [
                         peptidoform.precursor_charge
                         for peptidoform in psm_list_run_df["peptidoform"]
@@ -156,9 +188,8 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
                             psm["rescoring_features"].update({})
                     current_run += 1
 
-    def _calculate_features(self, feature_df):
-        """Get ccs features for PSMs."""
-
+    def _calculate_features(self, feature_df: pd.DataFrame) -> Dict[str, Dict[str, float]]:
+        """Get CCS features for PSMs."""
         ccs_features = {}
         for row in feature_df.itertuples():
             ccs_features[row.spectrum_id] = {
@@ -169,21 +200,11 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
                 "perc_ccs_error": ((abs(row.ccs_observed - row.ccs_predicted)) / row.ccs_observed)
                 * 100,
             }
-
         return ccs_features
 
     @staticmethod
-    def tokenize_peptidoform(peptidoform):
-        """
-        Tokenize proforma sequence and add modifications.
-
-        Args:
-            seq (str): Peptide sequence.
-            peprec_mod (str): Peptide modifications in the format "loc1|mod1|loc2|mod2|...".
-
-        Returns:
-            list: A list of tokenized and modified peptide sequence.
-        """
+    def tokenize_peptidoform(peptidoform: Peptidoform) -> list:
+        """Tokenize proforma sequence and add modifications."""
         tokenized_seq = []
 
         if peptidoform.properties["n_term"]:
@@ -207,16 +228,15 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
 
         return tokenized_seq
 
-    def calculate_ccs_shift(self, psm_dataframe):
+    def calculate_ccs_shift(self, psm_dataframe: pd.DataFrame) -> float:
         """
         Apply CCS shift to CCS values.
 
-        Args:
-            peprec (pandas.DataFrame): Modified and parsed Peprec data.
-            reference (str): Path to the reference data used for CCS shift calculation.
+        Parameters
+        ----------
+        psm_dataframe
+            Dataframe with PSMs as returned by :py:meth:`psm_utils.PSMList.to_dataframe`.
 
-        Returns:
-            pandas.DataFrame: Peprec data with CCS values after applying the shift.
         """
         df = psm_dataframe.copy()
         df.rename({"ccs_observed": "ccs"}, axis=1, inplace=True)
@@ -238,14 +258,25 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
         """
         Check if peptide sequence contains invalid tokens.
 
-        Args:
-            tokenized_seq (list): Tokenized peptide sequence.
+        Parameters
+        ----------
+        tokenized_seq
+            Tokenized peptide sequence.
 
-        Returns:
-            bool: False if invalid tokens are present, True otherwise.
+        Returns
+        -------
+        bool
+            False if invalid tokens are present, True otherwise.
+
         """
         for token in tokenized_seq:
-            if token not in self.allowed_mods:
+            if token not in self.allowed_modifications:
                 logger.debug(f"Invalid modification found: {token}")
                 return False
         return True
+
+
+class IonmobException(FeatureGeneratorException):
+    """Exception raised by Ionmob feature generator."""
+
+    pass

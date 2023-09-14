@@ -32,27 +32,27 @@ classifiers = [
 dynamic = ["version"]
 requires-python = ">=3.8"
 dependencies = [
-    "numpy>=1.16.0,<2",
-    "pandas>=0.24.0,<3",                 # TODO: Check compatibility for v2
+    "numpy>=1.16.0",
+    "pandas>=1.0",
     "rich>=12",
-    "pyteomics>=4.1.0,<5",
-    "lxml>=4.5,<5",
-    "ms2pip>=4.0.0-dev1,<5",
+    "pyteomics>=4.1.0",
+    "lxml>=4.5",
+    "ms2pip>=4.0.0-dev5",
     "click>=7",
-    "cascade-config>=0.4.0,<2",
-    "deeplc>=2.2.1",
+    "cascade-config>=0.4.0",
+    "deeplc>=2.2",
     "deeplcretrainer==0.1.17",           # TODO: Release version pin
     "tomli>=2; python_version < '3.11'",
-    "psm_utils>=0.3",
+    "psm_utils>=0.4",
     "customtkinter>=5,<6",
     "mokapot>=0.9",
     "pydantic>=1.8.2,<2",                # Fix compatibility with v2 in psm_utils
     "jinja2>=3",
     "plotly>=5",
-    "ionmob",
 ]
 
 [project.optional-dependencies]
+ionmob = ["ionmob", "tensorflow"]
 dev = ["ruff", "black", "pytest", "pytest-cov", "pre-commit"]
 docs = [
     "sphinx",
@@ -80,6 +80,9 @@ ms2rescore-report = "ms2rescore.report.__main__:main"
 [build-system]
 requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
+
+[tool.isort]
+profile = "black"
 
 [tool.black]
 line-length = 99

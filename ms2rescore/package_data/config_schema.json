@@ -29,7 +29,6 @@
                         },
                         "ionmob": {
                             "$ref": "#/definitions/ionmob"
-                            
                         }
                     },
                     "default": {
@@ -213,8 +212,7 @@
                     "type": "string",
                     "default": "Meier_unimod.parquet"
                 },
-                "tokenizer": 
-                {
+                "tokenizer": {
                     "description": "Path to tokenizer json file",
                     "type": "string",
                     "default": "tokenizer.json"
