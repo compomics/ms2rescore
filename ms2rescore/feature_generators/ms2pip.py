@@ -195,6 +195,7 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
                     processes=self.processes,
                 )
                 self._calculate_features(psm_list_run, ms2pip_results)
+                current_run += 1
 
     def _calculate_features(
         self, psm_list: PSMList, ms2pip_results: List[ProcessingResult]
