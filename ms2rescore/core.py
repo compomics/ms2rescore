@@ -43,6 +43,7 @@ def rescore(configuration: Dict, psm_list: PSMList = None) -> None:
             config["psm_file"],
             filetype=config["psm_file_type"],
             show_progressbar=True,
+            **config["psm_reader_kwargs"],
         )
 
     logger.debug("Finding decoys...")

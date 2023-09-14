@@ -69,6 +69,11 @@
                     "type": "string",
                     "default": "infer"
                 },
+                "psm_reader_kwargs": {
+                    "description": "Keyword arguments passed to the PSM reader.",
+                    "type": "object",
+                    "default": {}
+                },
                 "spectrum_path": {
                     "description": "Path to spectrum file or directory with spectrum files",
                     "oneOf": [{ "type": "string" }, { "type": "null" }]
