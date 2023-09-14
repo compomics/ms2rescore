@@ -33,7 +33,7 @@ files:
 - [PeptideShaker](https://compomics.github.io/projects/peptide-shaker.html) `.mzid`
 - [MSGFPlus](https://omics.pnl.gov/software/ms-gf) `.mzid`
 - [MaxQuant](https://www.maxquant.org/) `msms.txt`
-- [X!Tandem](https://www.thegpm.org/tandem/) X!Tandem `.xml`
+- [X!Tandem](https://www.thegpm.org/tandem/) `.xml`
 - [PEAKS](https://www.bioinfor.com/peaksdb/) `.mzid`
 
 MS²Rescore is available as a [desktop application][desktop], a [command line tool][cli], and a
@@ -45,15 +45,13 @@ MS²Rescore is available as a [desktop application][desktop], a [command line to
 
 > **MS2Rescore: Data-driven rescoring dramatically boosts immunopeptide identification rates.**
 > Arthur Declercq, Robbin Bouwmeester, Aurélie Hirschler, Christine Carapito, Sven Degroeve, Lennart Martens, and Ralf Gabriels.
-> _Molecular & Cellular Proteomics_ (2021) [doi:10.1016/j.mcpro.2022.100266](https://doi.org/10.1016/j.mcpro.2022.100266)
-> <span class="__dimensions_badge_embed__" data-doi="10.1016/j.mcpro.2022.100266" data-hide-zero-citations="true" data-style="small_rectangle"></span>
+> _Molecular & Cellular Proteomics_ (2021) [doi:10.1016/j.mcpro.2022.100266](https://doi.org/10.1016/j.mcpro.2022.100266) > <span class="__dimensions_badge_embed__" data-doi="10.1016/j.mcpro.2022.100266" data-hide-zero-citations="true" data-style="small_rectangle"></span>
 
 **Original publication describing the concept of rescoring with predicted spectra:**
 
 > **Accurate peptide fragmentation predictions allow data driven approaches to replace and improve upon proteomics search engine scoring functions.**
 > Ana S C Silva, Robbin Bouwmeester, Lennart Martens, and Sven Degroeve.
-> _Bioinformatics_ (2019) [doi:10.1093/bioinformatics/btz383](https://doi.org/10.1093/bioinformatics/btz383)
-> <span class="__dimensions_badge_embed__" data-doi="10.1093/bioinformatics/btz383" data-hide-zero-citations="true" data-style="small_rectangle"></span>
+> _Bioinformatics_ (2019) [doi:10.1093/bioinformatics/btz383](https://doi.org/10.1093/bioinformatics/btz383) > <span class="__dimensions_badge_embed__" data-doi="10.1093/bioinformatics/btz383" data-hide-zero-citations="true" data-style="small_rectangle"></span>
 
 To replicate the experiments described in this article, check out the
 [publication branch][publication-branch] of the repository.
