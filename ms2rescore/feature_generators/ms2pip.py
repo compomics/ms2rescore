@@ -173,9 +173,15 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
 
         """
         logger.info("Adding MS²PIP-derived features to PSMs.")
-        for runs in psm_list.get_psm_dict().values():
+        psm_dict = psm_list.get_psm_dict()
+        current_run = 1
+        total_runs = len(list(chain.from_iterable([runs.keys() for runs in psm_dict.values()])))
+
+        for runs in psm_dict.values():
             for run, psms in runs.items():
-                logger.info(f"Running MS²PIP for PSMs from run `{run}`...")
+                logger.info(
+                    f"Running MS²PIP for PSMs from run ({current_run}/{total_runs}) `{run}`..."
+                )
                 psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
                 spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
                 logger.debug(f"Using spectrum file `{spectrum_filename}`")
