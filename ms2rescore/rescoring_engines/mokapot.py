@@ -32,14 +32,6 @@ from pyteomics.mass import nist_mass
 
 logger = logging.getLogger(__name__)
 
-# Set mokapot logging to WARNING if not in debug mode
-if logger.getEffectiveLevel() > logging.DEBUG:
-    logging.getLogger("mokapot").setLevel(logging.WARNING)
-
-# Keep numba logging to INFO or higher
-if logger.getEffectiveLevel() < logging.INFO:
-    logging.getLogger("numba").setLevel(logging.INFO)
-
 
 def rescore(
     psm_list: psm_utils.PSMList,
@@ -80,6 +72,8 @@ def rescore(
         Additional keyword arguments are passed to the Mokapot :py:func:`~mokapot.brew` function.
 
     """
+    _set_log_levels()
+
     # Convert PSMList to Mokapot dataset
     lin_psm_data = convert_psm_list(psm_list)
     feature_names = list(lin_psm_data.features.columns)
@@ -223,3 +217,14 @@ def save_model_weights(
 def _mz_to_mass(mz: float, charge: int) -> float:
     """Convert m/z to mass."""
     return mz * charge - charge * nist_mass["H"][1][0]
+
+
+def _set_log_levels() -> None:
+    """Set log levels for Mokapot and Numba to avoid too-high verbosity."""
+    # Set mokapot logging to WARNING if not in debug mode
+    if logger.getEffectiveLevel() > logging.DEBUG:
+        logging.getLogger("mokapot").setLevel(logging.WARNING)
+
+    # Keep Numba logging to INFO or higher
+    if logger.getEffectiveLevel() < logging.INFO:
+        logging.getLogger("numba").setLevel(logging.INFO)
