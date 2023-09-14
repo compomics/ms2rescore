@@ -61,6 +61,8 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
         self.reference_dataset = pd.read_parquet(reference_dataset)
         self.tokenizer = tokenizer_from_json(tokenizer)
 
+        self._verbose = logger.getEffectiveLevel() <= logging.DEBUG
+
     @property
     def feature_names(self):
         return [
