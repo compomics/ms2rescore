@@ -55,14 +55,15 @@ dependencies = [
 dev = ["ruff", "black", "pytest", "pytest-cov", "pre-commit"]
 docs = [
     "sphinx",
-    "numpydoc>=1,<2",
     "myst-parser",
-    "toml",
-    "semver>=2",
-    "sphinx_rtd_theme",
-    "sphinx-autobuild",
     "nbsphinx",
+    "numpydoc>=1,<2",
+    "semver>=2",
+    "sphinx_inline_tabs",
+    "sphinx_rtd_theme",
     "sphinx-argparse",
+    "sphinx-autobuild",
+    "toml",
 ]
 
 [project.urls]

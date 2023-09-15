@@ -43,3 +43,9 @@ html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(
     background: #C9F4ED;
     border-top: 3px solid #80b4e8;
 }
+
+/** Figure bottom margin **/
+.rst-content figure,
+.rst-content .tab-content > figure:last-child {
+    margin-bottom: 24px;
+}

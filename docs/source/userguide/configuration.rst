@@ -25,11 +25,21 @@ Configuring input files
 
 In the configuration file, input files can be specified as follows:
 
-.. code-block:: json
+.. tab:: JSON
 
-  "psm_file": "path/to/psms.tsv",
-  "psm_file_type": "infer",
-  "spectrum_path": "path/to/spectra.mgf"
+  .. code-block:: json
+
+    "psm_file": "path/to/psms.tsv",
+    "psm_file_type": "infer",
+    "spectrum_path": "path/to/spectra.mgf"
+
+.. tab:: TOML
+
+  .. code-block:: toml
+
+    psm_file = "path/to/psms.tsv"
+    psm_file_type = "infer"
+    spectrum_path = "path/to/spectra.mgf"
 
 See :ref:`Input files` for more information.
 
@@ -42,14 +52,11 @@ MS²Rescore uses the `HUPO-PSI standardized ProForma v2 notation
 format. Unfortunately, most PSM file types coming from different proteomics search
 engines use a custom modification notation.
 
-For example, a MaxQuant ``Modified sequence`` would be parsed as follows:
-
-    ``_AM(Oxidation (M))SIVM(Oxidation (M))LSM_`` 🠚 ``AM[Oxidation (M)]]SIVM[Oxidation (M)]]LSM``
-
-However, the label ``Oxidation (M)`` is not a resolvable modification, as it is not
-present in any of the supported controlled vocabularies. Therefore, ``Oxidation (M)`` needs to be
-mapped to ``U:Oxidation``, where ``U`` denotes that the `Unimod <http://www.unimod.org/>`_
-database is used and ``Oxidation`` denotes the official Unimod name.
+For example, a MaxQuant ``Modified sequence`` would be parsed as follows: ``_AM(ox)SIVMLSM_`` 🠚
+``AM[ox]SIVMLSM``. However, the label ``ox`` is not a resolvable modification, as it is not
+present in any of the supported controlled vocabularies. Therefore, ``ox`` needs to be mapped to
+``U:Oxidation``, where ``U`` denotes that the `Unimod <http://www.unimod.org/>`_ database is used
+and ``Oxidation`` denotes the official Unimod name.
 
 To correctly parse the various notations to ProForma, :py:mod:`ms2rescore` requires a configuration
 :py:obj:`modification_mapping` which maps each specific search engine modification label to a valid
@@ -76,20 +83,32 @@ require the modification formula.
 
 And example of the :py:obj:`modification_mapping` could be:
 
-.. code-block:: json
+.. tab:: JSON
 
-  "modification_mapping": {
-    "gl": "U:Gln->pyro-Glu",
-    "ox": "U:Oxidation",
-    "ac": "U:Acetylation",
-    "de": "U:Deamidation"
-  }
+  .. code-block:: json
 
-In the GUI:
+    "modification_mapping": {
+      "gl": "U:Gln->pyro-Glu",
+      "ox": "U:Oxidation",
+      "ac": "U:Acetylation",
+      "de": "U:Deamidation"
+    }
 
-.. image:: ../_static/img/gui-modification-mapping.png
-   :width: 500px
-   :alt: modification mapping configuration in GUI
+.. tab:: TOML
+
+  .. code-block:: toml
+
+    [ms2rescore.modification_mapping]
+    "gl" = "Gln->pyro-Glu"
+    "ox" = "Oxidation"
+    "ac" = "Acetylation"
+    "de" = "Deamidation"
+
+.. tab:: GUI
+
+  .. figure:: ../_static/img/gui-modification-mapping.png
+    :width: 500px
+    :alt: modification mapping configuration in GUI
 
 
 Adding fixed modifications
@@ -99,18 +118,26 @@ Some search engines, such as MaxQuant, do not report fixed modifications that we
 search. To correctly rescore PSMs, fixed modifications that are not reported in the PSM file must
 be configured separately. For instance:
 
-.. code-block:: json
+.. tab:: JSON
 
-  "fixed_modifications": {
-    "C": "U:Carbamidomethyl"
-  }
+  .. code-block:: json
 
+    "fixed_modifications": {
+      "C": "U:Carbamidomethyl"
+    }
 
-In the GUI:
+.. tab:: TOML
 
-.. image:: ../_static/img/gui-fixed-modifications.png
-   :width: 500px
-   :alt: fixed modifications configuration in GUI
+    .. code-block:: toml
+
+      [ms2rescore.fixed_modifications]
+      "Carbamidomethyl" = ["C"]
+
+.. tab:: GUI
+
+  .. figure:: ../_static/img/gui-fixed-modifications.png
+    :width: 500px
+    :alt: fixed modifications configuration in GUI
 
 
 
@@ -137,17 +164,32 @@ and the PSM file contains the following identifier in the ``spectrum_id`` field:
 
 then the following patterns can be used to extract ``2`` from both identifiers:
 
-.. code-block:: json
+.. tab:: JSON
 
-  "spectrum_id_pattern": ".*scan=(\d+)$",
-  "psm_id_pattern": ".*\..*\.(.*)"
+  .. code-block:: json
 
-Both options require a single capture group (denoted by the parentheses) to mark the section of
-the match that should be extracted.
+    "spectrum_id_pattern": ".*scan=(\\d+)$",
+    "psm_id_pattern": ".*\\..*\\.(.*)"
+
+.. tab:: TOML
+
+  .. code-block:: toml
+
+      spectrum_id_pattern = '.*scan=(\d+)$'
+      psm_id_pattern = ".*\..*\.(.*)"
+
+
+Both options should match the entire string and require a single capture group (denoted by the
+parentheses) to mark the section of the match that should be extracted.
+
+.. warning::
+  Regular expression patterns often contain special characters that need to be escaped. For example,
+  the ``\`` should be escaped with an additional ``\`` in JSON, as is shown above. In TOML files,
+  the full regex can be wrapped in single quotes to avoid excaping.
 
 .. note::
-  Find out more about regular expression patterns and try them out on
-  `regex101.com <https://regex101.com/>`_. You can try out the above example at
+  Find out more about regular expression patterns and try them on
+  `regex101.com <https://regex101.com/>`_. You can try out the above examples at
   https://regex101.com/r/VhBJRM/1 and https://regex101.com/r/JkT79a/1.
 
 
@@ -159,11 +201,17 @@ it can usually be derived from the protein name. For example, if the protein nam
 prefix ``DECOY_``, the PSM is a decoy PSM. The following option can be used to define a regular
 expression pattern that extracts the decoy status from the protein name:
 
-.. code-block:: json
+.. tab:: JSON
 
-  "id_decoy_pattern": "DECOY_"
+  .. code-block:: json
 
+    "decoy_pattern": "DECOY_"
 
+.. tab:: TOML
+
+    .. code-block:: toml
+
+      decoy_pattern = "DECOY_"
 
 
 

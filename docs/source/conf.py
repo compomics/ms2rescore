@@ -23,6 +23,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinxarg.ext",
+    "sphinx_inline_tabs",
     "sphinx_rtd_theme",
     "myst_parser",
 ]
