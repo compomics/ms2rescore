@@ -22,6 +22,7 @@
         "config_file": null,
         "psm_file": null,
         "psm_file_type": "infer",
+        "psm_reader_kwargs": {},
         "spectrum_path": null,
         "output_path": null,
         "log_level": "info",
