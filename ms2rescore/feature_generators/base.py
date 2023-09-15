@@ -17,3 +17,9 @@ class FeatureGeneratorBase(ABC):
     @abstractmethod
     def add_features(psm_list: PSMList):
         pass
+
+
+class FeatureGeneratorException(Exception):
+    """Base class for exceptions raised by feature generators."""
+
+    pass

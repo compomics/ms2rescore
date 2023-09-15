@@ -39,12 +39,20 @@ def rescore(configuration: Dict, psm_list: PSMList = None) -> None:
     # Read PSMs
     logger.info("Reading PSMs...")
     if not psm_list:
-        psm_list = psm_utils.io.read_file(
-            config["psm_file"],
-            filetype=config["psm_file_type"],
-            show_progressbar=True,
-            **config["psm_reader_kwargs"],
-        )
+        try:
+            psm_list = psm_utils.io.read_file(
+                config["psm_file"],
+                filetype=config["psm_file_type"],
+                show_progressbar=True,
+                **config["psm_reader_kwargs"],
+            )
+        except psm_utils.io.PSMUtilsIOException:
+            raise MS2RescoreConfigurationError(
+                "Error occurred while reading PSMs. Please check the `psm_file` and "
+                "`psm_file_type` settings. See "
+                "https://ms2rescore.readthedocs.io/en/latest/userguide/input-files/"
+                " for more information."
+            )
 
     logger.debug("Finding decoys...")
     if config["id_decoy_pattern"]:
@@ -55,7 +63,9 @@ def rescore(configuration: Dict, psm_list: PSMList = None) -> None:
     if not any(psm_list["is_decoy"]):
         raise MS2RescoreConfigurationError(
             "No decoy PSMs found. Please check if decoys are present in the PSM file and that "
-            "the `id_decoy_pattern` option is correct."
+            "the `id_decoy_pattern` option is correct. See "
+            "https://ms2rescore.readthedocs.io/en/latest/userguide/configuration/#selecting-decoy-psms"
+            " for more information."
         )
 
     # Calculate q-values if not present
