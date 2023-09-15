@@ -84,7 +84,7 @@ def rescore(configuration: Dict, psm_list: PSMList = None) -> None:
     psm_list.add_fixed_modifications(config["fixed_modifications"])
     psm_list.apply_fixed_modifications()
 
-    logger.debug("Applying 'psm_id_pattern'...")
+    logger.debug("Applying `psm_id_pattern`...")
     if config["psm_id_pattern"]:
         pattern = re.compile(config["psm_id_pattern"])
         new_ids = [_match_psm_ids(old_id, pattern) for old_id in psm_list["spectrum_id"]]
