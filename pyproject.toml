@@ -52,7 +52,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ionmob = ["ionmob", "tensorflow"]
+ionmob = ["ionmob>=0.2", "tensorflow"]
 dev = ["ruff", "black", "pytest", "pytest-cov", "pre-commit"]
 docs = [
     "sphinx",
