@@ -18,18 +18,29 @@ class Heading(ctk.CTkLabel):
 
 
 class LabeledEntry(ctk.CTkFrame):
-    def __init__(self, *args, label="Enter text", placeholder_text="Enter text...", **kwargs):
+    def __init__(
+        self,
+        *args,
+        label="Enter text",
+        placeholder_text="Enter text...",
+        default_value="",
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.grid_columnconfigure(0, weight=1)
+
+        self._variable = ctk.StringVar(value=default_value)
 
         self._label = ctk.CTkLabel(self, text=label)
         self._label.grid(row=0, column=0, padx=0, pady=5, sticky="w")
 
-        self._entry = ctk.CTkEntry(self, placeholder_text=placeholder_text)
+        self._entry = ctk.CTkEntry(
+            self, placeholder_text=placeholder_text, textvariable=self._variable
+        )
         self._entry.grid(row=0, column=1, padx=0, pady=5, sticky="e")
 
     def get(self):
-        return self._entry.get()
+        return self._variable.get()
 
 
 class LabeledEntryTextbox(ctk.CTkFrame):
