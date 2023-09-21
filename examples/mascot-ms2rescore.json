@@ -1,0 +1,10 @@
+{
+    "ms2rescore": {
+        "psm_file": "examples/data/search/mascot/F010956.mzid",
+        "psm_file_type": "mzid",
+        "spectrum_path": "examples/data/spectra/F010956.mgf",
+        "psm_id_pattern": "(.*)",
+        "id_decoy_pattern": "^rev_",
+        "fasta_file": "examples/data/fasta/uniprot-proteome-human-contaminants.fasta"
+    }
+}

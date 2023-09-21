@@ -1,16 +1,4 @@
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
-    hooks:
-      - id: check-yaml
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-
-  - repo: https://github.com/psf/black
-    rev: 22.10.0
-    hooks:
-      - id: black
-
   - repo: https://github.com/sbrunner/jsonschema2md
     rev: 0.9.0
     hooks:
@@ -19,3 +7,22 @@ repos:
         args:
           - ms2rescore/package_data/config_schema.json
           - docs/source/config_schema.md
+
+  - repo: https://github.com/ralfg/convert-config-hook
+    rev: 0.1.6
+    hooks:
+      - id: convert-config
+        files: "examples\\/.*-ms2rescore\\.toml"
+        args: ["--output-format", "json"]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: check-yaml
+      - id: trailing-whitespace
+      # - id: end-of-file-fixer
+
+  - repo: https://github.com/psf/black
+    rev: 22.10.0
+    hooks:
+      - id: black
