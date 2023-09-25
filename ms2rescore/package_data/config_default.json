@@ -35,6 +35,6 @@
         "processes": -1,
         "rename_to_usi": false,
         "fasta_file": null,
-        "write_report": false
+        "write_report": true
     }
 }

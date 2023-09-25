@@ -1,0 +1,16 @@
+{
+    "ms2rescore": {
+        "psm_file": "examples/data/search/xtandem/pyro.t.xml",
+        "psm_file_type": "xtandem",
+        "spectrum_path": "examples/data/spectra/Velos005137.mgf",
+        "psm_id_pattern": "(\\S+).*",
+        "modification_mapping": {
+            "+57.022": "U:Carbamidomethyl",
+            "+15.994": "U:Oxidation",
+            "+39.9954": "U:Pyro-carbamidomethyl",
+            "+42.0106": "U:Acetyl",
+            "-17.0266": "U:Gln->pyro-Glu",
+            "-18.0106": "U:Glu->pyro-Glu"
+        }
+    }
+}
