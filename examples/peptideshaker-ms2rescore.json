@@ -1,0 +1,6 @@
+{
+    "ms2rescore": {
+        "psm_file": "examples/data/search/peptideshaker/peptideshaker-example.mzid",
+        "spectrum_path": "examples/data/spectra/qExactive01819.mzML"
+    }
+}

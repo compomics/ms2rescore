@@ -1,0 +1,29 @@
+[ms2rescore]
+psm_file = "examples/id/msgfplus.pin"
+psm_file_type = "percolator"
+psm_reader_kwargs = { "score_column" = "PSMScore" }
+log_level = "debug"
+processes = 16
+
+# [ms2rescore.modification_mapping]
+
+# [ms2rescore.fixed_modifications]
+
+[ms2rescore.feature_generators.basic]
+# No options, but setting heading enables feature generator
+
+# [ms2rescore.feature_generators.ms2pip]
+# model = "HCD"
+# ms2_tolerance = 0.02
+
+# [ms2rescore.feature_generators.deeplc]
+# deeplc_retrain = false
+
+# [ms2rescore.feature_generators.maxquant]
+# No options, but setting heading enables feature generator
+
+[ms2rescore.rescoring_engine.mokapot]
+fasta_file = "examples/proteins/uniprot-proteome-human-contaminants.fasta"
+write_weights = true
+write_txt = true
+# write_flashlfq = true
