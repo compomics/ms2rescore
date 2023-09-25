@@ -22,6 +22,8 @@
     - **One of**
       - *string*
       - *null*
+      - *array*
+        - **Items** *(string)*
   - **`psm_file_type`** *(string)*: PSM file type. By default inferred from file extension. Default: `"infer"`.
   - **`psm_reader_kwargs`** *(object)*: Keyword arguments passed to the PSM reader. Default: `{}`.
   - **`spectrum_path`**: Path to spectrum file or directory with spectrum files.

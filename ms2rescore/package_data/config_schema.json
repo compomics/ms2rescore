@@ -65,7 +65,7 @@
                 },
                 "psm_file": {
                     "description": "Path to file with peptide-spectrum matches.",
-                    "oneOf": [{ "type": "string" }, { "type": "null" }]
+                    "oneOf": [{ "type": "string" }, { "type": "null" }, { "type": "array", "items": { "type": "string" } }]
                 },
                 "psm_file_type": {
                     "description": "PSM file type. By default inferred from file extension.",

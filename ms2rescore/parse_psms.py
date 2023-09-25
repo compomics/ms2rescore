@@ -22,7 +22,7 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None], output_file_root: s
     psm_list
         PSMList object containing PSMs. If None, PSMs will be read from ``psm_file``.
     output_file_root
-        Path to output file root (without file extension).
+        Path to output file root (without file extension). #TODO doesn't get used?
 
     """
     # Read PSMs, find decoys, calculate q-values
@@ -60,24 +60,36 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None], output_file_root: s
 
 
 def _read_psms(config, psm_list):
-    logger.info("Reading PSMs...")
     if isinstance(psm_list, PSMList):
+        logger.info("Reading PSMs...")
         return psm_list
     else:
-        try:
-            return psm_utils.io.read_file(
-                config["psm_file"],
-                filetype=config["psm_file_type"],
-                show_progressbar=True,
-                **config["psm_reader_kwargs"],
+        current_file = 1
+        total_files = len(config["psm_file"])
+        all_psms = []
+        for psm_file in config["psm_file"]:
+            logger.info(
+                f"Reading PSMs from PSM file ({current_file}/{total_files}): `{psm_file}`..."
             )
-        except psm_utils.io.PSMUtilsIOException:
-            raise MS2RescoreConfigurationError(
-                "Error occurred while reading PSMs. Please check the `psm_file` and "
-                "`psm_file_type` settings. See "
-                "https://ms2rescore.readthedocs.io/en/latest/userguide/input-files/"
-                " for more information."
-            )
+            try:
+                id_file_psm_list = psm_utils.io.read_file(
+                    psm_file,
+                    filetype=config["psm_file_type"],
+                    show_progressbar=True,
+                    **config["psm_reader_kwargs"],
+                )
+            except psm_utils.io.PSMUtilsIOException:
+                raise MS2RescoreConfigurationError(
+                    "Error occurred while reading PSMs. Please check the `psm_file` and "
+                    "`psm_file_type` settings. See "
+                    "https://ms2rescore.readthedocs.io/en/latest/userguide/input-files/"
+                    " for more information."
+                )
+
+            all_psms = all_psms + id_file_psm_list.psm_list
+            current_file += 1
+
+        return PSMList(psm_list=all_psms)
 
 
 def _find_decoys(config, psm_list):
