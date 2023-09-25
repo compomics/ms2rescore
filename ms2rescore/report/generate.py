@@ -221,8 +221,6 @@ def _get_overview_context(confidence_before, confidence_after) -> dict:
 
 
 def _get_target_decoy_context(psm_list) -> dict:
-    # fasta_file = "../../examples/fasta/uniprot-proteome-human-contaminants.fasta"
-    # confidence_estimates = _get_confidence_estimates(psm_list, fasta_file)
     logger.debug("Generating target-decoy charts...")
     psm_df = psm_list.to_dataframe()
     return {
@@ -363,7 +361,7 @@ def _get_log_context(files: Dict[str, Path]) -> dict:
 
 def _render_and_write(output_path_prefix: str, **context):
     """Render template with context and write to HTML file."""
-    report_path = Path(output_path_prefix + ".ms2rescore.report.html").resolve()
+    report_path = Path(output_path_prefix + ".report.html").resolve()
     logger.info("Writing report to %s", report_path.as_posix())
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(template_dir, encoding="utf-8"))

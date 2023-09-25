@@ -1,0 +1,21 @@
+{
+    "ms2rescore": {
+        "psm_file": "examples/id/msgfplus.pin",
+        "psm_file_type": "percolator",
+        "psm_reader_kwargs": {
+            "score_column": "PSMScore"
+        },
+        "log_level": "debug",
+        "processes": 16,
+        "feature_generators": {
+            "basic": {}
+        },
+        "rescoring_engine": {
+            "mokapot": {
+                "fasta_file": "examples/proteins/uniprot-proteome-human-contaminants.fasta",
+                "write_weights": true,
+                "write_txt": true
+            }
+        }
+    }
+}
