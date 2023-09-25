@@ -35,7 +35,6 @@ def parse_mgf_title_rt(path_to_mgf: Union[str, os.PathLike]) -> Dict[str, float]
             rt = None
         retention_times[title] = rt
 
-    print(retention_times)
     if any(list(retention_times.values())):
         return retention_times
     else:

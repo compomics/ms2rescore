@@ -127,9 +127,10 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         # Get easy-access nested version of PSMList
         psm_dict = psm_list.get_psm_dict()
 
-        # Run MS²PIP for each spectrum file
-        total_runs = len(psm_dict.values())
+        # Run DeepLC for each spectrum file
         current_run = 1
+        total_runs = sum(len(runs) for runs in psm_dict.values())
+
         for runs in psm_dict.values():
             # Reset DeepLC predictor for each collection of runs
             self.deeplc_predictor = None
@@ -216,7 +217,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                         psm["rescoring_features"].update(
                             peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
                         )
-            current_run += 1
+                current_run += 1
 
     # TODO: Remove when DeepLC supports PSMList directly
     @staticmethod
