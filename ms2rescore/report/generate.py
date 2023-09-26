@@ -96,7 +96,9 @@ def generate_report(
         "metadata": {
             "generated_on": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
             "ms2rescore_version": ms2rescore.__version__,  # TODO: Write during run?
-            "psm_filename": Path(config["ms2rescore"]["psm_file"]).name,
+            "psm_filename": "\n".join(
+                [Path(id_file).name for id_file in config["ms2rescore"]["psm_file"]]
+            ),
         },
         "main_tabs": [
             {
