@@ -44,7 +44,6 @@ jobs:
           ms2rescore --help
   windows-installer:
     runs-on: windows-latest
-    needs: python-package
     steps:
       - uses: actions/checkout@v2
 
