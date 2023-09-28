@@ -3,6 +3,7 @@ on:
     branches:
     - main
 
+jobs:
   windows-installer:
     runs-on: windows-latest
     steps:
