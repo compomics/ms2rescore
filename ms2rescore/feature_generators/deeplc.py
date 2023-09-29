@@ -30,7 +30,6 @@ from psm_utils.io import peptide_record
 
 from ms2rescore.exceptions import MS2RescoreError
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
-from ms2rescore.parse_mgf import parse_mgf_title_rt
 from ms2rescore.utils import infer_spectrum_path
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -151,22 +150,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     open(os.devnull, "w")
                 ) if not self._verbose else contextlib.nullcontext():
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
-
-                    if not all(psm_list["retention_time"]):
-                        # Prepare spectrum filenames
-                        spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
-                        retention_time_dict = parse_mgf_title_rt(
-                            spectrum_filename
-                        )  # TODO Add mzML support
-                        try:
-                            psm_list_run["retention_time"] = [
-                                retention_time_dict[psm_id]
-                                for psm_id in psm_list_run["spectrum_id"]
-                            ]
-                        except KeyError:
-                            raise MS2RescoreError(
-                                "Could not map all spectrum ids to retention times"
-                            )
 
                     psm_list_calibration = self._get_calibration_psms(psm_list_run)
 

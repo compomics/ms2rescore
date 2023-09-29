@@ -10,6 +10,7 @@ from ms2rescore.feature_generators import FEATURE_GENERATORS
 from ms2rescore.parse_psms import parse_psms
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
+from ms2rescore.parse_spectra import get_missing_values
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,20 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     logger.debug(
         f"PSMs already contain the following rescoring features: {psm_list_feature_names}"
     )
+
+    if ("deeplc" in config["feature_generators"] and None in psm_list["retention_time"]) or (
+        "ionmob" in config["feature_generators"] and None in psm_list["ion_mobility"]
+    ):
+        logger.warning(
+            "One or more PSMs are missing retention time and/or ion mobility values. These will be "
+            "parsed from the spectrum file."
+        )
+        get_missing_values(
+            config,
+            psm_list,
+            missing_rt_values=None in psm_list["retention_time"],
+            missing_im_values=None in psm_list["ion_mobility"],
+        )
 
     # Add rescoring features
     for fgen_name, fgen_config in config["feature_generators"].items():
