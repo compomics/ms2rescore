@@ -120,6 +120,7 @@ def rescore(
     if write_txt:
         confidence_results.to_txt(file_root=output_file_root, decoys=True)
     if write_flashlfq:
+        confidence_results.psms["retention_time"] = confidence_results.psms["retention_time"] * 60
         confidence_results.to_flashlfq(output_file_root + ".mokapot.flashlfq.txt")
 
 
