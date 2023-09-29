@@ -8,6 +8,7 @@ from rich.progress import track
 from pyteomics.mgf import MGF
 from pyteomics.mzml import MzML
 from itertools import chain
+from pathlib import Path
 
 from ms2rescore.exceptions import MS2RescoreError
 from ms2rescore.utils import infer_spectrum_path
@@ -30,15 +31,17 @@ class ParsingError(MS2RescoreError):
 
 def get_missing_values(config, psm_list, missing_rt_values=False, missing_im_values=False):
     """Get missing features from spectrum file."""
-
+    logger.info("Parsing missing values from spectrum file.")
     rt_dict = {}
     im_dict = {}
 
     psm_dict = psm_list.get_psm_dict()
     for runs in psm_dict.values():
-        for run, psms in track(runs.items()):
+        for run, psms in track(runs.items(), description="Parsing missing values"):
             psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
             spectrum_file = infer_spectrum_path(config["spectrum_path"], run)
+            if isinstance(spectrum_file, str):
+                spectrum_file = Path(spectrum_file)
 
             if spectrum_file.suffix.lower() == ".mzml":
                 rt_dict, im_dict = _parse_values_from_mzml(
@@ -68,6 +71,7 @@ def _parse_values_from_mgf(
 
     for spectrum in MGF(str(spectrum_file)):
         if missing_rt_values:
+            logger.debug("Parsing retention time from spectrum file.")
             rt_dict = {}
             try:
                 rt_dict[
@@ -79,6 +83,7 @@ def _parse_values_from_mgf(
                     "Please make sure that the retention time key is present in the spectrum file."
                 )
         if missing_im_values:
+            logger.debug("Parsing ion mobility from spectrum file.")
             im_dict = {}
             try:
                 im_dict[
@@ -102,6 +107,7 @@ def _parse_values_from_mzml(
 
     for spectrum in MGF(str(spectrum_file)):
         if missing_rt_values:
+            logger.debug("Parsing retention time from spectrum file.")
             rt_dict = {}
             try:
                 rt_dict[re.match(config["spectrum_id_pattern"], spectrum["id"]).group()] = float(
@@ -115,6 +121,7 @@ def _parse_values_from_mzml(
                     "Please make sure that the retention time key is present in the spectrum file."
                 )
         if missing_im_values:
+            logger.debug("Parsing ion mobility from spectrum file.")
             im_dict = {}
             try:
                 im_dict[re.match(config["spectrum_id_pattern"], spectrum["id"]).group()] = float(
