@@ -40,6 +40,7 @@ def rescore(
     write_weights: bool = False,
     write_txt: bool = False,
     write_flashlfq: bool = False,
+    protein_kwargs: Optional[dict[str, Any]] = None,
     **kwargs: Any,
 ) -> None:
     """
@@ -68,6 +69,9 @@ def rescore(
         Write Mokapot results to a text file. Defaults to ``False``.
     write_flashlfq
         Write Mokapot results to a FlashLFQ-compatible file. Defaults to ``False``.
+    protein_kwargs
+        Keyword arguments to pass to the :py:meth:`~mokapot.dataset.LinearPsmDataset.add_proteins`
+        method.
     **kwargs
         Additional keyword arguments are passed to the Mokapot :py:func:`~mokapot.brew` function.
 
@@ -80,11 +84,11 @@ def rescore(
 
     # Add proteins
     if fasta_file:
-        proteins = mokapot.read_fasta(fasta_file)
-        lin_psm_data.add_proteins(proteins)
+        logger.debug(f"Mokapot read fasta keyword arguments : {protein_kwargs}")
+        lin_psm_data.add_proteins(fasta_file, **protein_kwargs)
 
     # Rescore
-    logger.debug(f"Mokapot keyword arguments : {kwargs}")
+    logger.debug(f"Mokapot brew keyword arguments : {kwargs}")
     confidence_results, models = brew(lin_psm_data, **kwargs)
 
     # Reshape confidence estimates to match PSMList
