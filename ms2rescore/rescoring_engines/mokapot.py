@@ -20,7 +20,7 @@ If you use Mokapot through MS²Rescore, please cite:
 """
 
 import logging
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Dict
 
 import mokapot
 import numpy as np
@@ -40,7 +40,7 @@ def rescore(
     write_weights: bool = False,
     write_txt: bool = False,
     write_flashlfq: bool = False,
-    protein_kwargs: Optional[dict[str, Any]] = None,
+    protein_kwargs: Optional[Dict[str, Any]] = None,
     **kwargs: Any,
 ) -> None:
     """
