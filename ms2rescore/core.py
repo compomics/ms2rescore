@@ -53,7 +53,6 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     logger.debug(
         f"PSMs already contain the following rescoring features: {psm_list_feature_names}"
     )
-    psm_list["retention_time"] = [None] * len(psm_list)
 
     if ("deeplc" in config["feature_generators"] and None in psm_list["retention_time"]) or (
         "ionmob" in config["feature_generators"] and None in psm_list["ion_mobility"]
@@ -137,9 +136,15 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     elif "mokapot" in config["rescoring_engine"]:
         if "fasta_file" not in config["rescoring_engine"]["mokapot"]:
             config["rescoring_engine"]["mokapot"]["fasta_file"] = config["fasta_file"]
+        if "protein_kwargs" in config["rescoring_engine"]["mokapot"]:
+            protein_kwargs = config["rescoring_engine"]["mokapot"].pop("protein_kwargs")
+        else:
+            protein_kwargs = dict()
+
         mokapot.rescore(
             psm_list,
             output_file_root=output_file_root,
+            protein_kwargs=protein_kwargs,
             **config["rescoring_engine"]["mokapot"],
         )
     else:
