@@ -93,7 +93,9 @@ def _parse_values_from_mgf(
                         else r"(.*)",
                         spectrum["params"]["title"],
                     ).group()
-                ] = float(spectrum["params"]["ionmobility"])
+                ] = float(
+                    spectrum["params"]["ion_mobility"]
+                )  # http://www.matrixscience.com/help/data_file_help.html
             except KeyError:
                 raise ParsingError(
                     f"Could not parse ion mobility key `ionmobility` from spectrum file for run {run}."
