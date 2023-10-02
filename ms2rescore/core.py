@@ -54,6 +54,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         f"PSMs already contain the following rescoring features: {psm_list_feature_names}"
     )
     psm_list["retention_time"] = [None] * len(psm_list)
+
     if ("deeplc" in config["feature_generators"] and None in psm_list["retention_time"]) or (
         "ionmob" in config["feature_generators"] and None in psm_list["ion_mobility"]
     ):
@@ -64,10 +65,13 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         get_missing_values(
             config,
             psm_list,
-            missing_rt_values=None in psm_list["retention_time"],
-            missing_im_values=None in psm_list["ion_mobility"],
+            missing_rt_values=(
+                "deeplc" in config["feature_generators"] and None in psm_list["retention_time"]
+            ),
+            missing_im_values=(
+                "ionmob" in config["feature_generators"] and None in psm_list["ion_mobility"]
+            ),
         )
-
     # Add rescoring features
     for fgen_name, fgen_config in config["feature_generators"].items():
         # TODO: Handle this somewhere else, more generally?

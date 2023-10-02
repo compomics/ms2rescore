@@ -32,10 +32,9 @@ class ParsingError(MS2RescoreError):
 def get_missing_values(config, psm_list, missing_rt_values=False, missing_im_values=False):
     """Get missing features from spectrum file."""
     logger.info("Parsing missing values from spectrum file.")
-    rt_dict = {}
-    im_dict = {}
 
     psm_dict = psm_list.get_psm_dict()
+    logger.debug(f"Extracting missing values from spectrum files.")
     for runs in psm_dict.values():
         for run, psms in track(runs.items(), description="Parsing missing values"):
             psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
@@ -66,16 +65,19 @@ def _parse_values_from_mgf(
     spectrum_file, config, run, missing_rt_values, missing_im_values
 ) -> Tuple[Dict, Dict]:
     """Parse retention time and/or ion mobility from MGF file."""
-    rt_dict = None
-    im_dict = None
+    rt_dict = {}
+    im_dict = {}
 
     for spectrum in MGF(str(spectrum_file)):
         if missing_rt_values:
-            logger.debug("Parsing retention time from spectrum file.")
-            rt_dict = {}
             try:
                 rt_dict[
-                    re.match(config["spectrum_id_pattern"], spectrum["params"]["title"]).group()
+                    re.match(
+                        config["spectrum_id_pattern"]
+                        if config["spectrum_id_pattern"]
+                        else r"(.*)",
+                        spectrum["params"]["title"],
+                    ).group()
                 ] = float(spectrum["params"]["rtinseconds"])
             except KeyError:
                 raise ParsingError(
@@ -83,11 +85,14 @@ def _parse_values_from_mgf(
                     "Please make sure that the retention time key is present in the spectrum file."
                 )
         if missing_im_values:
-            logger.debug("Parsing ion mobility from spectrum file.")
-            im_dict = {}
             try:
                 im_dict[
-                    re.match(config["spectrum_id_pattern"], spectrum["params"]["title"]).group()
+                    re.match(
+                        config["spectrum_id_pattern"]
+                        if config["spectrum_id_pattern"]
+                        else r"(.*)",
+                        spectrum["params"]["title"],
+                    ).group()
                 ] = float(spectrum["params"]["ionmobility"])
             except KeyError:
                 raise ParsingError(
@@ -102,15 +107,20 @@ def _parse_values_from_mzml(
     spectrum_file, config, run, missing_rt_values, missing_im_values
 ) -> Tuple[Dict, Dict]:
     """Parse retention time and/or ion mobility from MGF file."""
-    rt_dict = None
-    im_dict = None
+    rt_dict = {}
+    im_dict = {}
 
-    for spectrum in MGF(str(spectrum_file)):
+    for spectrum in MzML(str(spectrum_file)):
         if missing_rt_values:
-            logger.debug("Parsing retention time from spectrum file.")
-            rt_dict = {}
             try:
-                rt_dict[re.match(config["spectrum_id_pattern"], spectrum["id"]).group()] = float(
+                rt_dict[
+                    re.match(
+                        config["spectrum_id_pattern"]
+                        if config["spectrum_id_pattern"]
+                        else r"(.*)",
+                        spectrum["id"],
+                    ).group()
+                ] = float(
                     spectrum["scanList"]["scan"][0][
                         "scan start time"
                     ]  # is rt in minutes by default?
@@ -121,12 +131,15 @@ def _parse_values_from_mzml(
                     "Please make sure that the retention time key is present in the spectrum file."
                 )
         if missing_im_values:
-            logger.debug("Parsing ion mobility from spectrum file.")
-            im_dict = {}
             try:
-                im_dict[re.match(config["spectrum_id_pattern"], spectrum["id"]).group()] = float(
-                    spectrum["scanList"]["scan"][0]["reverse ion mobility"]
-                )
+                im_dict[
+                    re.match(
+                        config["spectrum_id_pattern"]
+                        if config["spectrum_id_pattern"]
+                        else r"(.*)",
+                        spectrum["id"],
+                    ).group()
+                ] = float(spectrum["scanList"]["scan"][0]["reverse ion mobility"])
             except KeyError:
                 raise ParsingError(
                     f"Could not parse ion mobility key `reverse ion mobility` from spectrum file for run {run}."
