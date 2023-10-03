@@ -595,7 +595,6 @@ class MokapotRescoringConfiguration(ctk.CTkFrame):
             "write_flashlfq": self.write_flashlfq.get(),
             "protein_kwargs": self._parse_protein_kwargs(self.protein_kwargs.get()),
         }
-        print(config)
         return config
 
     @staticmethod
