@@ -281,9 +281,12 @@ class PSMFileConfigFrame(ctk.CTkFrame):
 
     def get(self) -> Dict:
         """Get the configured values as a dictionary."""
-
+        try:
+            psm_files = self.psm_file.get().split(" ")
+        except AttributeError:
+            raise MS2RescoreConfigurationError("No PSM file provided. Please select a file.")
         return {
-            "psm_file": self.psm_file.get().split(" "),  # there cannot be spaces in the file path
+            "psm_file": psm_files,  # there cannot be spaces in the file path
             "psm_file_type": self.psm_file_type.get(),
         }
 
@@ -567,14 +570,33 @@ class MokapotRescoringConfiguration(ctk.CTkFrame):
         self.write_flashlfq = widgets.LabeledSwitch(self, label="Write flashlfq", default=False)
         self.write_flashlfq.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
 
+        self.protein_kwargs = widgets.TableInput(
+            self,
+            label="mokapot protein kwargs",
+            columns=2,
+            header_labels=["keyword", "value"],
+        )
+        self.protein_kwargs.grid(row=4, column=0, sticky="new")  # leave this in?
+
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
         config = {
             "write_weights": self.write_weights.get(),
             "write_txt": self.write_txt.get(),
             "write_flashlfq": self.write_flashlfq.get(),
+            "protein_kwargs": self._parse_protein_kwargs(self.protein_kwargs.get()),
         }
+        print(config)
         return config
+
+    @staticmethod
+    def _parse_protein_kwargs(table_output):
+        """Parse text input modifications mapping"""
+        protein_kwargs = {}
+        for mod in table_output:
+            if mod[0] and mod[1]:
+                protein_kwargs[mod[0].strip()] = mod[1].strip()
+        return protein_kwargs
 
 
 class PercolatorRescoringConfiguration(ctk.CTkFrame):
