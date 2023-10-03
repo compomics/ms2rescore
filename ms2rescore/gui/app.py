@@ -467,7 +467,7 @@ class DeepLCConfiguration(ctk.CTkFrame):
             label="Number of epochs",
             step_size=5,
             initial_value=20,
-        )
+        )  # way to remove float in spinbox label?
         self.num_epochs.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
 
         self.calibration_set_size = widgets.LabeledEntry(
