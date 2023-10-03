@@ -462,12 +462,20 @@ class DeepLCConfiguration(ctk.CTkFrame):
         self.transfer_learning = widgets.LabeledSwitch(self, label="Use transfer learning")
         self.transfer_learning.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
 
+        self.num_epochs = widgets.LabeledFloatSpinbox(
+            self,
+            label="Number of epochs",
+            step_size=5,
+            initial_value=20,
+        )
+        self.num_epochs.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+
         self.calibration_set_size = widgets.LabeledEntry(
             self,
             label="Set calibration set size (fraction or number of PSMs)",
             placeholder_text="0.15",
         )
-        self.calibration_set_size.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+        self.calibration_set_size.grid(row=4, column=0, pady=(0, 10), sticky="nsew")
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
@@ -486,6 +494,7 @@ class DeepLCConfiguration(ctk.CTkFrame):
         enabled = self.enabled.get()
         config = {
             "deeplc_retrain": self.transfer_learning.get(),
+            "n_epochs": int(self.num_epochs.get()),
             "calibration_set_size": calibration_set_size,
         }
         return enabled, config
