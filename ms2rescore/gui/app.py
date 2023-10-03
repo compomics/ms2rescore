@@ -267,7 +267,7 @@ class PSMFileConfigFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
 
         self.psm_file = widgets.LabeledFileSelect(
-            self, label="Select identification file", file_option="openfile"
+            self, label="Select identification file", file_option="openfiles"
         )
         self.psm_file.grid(row=0, column=0, pady=0, padx=(0, 5), sticky="nsew")
 
@@ -281,8 +281,9 @@ class PSMFileConfigFrame(ctk.CTkFrame):
 
     def get(self) -> Dict:
         """Get the configured values as a dictionary."""
+
         return {
-            "psm_file": self.psm_file.get(),
+            "psm_file": self.psm_file.get().split(" "),  # there cannot be spaces in the file path
             "psm_file_type": self.psm_file_type.get(),
         }
 
@@ -498,7 +499,7 @@ class IonmobConfiguration(ctk.CTkFrame):
         self.title = widgets.Heading(self, text="Ionmob")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
-        self.enabled = widgets.LabeledSwitch(self, label="Enable Ionmob", default=True)
+        self.enabled = widgets.LabeledSwitch(self, label="Enable Ionmob", default=False)
         self.enabled.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
 
         self.model = widgets.LabeledEntry(

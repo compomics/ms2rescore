@@ -268,6 +268,9 @@ class LabeledFileSelect(ctk.CTkFrame):
         elif file_option == "openfile":
             self._button_1 = ctk.CTkButton(self, text="Browse files", command=self._pick_file)
 
+        elif file_option == "openfiles":
+            self._button_1 = ctk.CTkButton(self, text="Browse files", command=self._pick_files)
+
         elif file_option == "file/dir":
             self._button_1 = ctk.CTkButton(self, text="Browse files", command=self._pick_file)
             self._button_2 = ctk.CTkButton(self, text="Browse directories", command=self._pick_dir)
@@ -294,6 +297,10 @@ class LabeledFileSelect(ctk.CTkFrame):
 
     def _pick_file(self):
         self._selected_filename = tk.filedialog.askopenfilename()
+        self._update_entry()
+
+    def _pick_files(self):
+        self._selected_filename = tk.filedialog.askopenfilenames()
         self._update_entry()
 
     def _pick_dir(self):
