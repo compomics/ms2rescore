@@ -157,7 +157,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     self.deeplc_predictor = self.DeepLC(
                         n_jobs=self.processes,
                         verbose=self._verbose,
-                        path_model=self.user_model or self.selected_model,
+                        path_model=self.selected_model or self.user_model,
                         **self.deeplc_kwargs,
                     )
                     self.deeplc_predictor.calibrate_preds(
@@ -165,8 +165,9 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     )
                     # Still calibrate for each run, but do not try out all model options.
                     # Just use model that was selected based on first run
-                    if not self.user_model and not self.selected_model:
+                    if not self.selected_model:
                         self.selected_model = list(self.deeplc_predictor.model.keys())
+                        self.deeplc_kwargs["deeplc_retrain"] = False
                         logger.debug(
                             f"Selected DeepLC model {self.selected_model} based on "
                             "calibration of first run. Using this model (after new "
