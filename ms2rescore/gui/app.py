@@ -8,6 +8,7 @@ import sys
 import webbrowser
 from pathlib import Path
 from typing import Dict, List, Tuple
+from joblib import parallel_backend
 
 import customtkinter as ctk
 from ms2pip.constants import MODELS as ms2pip_models
@@ -40,6 +41,7 @@ except ImportError:
     pass
 
 ctk.set_default_color_theme(_THEME_FILE)
+parallel_backend("threading")
 
 
 class SideBar(ctk.CTkFrame):
