@@ -38,7 +38,6 @@ from psm_utils import PSMList
 from rich.progress import track
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase, FeatureGeneratorException
-from ms2rescore.utils import infer_spectrum_path
 
 logger = logging.getLogger(__name__)
 
@@ -184,12 +183,10 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
                     f"Running MS²PIP for PSMs from run ({current_run}/{total_runs}) `{run}`..."
                 )
                 psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
-                spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
-                logger.debug(f"Using spectrum file `{spectrum_filename}`")
                 try:
                     ms2pip_results = correlate(
                         psms=psm_list_run,
-                        spectrum_file=spectrum_filename,
+                        spectrum_file=run,  # Run has already been mapped to a path
                         spectrum_id_pattern=self.spectrum_id_pattern,
                         model=self.model,
                         ms2_tolerance=self.ms2_tolerance,
