@@ -145,63 +145,60 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                 logger.info(
                     f"Running DeepLC for PSMs from run ({current_run}/{total_runs}): `{run}`..."
                 )
-                # Prepare PSM file
-                with contextlib.redirect_stdout(
-                    open(os.devnull, "w")
-                ) if not self._verbose else contextlib.nullcontext():
-                    psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
-                    psm_list_calibration = self._get_calibration_psms(psm_list_run)
+                psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
-                    logger.debug("Calibrating DeepLC")
-                    self.deeplc_predictor = self.DeepLC(
-                        n_jobs=self.processes,
-                        verbose=self._verbose,
-                        path_model=self.selected_model or self.user_model,
-                        **self.deeplc_kwargs,
+                psm_list_calibration = self._get_calibration_psms(psm_list_run)
+
+                logger.debug("Calibrating DeepLC")
+                self.deeplc_predictor = self.DeepLC(
+                    n_jobs=self.processes,
+                    verbose=self._verbose,
+                    path_model=self.selected_model or self.user_model,
+                    **self.deeplc_kwargs,
+                )
+                self.deeplc_predictor.calibrate_preds(
+                    seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
+                )
+                # Still calibrate for each run, but do not try out all model options.
+                # Just use model that was selected based on first run
+                if not self.selected_model:
+                    self.selected_model = list(self.deeplc_predictor.model.keys())
+                    self.deeplc_kwargs["deeplc_retrain"] = False
+                    logger.debug(
+                        f"Selected DeepLC model {self.selected_model} based on "
+                        "calibration of first run. Using this model (after new "
+                        "calibrations) for the remaining runs."
                     )
-                    self.deeplc_predictor.calibrate_preds(
-                        seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
-                    )
-                    # Still calibrate for each run, but do not try out all model options.
-                    # Just use model that was selected based on first run
-                    if not self.selected_model:
-                        self.selected_model = list(self.deeplc_predictor.model.keys())
-                        self.deeplc_kwargs["deeplc_retrain"] = False
-                        logger.debug(
-                            f"Selected DeepLC model {self.selected_model} based on "
-                            "calibration of first run. Using this model (after new "
-                            "calibrations) for the remaining runs."
-                        )
 
-                    predictions = np.array(
-                        self.deeplc_predictor.make_preds(
-                            seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
-                        )
+                predictions = np.array(
+                    self.deeplc_predictor.make_preds(
+                        seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
                     )
-                    observations = psm_list_run["retention_time"]
-                    rt_diffs_run = np.abs(predictions - observations)
+                )
+                observations = psm_list_run["retention_time"]
+                rt_diffs_run = np.abs(predictions - observations)
 
-                    for i, psm in enumerate(psm_list_run):
-                        psm["rescoring_features"].update(
-                            {
-                                "observed_retention_time": observations[i],
-                                "predicted_retention_time": predictions[i],
-                                "rt_diff": rt_diffs_run[i],
-                            }
-                        )
-                        peptide = psm.peptidoform.proforma.split("\\")[0]  # remove charge
-                        if peptide_rt_diff_dict[peptide]["rt_diff_best"] > rt_diffs_run[i]:
-                            peptide_rt_diff_dict[peptide] = {
-                                "observed_retention_time_best": observations[i],
-                                "predicted_retention_time_best": predictions[i],
-                                "rt_diff_best": rt_diffs_run[i],
-                            }
-                    for psm in psm_list_run:
-                        psm["rescoring_features"].update(
-                            peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
-                        )
-                current_run += 1
+                for i, psm in enumerate(psm_list_run):
+                    psm["rescoring_features"].update(
+                        {
+                            "observed_retention_time": observations[i],
+                            "predicted_retention_time": predictions[i],
+                            "rt_diff": rt_diffs_run[i],
+                        }
+                    )
+                    peptide = psm.peptidoform.proforma.split("\\")[0]  # remove charge
+                    if peptide_rt_diff_dict[peptide]["rt_diff_best"] > rt_diffs_run[i]:
+                        peptide_rt_diff_dict[peptide] = {
+                            "observed_retention_time_best": observations[i],
+                            "predicted_retention_time_best": predictions[i],
+                            "rt_diff_best": rt_diffs_run[i],
+                        }
+                for psm in psm_list_run:
+                    psm["rescoring_features"].update(
+                        peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
+                    )
+            current_run += 1
 
     # TODO: Remove when DeepLC supports PSMList directly
     @staticmethod
