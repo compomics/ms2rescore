@@ -242,7 +242,7 @@ class MainConfiguration(ctk.CTkFrame):
         for mod in table_output:
             if mod[0] and mod[1]:
                 modification_map[mod[0].strip()] = mod[1].strip()
-        return modification_map
+        return modification_map or None
 
     @staticmethod
     def _parse_fixed_modifications(table_output):
@@ -252,7 +252,7 @@ class MainConfiguration(ctk.CTkFrame):
             if mod[0] and mod[1]:
                 amino_acids = [aa.upper() for aa in mod[1].strip().split(",")]
                 fixed_modifications[mod[0]] = amino_acids
-        return fixed_modifications
+        return fixed_modifications or None
 
 
 class PSMFileConfigFrame(ctk.CTkFrame):
@@ -612,7 +612,7 @@ class PercolatorRescoringConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="Percolator configuration")
+        self.title = widgets.Heading(self, text="Percolator coffeeguration")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.weights_file = widgets.LabeledFileSelect(
@@ -629,7 +629,7 @@ class PercolatorRescoringConfiguration(ctk.CTkFrame):
 def function(config):
     """Function to be executed in a separate process."""
     config = config.copy()
-    config = parse_configurations(config)
+    config = parse_configurations([config["ms2rescore"]["config_file"], config])
     rescore(configuration=config)
 
 

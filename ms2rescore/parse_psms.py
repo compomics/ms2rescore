@@ -1,7 +1,7 @@
 import logging
 import re
-from typing import Dict, Union
 from itertools import chain
+from typing import Dict, Union
 
 import psm_utils.io
 from psm_utils import PSMList
@@ -88,7 +88,7 @@ def _read_psms(config, psm_list):
             psm_list_list.append(id_file_psm_list)
             current_file += 1
 
-        return PSMList(psm_list=chain.from_iterable(p.psm_list for p in psm_list_list))
+        return PSMList(psm_list=list(chain.from_iterable(p.psm_list for p in psm_list_list)))
 
 
 def _find_decoys(config, psm_list):
@@ -124,7 +124,7 @@ def _match_psm_ids(old_id, regex_pattern):
     try:
         return match[1]
     except (TypeError, IndexError):
-        raise MS2RescoreError(
+        raise MS2RescoreConfigurationError(
             "`psm_id_pattern` could not be matched to all PSM spectrum IDs."
             " Ensure that the regex contains a capturing group?"
         )

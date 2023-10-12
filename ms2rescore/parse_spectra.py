@@ -65,7 +65,7 @@ def _parse_values_from_mgf(
     )
 
     for spectrum in MGF(str(spectrum_file)):
-        matched_id = spectrum_id_pattern.match(spectrum["id"]).group()
+        matched_id = spectrum_id_pattern.match(spectrum["params"]["title"]).group()
         if missing_rt:
             try:
                 rt_dict[matched_id] = float(spectrum["params"]["rtinseconds"])
