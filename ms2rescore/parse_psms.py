@@ -1,16 +1,17 @@
 import logging
 import re
+from itertools import chain
 from typing import Dict, Union
 
 import psm_utils.io
 from psm_utils import PSMList
 
-from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
+from ms2rescore.exceptions import MS2RescoreConfigurationError
 
 logger = logging.getLogger(__name__)
 
 
-def parse_psms(config: Dict, psm_list: Union[PSMList, None], output_file_root: str) -> PSMList:
+def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
     """
     Parse PSMs and prepare for rescoring.
 
@@ -21,8 +22,6 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None], output_file_root: s
         top-level key).
     psm_list
         PSMList object containing PSMs. If None, PSMs will be read from ``psm_file``.
-    output_file_root
-        Path to output file root (without file extension).
 
     """
     # Read PSMs, find decoys, calculate q-values
@@ -60,24 +59,36 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None], output_file_root: s
 
 
 def _read_psms(config, psm_list):
-    logger.info("Reading PSMs...")
     if isinstance(psm_list, PSMList):
         return psm_list
     else:
-        try:
-            return psm_utils.io.read_file(
-                config["psm_file"],
-                filetype=config["psm_file_type"],
-                show_progressbar=True,
-                **config["psm_reader_kwargs"],
+        logger.info("Reading PSMs from file...")
+        current_file = 1
+        total_files = len(config["psm_file"])
+        psm_list_list = []
+        for psm_file in config["psm_file"]:
+            logger.info(
+                f"Reading PSMs from PSM file ({current_file}/{total_files}): `{psm_file}`..."
             )
-        except psm_utils.io.PSMUtilsIOException:
-            raise MS2RescoreConfigurationError(
-                "Error occurred while reading PSMs. Please check the `psm_file` and "
-                "`psm_file_type` settings. See "
-                "https://ms2rescore.readthedocs.io/en/latest/userguide/input-files/"
-                " for more information."
-            )
+            try:
+                id_file_psm_list = psm_utils.io.read_file(
+                    psm_file,
+                    filetype=config["psm_file_type"],
+                    show_progressbar=True,
+                    **config["psm_reader_kwargs"],
+                )
+            except psm_utils.io.PSMUtilsIOException:
+                raise MS2RescoreConfigurationError(
+                    "Error occurred while reading PSMs. Please check the `psm_file` and "
+                    "`psm_file_type` settings. See "
+                    "https://ms2rescore.readthedocs.io/en/latest/userguide/input-files/"
+                    " for more information."
+                )
+
+            psm_list_list.append(id_file_psm_list)
+            current_file += 1
+
+        return PSMList(psm_list=list(chain.from_iterable(p.psm_list for p in psm_list_list)))
 
 
 def _find_decoys(config, psm_list):
@@ -113,7 +124,7 @@ def _match_psm_ids(old_id, regex_pattern):
     try:
         return match[1]
     except (TypeError, IndexError):
-        raise MS2RescoreError(
+        raise MS2RescoreConfigurationError(
             "`psm_id_pattern` could not be matched to all PSM spectrum IDs."
             " Ensure that the regex contains a capturing group?"
         )

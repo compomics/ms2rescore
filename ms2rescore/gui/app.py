@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import customtkinter as ctk
+from joblib import parallel_backend
 from ms2pip.constants import MODELS as ms2pip_models
 from PIL import Image
 from psm_utils.io import FILETYPES
@@ -40,6 +41,9 @@ except ImportError:
     pass
 
 ctk.set_default_color_theme(_THEME_FILE)
+
+# TODO Does this disable multiprocessing everywhere?
+parallel_backend("threading")
 
 
 class SideBar(ctk.CTkFrame):
@@ -161,17 +165,10 @@ class ConfigFrame(ctk.CTkTabview):
         main_config = self.main_config.get()
         advanced_config = self.advanced_config.get()
 
-        # TODO Move to rescoring engine config
-        percolator_config = {"init-weights": advanced_config.pop("weightsfile")}
-
         config = {"ms2rescore": main_config}
         config["ms2rescore"].update(advanced_config)
         config["ms2rescore"]["feature_generators"] = self.fgen_config.get()
         config["ms2rescore"]["rescoring_engine"] = self.rescoring_engine_config.get()
-
-        # TODO See above
-        if "percolator" in config["ms2rescore"]["rescoring_engine"]:
-            config["ms2rescore"]["rescoring_engine"]["percolator"] = percolator_config
 
         args = (config,)  # Comma required to wrap in tuple
         kwargs = {}
@@ -245,7 +242,7 @@ class MainConfiguration(ctk.CTkFrame):
         for mod in table_output:
             if mod[0] and mod[1]:
                 modification_map[mod[0].strip()] = mod[1].strip()
-        return modification_map
+        return modification_map or None
 
     @staticmethod
     def _parse_fixed_modifications(table_output):
@@ -255,7 +252,7 @@ class MainConfiguration(ctk.CTkFrame):
             if mod[0] and mod[1]:
                 amino_acids = [aa.upper() for aa in mod[1].strip().split(",")]
                 fixed_modifications[mod[0]] = amino_acids
-        return fixed_modifications
+        return fixed_modifications or None
 
 
 class PSMFileConfigFrame(ctk.CTkFrame):
@@ -267,7 +264,7 @@ class PSMFileConfigFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
 
         self.psm_file = widgets.LabeledFileSelect(
-            self, label="Select identification file", file_option="openfile"
+            self, label="Select identification file", file_option="openfiles"
         )
         self.psm_file.grid(row=0, column=0, pady=0, padx=(0, 5), sticky="nsew")
 
@@ -281,8 +278,14 @@ class PSMFileConfigFrame(ctk.CTkFrame):
 
     def get(self) -> Dict:
         """Get the configured values as a dictionary."""
+        try:
+            # there cannot be spaces in the file path
+            # TODO: Fix this in widgets.LabeledFileSelect
+            psm_files = self.psm_file.get().split(" ")
+        except AttributeError:
+            raise MS2RescoreConfigurationError("No PSM file provided. Please select a file.")
         return {
-            "psm_file": self.psm_file.get(),
+            "psm_file": psm_files,
             "psm_file_type": self.psm_file_type.get(),
         }
 
@@ -315,11 +318,6 @@ class AdvancedConfiguration(ctk.CTkFrame):
         self.spectrum_id_pattern = widgets.LabeledEntry(self, label="Spectrum ID regex pattern")
         self.spectrum_id_pattern.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
 
-        self.weightsfile = widgets.LabeledFileSelect(
-            self, label="Pretrained Percolator weights", file_option="openfile"
-        )
-        self.weightsfile.grid(row=6, column=0, columnspan=2, sticky="nsew")
-
         self.file_prefix = widgets.LabeledFileSelect(
             self, label="Filename for output files", file_option="savefile"
         )
@@ -338,7 +336,6 @@ class AdvancedConfiguration(ctk.CTkFrame):
             "id_decoy_pattern": self.id_decoy_pattern.get(),
             "psm_id_pattern": self.psm_id_pattern.get(),
             "spectrum_id_pattern": self.spectrum_id_pattern.get(),
-            "weightsfile": self.weightsfile.get(),
             "output_path": self.file_prefix.get(),
             "config_file": self.config_file.get(),
             "write_report": self.generate_report.get(),
@@ -458,12 +455,20 @@ class DeepLCConfiguration(ctk.CTkFrame):
         self.transfer_learning = widgets.LabeledSwitch(self, label="Use transfer learning")
         self.transfer_learning.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
 
+        self.num_epochs = widgets.LabeledFloatSpinbox(
+            self,
+            label="Number of transfer learning epochs",
+            step_size=5,
+            initial_value=20,
+        )  # way to remove float in spinbox label?
+        self.num_epochs.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+
         self.calibration_set_size = widgets.LabeledEntry(
             self,
             label="Set calibration set size (fraction or number of PSMs)",
             placeholder_text="0.15",
         )
-        self.calibration_set_size.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+        self.calibration_set_size.grid(row=4, column=0, pady=(0, 10), sticky="nsew")
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
@@ -482,6 +487,7 @@ class DeepLCConfiguration(ctk.CTkFrame):
         enabled = self.enabled.get()
         config = {
             "deeplc_retrain": self.transfer_learning.get(),
+            "n_epochs": int(self.num_epochs.get()),
             "calibration_set_size": calibration_set_size,
         }
         return enabled, config
@@ -498,7 +504,7 @@ class IonmobConfiguration(ctk.CTkFrame):
         self.title = widgets.Heading(self, text="Ionmob")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
-        self.enabled = widgets.LabeledSwitch(self, label="Enable Ionmob", default=True)
+        self.enabled = widgets.LabeledSwitch(self, label="Enable Ionmob", default=False)
         self.enabled.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
 
         self.model = widgets.LabeledEntry(
@@ -554,17 +560,29 @@ class MokapotRescoringConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="Mokapot cofiguration")
+        self.title = widgets.Heading(self, text="Mokapot coffeeguration")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
-        self.write_weights = widgets.LabeledSwitch(self, label="Write weightsfile", default=True)
+        self.write_weights = widgets.LabeledSwitch(
+            self, label="Write model weights to file", default=True
+        )
         self.write_weights.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
 
-        self.write_txt = widgets.LabeledSwitch(self, label="Write txt output file", default=True)
+        self.write_txt = widgets.LabeledSwitch(self, label="Write TXT output files", default=True)
         self.write_txt.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
 
-        self.write_flashlfq = widgets.LabeledSwitch(self, label="Write flashlfq", default=False)
+        self.write_flashlfq = widgets.LabeledSwitch(
+            self, label="Write file for FlashLFQ", default=False
+        )
         self.write_flashlfq.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+
+        self.protein_kwargs = widgets.TableInput(
+            self,
+            label="`mokapot.read_fasta` options (see Mokapot documentation)",
+            columns=2,
+            header_labels=["Parameter", "Value"],
+        )
+        self.protein_kwargs.grid(row=4, column=0, sticky="nsew")
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
@@ -572,8 +590,18 @@ class MokapotRescoringConfiguration(ctk.CTkFrame):
             "write_weights": self.write_weights.get(),
             "write_txt": self.write_txt.get(),
             "write_flashlfq": self.write_flashlfq.get(),
+            "protein_kwargs": self._parse_protein_kwargs(self.protein_kwargs.get()),
         }
         return config
+
+    @staticmethod
+    def _parse_protein_kwargs(table_output):
+        """Parse text input modifications mapping"""
+        protein_kwargs = {}
+        for mod in table_output:
+            if mod[0] and mod[1]:
+                protein_kwargs[mod[0].strip()] = mod[1].strip()
+        return protein_kwargs
 
 
 class PercolatorRescoringConfiguration(ctk.CTkFrame):
@@ -584,19 +612,24 @@ class PercolatorRescoringConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="Percolator cofiguration")
+        self.title = widgets.Heading(self, text="Percolator coffeeguration")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
+
+        self.weights_file = widgets.LabeledFileSelect(
+            self, label="Pretrained Percolator model weights", file_option="openfile"
+        )
+        self.weights_file.grid(row=1, column=0, columnspan=2, sticky="nsew")
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
-        config = {}
+        config = {"init-weights": self.weights_file.get()}
         return config
 
 
 def function(config):
     """Function to be executed in a separate process."""
     config = config.copy()
-    config = parse_configurations(config)
+    config = parse_configurations([config["ms2rescore"]["config_file"], config])
     rescore(configuration=config)
 
 
@@ -608,8 +641,8 @@ def app():
         function=function,
     )
     root.protocol("WM_DELETE_WINDOW", sys.exit)
-    root.geometry(f"{1250}x{700}")
-    root.minsize(1000, 700)
+    dpi = root.winfo_fpixels("1i")
+    root.geometry(f"{int(15*dpi)}x{int(10*dpi)}")
     root.title("MS²Rescore")
     root.wm_iconbitmap(os.path.join(str(_IMG_DIR), "program_icon.ico"))
 

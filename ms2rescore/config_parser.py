@@ -44,11 +44,18 @@ def _validate_filenames(config: Dict) -> Dict:
     if not config["ms2rescore"]["psm_file"]:
         raise MS2RescoreConfigurationError("PSM file should be provided.")
 
-    # psm_file should exist
-    id_file = Path(config["ms2rescore"]["psm_file"])
-    if not id_file.is_file():
-        raise FileNotFoundError(id_file)
-    config["ms2rescore"]["psm_file"] = id_file.as_posix()
+    # if psm_file is a string turn into a list else leave as is
+    if isinstance(config["ms2rescore"]["psm_file"], str):
+        config["ms2rescore"]["psm_file"] = [config["ms2rescore"]["psm_file"]]
+
+    # all provided psm_file(s) should exist
+    psm_files = []
+    for psm_file in config["ms2rescore"]["psm_file"]:
+        id_file = Path(psm_file)
+        if not id_file.is_file():
+            raise FileNotFoundError(id_file)
+        psm_files.append(id_file.as_posix())
+    config["ms2rescore"]["psm_file"] = psm_files
 
     # spectrum_path should either be None, or existing path to file or dir
     if config["ms2rescore"]["spectrum_path"]:
@@ -59,10 +66,10 @@ def _validate_filenames(config: Dict) -> Dict:
 
     # Parse output_path
     config["ms2rescore"]["output_path"] = _parse_output_path(
-        config["ms2rescore"]["output_path"], config["ms2rescore"]["psm_file"]
+        config["ms2rescore"]["output_path"], config["ms2rescore"]["psm_file"][0]
     )
 
-    # Parse config_file as posix path
+    # Parse config_file as posix path to avoid combination of forward and backward slashes
     if config["ms2rescore"]["config_file"]:
         config["ms2rescore"]["config_file"] = Path(config["ms2rescore"]["config_file"]).as_posix()
 

@@ -28,10 +28,7 @@ import pandas as pd
 from psm_utils import PSMList
 from psm_utils.io import peptide_record
 
-from ms2rescore.exceptions import MS2RescoreError
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
-from ms2rescore.parse_mgf import parse_mgf_title_rt
-from ms2rescore.utils import infer_spectrum_path
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
@@ -146,35 +143,20 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                 logger.info(
                     f"Running DeepLC for PSMs from run ({current_run}/{total_runs}): `{run}`..."
                 )
-                # Prepare PSM file
+
+                # Disable wild logging to stdout by Tensorflow, unless in debug mode
                 with contextlib.redirect_stdout(
                     open(os.devnull, "w")
                 ) if not self._verbose else contextlib.nullcontext():
+                    # Make new PSM list for this run (chain PSMs per spectrum to flat list)
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
-                    if not all(psm_list["retention_time"]):
-                        # Prepare spectrum filenames
-                        spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
-                        retention_time_dict = parse_mgf_title_rt(
-                            spectrum_filename
-                        )  # TODO Add mzML support
-                        try:
-                            psm_list_run["retention_time"] = [
-                                retention_time_dict[psm_id]
-                                for psm_id in psm_list_run["spectrum_id"]
-                            ]
-                        except KeyError:
-                            raise MS2RescoreError(
-                                "Could not map all spectrum ids to retention times"
-                            )
-
+                    logger.debug("Calibrating DeepLC...")
                     psm_list_calibration = self._get_calibration_psms(psm_list_run)
-
-                    logger.debug("Calibrating DeepLC")
                     self.deeplc_predictor = self.DeepLC(
                         n_jobs=self.processes,
                         verbose=self._verbose,
-                        path_model=self.user_model or self.selected_model,
+                        path_model=self.selected_model or self.user_model,
                         **self.deeplc_kwargs,
                     )
                     self.deeplc_predictor.calibrate_preds(
@@ -182,14 +164,16 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     )
                     # Still calibrate for each run, but do not try out all model options.
                     # Just use model that was selected based on first run
-                    if not self.user_model and not self.selected_model:
+                    if not self.selected_model:
                         self.selected_model = list(self.deeplc_predictor.model.keys())
+                        self.deeplc_kwargs["deeplc_retrain"] = False
                         logger.debug(
                             f"Selected DeepLC model {self.selected_model} based on "
                             "calibration of first run. Using this model (after new "
                             "calibrations) for the remaining runs."
                         )
 
+                    logger.debug("Predicting retention times...")
                     predictions = np.array(
                         self.deeplc_predictor.make_preds(
                             seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
@@ -198,6 +182,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     observations = psm_list_run["retention_time"]
                     rt_diffs_run = np.abs(predictions - observations)
 
+                    logger.debug("Adding features to PSMs...")
                     for i, psm in enumerate(psm_list_run):
                         psm["rescoring_features"].update(
                             {

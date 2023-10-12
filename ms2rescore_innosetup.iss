@@ -2,6 +2,7 @@
 #define MyAppPublisher "CompOmics"
 #define MyAppURL "https://github.com/compomics/ms2rescore"
 #define MyAppExeName "ms2rescore.exe"
+#define OutputFilename "{#MyAppName}-{#MyAppVersion}-Windows64bit"
 
 [Setup]
 AppId={{2D3D12BD-3AE2-426E-8DE8-092148C12071}
@@ -17,7 +18,7 @@ LicenseFile=.\LICENSE
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir="dist"
-OutputBaseFilename="{#MyAppName}-{#MyAppVersion}-Windows64bit"
+OutputBaseFilename={#OutputFilename}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

@@ -10,7 +10,6 @@ from typing import Callable, Union
 
 import customtkinter as ctk
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -51,13 +50,9 @@ class Function2CTk(ctk.CTk):
 
         self.function = function
 
-        # # App config
-        self.geometry(f"{1250}x{700}")
-        self.minsize(1000, 700)
-
         # 2x3 grid, only logging column expands with window
-        self.grid_columnconfigure(0, weight=0, minsize=500)  # Left: Sidebar
-        self.grid_columnconfigure(1, weight=0, minsize=1000)  # Middle: Configuration
+        self.grid_columnconfigure(0, weight=0)  # Left: Sidebar
+        self.grid_columnconfigure(1, weight=2)  # Middle: Configuration
         self.grid_columnconfigure(2, weight=1)  # Right: Logging
         self.grid_rowconfigure(0, weight=1)
 

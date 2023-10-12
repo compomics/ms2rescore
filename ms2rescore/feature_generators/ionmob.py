@@ -129,64 +129,61 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
                 logger.info(
                     f"Running Ionmob for PSMs from run ({current_run}/{total_runs}): `{run}`..."
                 )
-                with contextlib.redirect_stdout(
-                    open(os.devnull, "w")
-                ) if not self._verbose else contextlib.nullcontext():
-                    psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
-                    psm_list_run_df = psm_list_run.to_dataframe()
 
-                    # prepare data frames for CCS prediction
-                    psm_list_run_df["charge"] = [
-                        peptidoform.precursor_charge
-                        for peptidoform in psm_list_run_df["peptidoform"]
-                    ]
-                    psm_list_run_df = psm_list_run_df[
-                        psm_list_run_df["charge"] < 5
-                    ]  # predictions do not go higher for ionmob
+                psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
+                psm_list_run_df = psm_list_run.to_dataframe()
 
-                    psm_list_run_df["sequence-tokenized"] = psm_list_run_df.apply(
-                        lambda x: self.tokenize_peptidoform(x["peptidoform"]), axis=1
-                    )
-                    psm_list_run_df = psm_list_run_df[
-                        psm_list_run_df.apply(
-                            lambda x: self._is_valid_tokenized_sequence(x["sequence-tokenized"]),
-                            axis=1,
-                        )
-                    ]
+                # prepare data frames for CCS prediction
+                psm_list_run_df["charge"] = [
+                    peptidoform.precursor_charge for peptidoform in psm_list_run_df["peptidoform"]
+                ]
+                psm_list_run_df = psm_list_run_df[
+                    psm_list_run_df["charge"] < 5
+                ]  # predictions do not go higher for ionmob
 
-                    psm_list_run_df["mz"] = psm_list_run_df.apply(
-                        lambda x: calculate_mz(x["sequence-tokenized"], x["charge"]), axis=1
-                    )  # use precursor m/z from PSMs?
-
-                    psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
-                        lambda x: reduced_mobility_to_ccs(x["ion_mobility"], x["mz"], x["charge"]),
+                psm_list_run_df["sequence-tokenized"] = psm_list_run_df.apply(
+                    lambda x: self.tokenize_peptidoform(x["peptidoform"]), axis=1
+                )
+                psm_list_run_df = psm_list_run_df[
+                    psm_list_run_df.apply(
+                        lambda x: self._is_valid_tokenized_sequence(x["sequence-tokenized"]),
                         axis=1,
                     )
-                    # calibrate CCS values
-                    shift_factor = self.calculate_ccs_shift(psm_list_run_df)
-                    psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
-                        lambda x: x["ccs_observed"] + shift_factor, axis=1
-                    )
-                    # predict CCS values
-                    tf_ds = to_tf_dataset_inference(
-                        psm_list_run_df["mz"],
-                        psm_list_run_df["charge"],
-                        psm_list_run_df["sequence-tokenized"],
-                        self.tokenizer,
-                    )
+                ]
 
-                    psm_list_run_df["ccs_predicted"], _ = self.ionmob_model.predict(tf_ds)
+                psm_list_run_df["mz"] = psm_list_run_df.apply(
+                    lambda x: calculate_mz(x["sequence-tokenized"], x["charge"]), axis=1
+                )  # use precursor m/z from PSMs?
 
-                    # calculate CCS features
-                    ccs_features = self._calculate_features(psm_list_run_df)
+                psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
+                    lambda x: reduced_mobility_to_ccs(x["ion_mobility"], x["mz"], x["charge"]),
+                    axis=1,
+                )
+                # calibrate CCS values
+                shift_factor = self.calculate_ccs_shift(psm_list_run_df)
+                psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
+                    lambda x: x["ccs_observed"] + shift_factor, axis=1
+                )
+                # predict CCS values
+                tf_ds = to_tf_dataset_inference(
+                    psm_list_run_df["mz"],
+                    psm_list_run_df["charge"],
+                    psm_list_run_df["sequence-tokenized"],
+                    self.tokenizer,
+                )
 
-                    # add CCS features to PSMs
-                    for psm in psm_list_run:
-                        try:
-                            psm["rescoring_features"].update(ccs_features[psm.spectrum_id])
-                        except KeyError:
-                            psm["rescoring_features"].update({})
-                    current_run += 1
+                psm_list_run_df["ccs_predicted"], _ = self.ionmob_model.predict(tf_ds)
+
+                # calculate CCS features
+                ccs_features = self._calculate_features(psm_list_run_df)
+
+                # add CCS features to PSMs
+                for psm in psm_list_run:
+                    try:
+                        psm["rescoring_features"].update(ccs_features[psm.spectrum_id])
+                    except KeyError:
+                        psm["rescoring_features"].update({})
+                current_run += 1
 
     def _calculate_features(self, feature_df: pd.DataFrame) -> Dict[str, Dict[str, float]]:
         """Get CCS features for PSMs."""

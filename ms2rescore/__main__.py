@@ -62,6 +62,7 @@ def _argument_parser() -> argparse.ArgumentParser:
         metavar="FILE",
         action="store",
         type=str,
+        nargs="*",
         dest="psm_file",
         help="path to PSM file (PIN, mzIdentML, MaxQuant msms, X!Tandem XML...)",
     )

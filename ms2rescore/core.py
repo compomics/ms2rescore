@@ -8,6 +8,7 @@ from psm_utils import PSMList
 
 from ms2rescore.feature_generators import FEATURE_GENERATORS
 from ms2rescore.parse_psms import parse_psms
+from ms2rescore.parse_spectra import get_missing_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
 
@@ -26,7 +27,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         PSMList object containing PSMs. If None, PSMs will be read from configuration ``psm_file``.
 
     """
-    config = configuration["ms2rescore"]  # TODO: Remove top-level key?
+    config = configuration["ms2rescore"]
     output_file_root = config["output_path"]
 
     # Write full configuration including defaults to file
@@ -36,7 +37,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     logger.debug("Using %i of %i available CPUs.", int(config["processes"]), int(cpu_count()))
 
     # Parse PSMs
-    psm_list = parse_psms(config, psm_list, output_file_root)
+    psm_list = parse_psms(config, psm_list)
 
     # Log #PSMs identified before rescoring
     id_psms_before = _log_id_psms_before(psm_list)
@@ -52,6 +53,13 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     logger.debug(
         f"PSMs already contain the following rescoring features: {psm_list_feature_names}"
     )
+
+    # TODO: avoid hard coding feature generators in some way
+    rt_required = "deeplc" in config["feature_generators"] and None in psm_list["retention_time"]
+    im_required = "ionmob" in config["feature_generators"] and None in psm_list["ion_mobility"]
+    if rt_required or im_required:
+        logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
+        get_missing_values(config, psm_list, missing_rt=rt_required, missing_im=im_required)
 
     # Add rescoring features
     for fgen_name, fgen_config in config["feature_generators"].items():
@@ -118,9 +126,15 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     elif "mokapot" in config["rescoring_engine"]:
         if "fasta_file" not in config["rescoring_engine"]["mokapot"]:
             config["rescoring_engine"]["mokapot"]["fasta_file"] = config["fasta_file"]
+        if "protein_kwargs" in config["rescoring_engine"]["mokapot"]:
+            protein_kwargs = config["rescoring_engine"]["mokapot"].pop("protein_kwargs")
+        else:
+            protein_kwargs = dict()
+
         mokapot.rescore(
             psm_list,
             output_file_root=output_file_root,
+            protein_kwargs=protein_kwargs,
             **config["rescoring_engine"]["mokapot"],
         )
     else:
