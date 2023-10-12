@@ -2,53 +2,37 @@
 
 import logging
 import re
-from typing import Union, Tuple, Dict
+from itertools import chain
+from typing import Dict, Tuple
 
-from rich.progress import track
+from psm_utils import PSMList
 from pyteomics.mgf import MGF
 from pyteomics.mzml import MzML
-from itertools import chain
-from pathlib import Path
+from rich.progress import track
 
 from ms2rescore.exceptions import MS2RescoreError
 from ms2rescore.utils import infer_spectrum_path
-from psm_utils import PSMList
 
 logger = logging.getLogger(__name__)
 
 
-class ParseMGFError(MS2RescoreError):
-    """Error parsing MGF file."""
-
-    pass
-
-
-class ParsingError(MS2RescoreError):
-    """Error parsing retention time from spectrum file."""
-
-    pass
-
-
-def get_missing_values(config, psm_list, missing_rt_values=False, missing_im_values=False):
-    """Get missing features from spectrum file."""
-    logger.info("Parsing missing values from spectrum file.")
+def get_missing_values(config, psm_list, missing_rt=False, missing_im=False):
+    """Get missing RT/IM features from spectrum file."""
+    logger.debug("Extracting missing RT/IM values from spectrum file(s).")
 
     psm_dict = psm_list.get_psm_dict()
-    logger.debug(f"Extracting missing values from spectrum files.")
     for runs in psm_dict.values():
-        for run, psms in track(runs.items(), description="Parsing missing values"):
+        for run, psms in track(runs.items(), description="Extracting RT/IM values..."):
             psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
             spectrum_file = infer_spectrum_path(config["spectrum_path"], run)
-            if isinstance(spectrum_file, str):
-                spectrum_file = Path(spectrum_file)
 
             if spectrum_file.suffix.lower() == ".mzml":
                 rt_dict, im_dict = _parse_values_from_mzml(
-                    spectrum_file, config, run, missing_rt_values, missing_im_values
+                    spectrum_file, config, run, missing_rt, missing_im
                 )
             elif spectrum_file.suffix.lower() == ".mgf":
                 rt_dict, im_dict = _parse_values_from_mgf(
-                    spectrum_file, config, run, missing_rt_values, missing_im_values
+                    spectrum_file, config, run, missing_rt, missing_im
                 )
 
             for value_dict, value in zip([rt_dict, im_dict], ["retention_time", "ion_mobility"]):
@@ -62,90 +46,92 @@ def get_missing_values(config, psm_list, missing_rt_values=False, missing_im_val
 
 
 def _parse_values_from_mgf(
-    spectrum_file, config, run, missing_rt_values, missing_im_values
+    spectrum_file, config, run, missing_rt, missing_im
 ) -> Tuple[Dict, Dict]:
-    """Parse retention time and/or ion mobility from MGF file."""
+    """
+    Parse retention time and/or ion mobility from an MGF file.
+
+    Notes
+    -----
+    - Extracting values (e.g., ion mobility) according to the Matrix documentation:
+      http://www.matrixscience.com/help/data_file_help.html
+
+    """
     rt_dict = {}
     im_dict = {}
 
+    spectrum_id_pattern = re.compile(
+        config["spectrum_id_pattern"] if config["spectrum_id_pattern"] else r"(.*)"
+    )
+
     for spectrum in MGF(str(spectrum_file)):
-        if missing_rt_values:
+        matched_id = spectrum_id_pattern.match(spectrum["id"]).group()
+        if missing_rt:
             try:
-                rt_dict[
-                    re.match(
-                        config["spectrum_id_pattern"]
-                        if config["spectrum_id_pattern"]
-                        else r"(.*)",
-                        spectrum["params"]["title"],
-                    ).group()
-                ] = float(spectrum["params"]["rtinseconds"])
+                rt_dict[matched_id] = float(spectrum["params"]["rtinseconds"])
             except KeyError:
                 raise ParsingError(
-                    f"Could not parse retention time key `rtinsecondes` from spectrum file for run {run}."
-                    "Please make sure that the retention time key is present in the spectrum file."
+                    "Could not parse retention time (`rtinseconds`) from spectrum file for "
+                    f"run {run}. Please make sure that the retention time key is present in the "
+                    "spectrum file or disable the relevant feature generator."
                 )
-        if missing_im_values:
+        if missing_im:
             try:
-                im_dict[
-                    re.match(
-                        config["spectrum_id_pattern"]
-                        if config["spectrum_id_pattern"]
-                        else r"(.*)",
-                        spectrum["params"]["title"],
-                    ).group()
-                ] = float(
-                    spectrum["params"]["ion_mobility"]
-                )  # http://www.matrixscience.com/help/data_file_help.html
+                im_dict[matched_id] = float(spectrum["params"]["ion_mobility"])
             except KeyError:
                 raise ParsingError(
-                    f"Could not parse ion mobility key `ionmobility` from spectrum file for run {run}."
-                    "Please make sure that the ion mobility key is present in the spectrum file."
+                    "Could not parse ion mobility (`ion_mobility`) from spectrum file "
+                    f"for run {run}. Please make sure that the ion mobility key is present in the "
+                    "spectrum file or disable the relevant feature generator."
                 )
 
     return rt_dict, im_dict
 
 
 def _parse_values_from_mzml(
-    spectrum_file, config, run, missing_rt_values, missing_im_values
+    spectrum_file, config, run, missing_rt, missing_im
 ) -> Tuple[Dict, Dict]:
-    """Parse retention time and/or ion mobility from MGF file."""
+    """Parse retention time and/or ion mobility from an mzML file."""
     rt_dict = {}
     im_dict = {}
 
+    spectrum_id_pattern = re.compile(
+        config["spectrum_id_pattern"] if config["spectrum_id_pattern"] else r"(.*)"
+    )
+
     for spectrum in MzML(str(spectrum_file)):
-        if missing_rt_values:
+        matched_id = spectrum_id_pattern.match(spectrum["id"]).group()
+        if missing_rt:
             try:
-                rt_dict[
-                    re.match(
-                        config["spectrum_id_pattern"]
-                        if config["spectrum_id_pattern"]
-                        else r"(.*)",
-                        spectrum["id"],
-                    ).group()
-                ] = float(
-                    spectrum["scanList"]["scan"][0][
-                        "scan start time"
-                    ]  # is rt in minutes by default?
+                rt_dict[matched_id] = float(spectrum["scanList"]["scan"][0]["scan start time"])
+            except KeyError:
+                raise ParsingError(
+                    "Could not parse retention time (`scan start time`) from spectrum file for "
+                    f"run {run}. Please make sure that the retention time key is present in the "
+                    "spectrum file or disable the relevant feature generator."
+                )
+        if missing_im:
+            try:
+                im_dict[matched_id] = float(
+                    spectrum["scanList"]["scan"][0]["reverse ion mobility"]
                 )
             except KeyError:
                 raise ParsingError(
-                    f"Could not parse retention time key `scan start time` from spectrum file for run {run}."
-                    "Please make sure that the retention time key is present in the spectrum file."
-                )
-        if missing_im_values:
-            try:
-                im_dict[
-                    re.match(
-                        config["spectrum_id_pattern"]
-                        if config["spectrum_id_pattern"]
-                        else r"(.*)",
-                        spectrum["id"],
-                    ).group()
-                ] = float(spectrum["scanList"]["scan"][0]["reverse ion mobility"])
-            except KeyError:
-                raise ParsingError(
-                    f"Could not parse ion mobility key `reverse ion mobility` from spectrum file for run {run}."
-                    "Please make sure that the ion mobility key is present in the spectrum file."
+                    "Could not parse ion mobility (`reverse ion mobility`) from spectrum file "
+                    f"for run {run}. Please make sure that the ion mobility key is present in the "
+                    "spectrum file or disable the relevant feature generator."
                 )
 
     return rt_dict, im_dict
+
+
+class ParseMGFError(MS2RescoreError):
+    """Error parsing MGF file."""
+
+    pass
+
+
+class ParsingError(MS2RescoreError):
+    """Error parsing retention time from spectrum file."""
+
+    pass

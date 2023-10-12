@@ -8,9 +8,9 @@ from psm_utils import PSMList
 
 from ms2rescore.feature_generators import FEATURE_GENERATORS
 from ms2rescore.parse_psms import parse_psms
+from ms2rescore.parse_spectra import get_missing_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
-from ms2rescore.parse_spectra import get_missing_values
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         PSMList object containing PSMs. If None, PSMs will be read from configuration ``psm_file``.
 
     """
-    config = configuration["ms2rescore"]  # TODO: Remove top-level key?
+    config = configuration["ms2rescore"]
     output_file_root = config["output_path"]
 
     # Write full configuration including defaults to file
@@ -54,23 +54,13 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         f"PSMs already contain the following rescoring features: {psm_list_feature_names}"
     )
 
-    if ("deeplc" in config["feature_generators"] and None in psm_list["retention_time"]) or (
-        "ionmob" in config["feature_generators"] and None in psm_list["ion_mobility"]
-    ):
-        logger.warning(
-            "One or more PSMs are missing retention time and/or ion mobility values. These will be "
-            "parsed from the spectrum file."
-        )
-        get_missing_values(
-            config,
-            psm_list,
-            missing_rt_values=(
-                "deeplc" in config["feature_generators"] and None in psm_list["retention_time"]
-            ),
-            missing_im_values=(
-                "ionmob" in config["feature_generators"] and None in psm_list["ion_mobility"]
-            ),
-        )
+    # TODO: avoid hard coding feature generators in some way
+    rt_required = "deeplc" in config["feature_generators"] and None in psm_list["retention_time"]
+    im_required = "ionmob" in config["feature_generators"] and None in psm_list["ion_mobility"]
+    if rt_required or im_required:
+        logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
+        get_missing_values(config, psm_list, missing_rt=rt_required, missing_im=im_required)
+
     # Add rescoring features
     for fgen_name, fgen_config in config["feature_generators"].items():
         # TODO: Handle this somewhere else, more generally?

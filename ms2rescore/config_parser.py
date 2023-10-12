@@ -69,7 +69,7 @@ def _validate_filenames(config: Dict) -> Dict:
         config["ms2rescore"]["output_path"], config["ms2rescore"]["psm_file"][0]
     )
 
-    # Parse config_file as posix path #TODO: Is this necessary?
+    # Parse config_file as posix path to avoid combination of forward and backward slashes
     if config["ms2rescore"]["config_file"]:
         config["ms2rescore"]["config_file"] = Path(config["ms2rescore"]["config_file"]).as_posix()
 

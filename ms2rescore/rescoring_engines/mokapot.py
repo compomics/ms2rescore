@@ -84,11 +84,11 @@ def rescore(
 
     # Add proteins
     if fasta_file:
-        logger.debug(f"Mokapot read fasta keyword arguments : {protein_kwargs}")
+        logger.debug(f"Adding protein info from {fasta_file} with options: `{protein_kwargs}`")
         lin_psm_data.add_proteins(fasta_file, **protein_kwargs)
 
     # Rescore
-    logger.debug(f"Mokapot brew keyword arguments : {kwargs}")
+    logger.debug(f"Mokapot brew options: `{kwargs}`")
     confidence_results, models = brew(lin_psm_data, **kwargs)
 
     # Reshape confidence estimates to match PSMList
@@ -124,6 +124,7 @@ def rescore(
     if write_txt:
         confidence_results.to_txt(file_root=output_file_root, decoys=True)
     if write_flashlfq:
+        # TODO: How do we validate that the RTs are in minutes?
         confidence_results.psms["retention_time"] = confidence_results.psms["retention_time"] * 60
         confidence_results.to_flashlfq(output_file_root + ".mokapot.flashlfq.txt")
 

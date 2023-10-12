@@ -8,9 +8,9 @@ import sys
 import webbrowser
 from pathlib import Path
 from typing import Dict, List, Tuple
-from joblib import parallel_backend
 
 import customtkinter as ctk
+from joblib import parallel_backend
 from ms2pip.constants import MODELS as ms2pip_models
 from PIL import Image
 from psm_utils.io import FILETYPES
@@ -41,6 +41,8 @@ except ImportError:
     pass
 
 ctk.set_default_color_theme(_THEME_FILE)
+
+# TODO Does this disable multiprocessing everywhere?
 parallel_backend("threading")
 
 
@@ -163,17 +165,10 @@ class ConfigFrame(ctk.CTkTabview):
         main_config = self.main_config.get()
         advanced_config = self.advanced_config.get()
 
-        # TODO Move to rescoring engine config
-        percolator_config = {"init-weights": advanced_config.pop("weightsfile")}
-
         config = {"ms2rescore": main_config}
         config["ms2rescore"].update(advanced_config)
         config["ms2rescore"]["feature_generators"] = self.fgen_config.get()
         config["ms2rescore"]["rescoring_engine"] = self.rescoring_engine_config.get()
-
-        # TODO See above
-        if "percolator" in config["ms2rescore"]["rescoring_engine"]:
-            config["ms2rescore"]["rescoring_engine"]["percolator"] = percolator_config
 
         args = (config,)  # Comma required to wrap in tuple
         kwargs = {}
@@ -284,11 +279,13 @@ class PSMFileConfigFrame(ctk.CTkFrame):
     def get(self) -> Dict:
         """Get the configured values as a dictionary."""
         try:
+            # there cannot be spaces in the file path
+            # TODO: Fix this in widgets.LabeledFileSelect
             psm_files = self.psm_file.get().split(" ")
         except AttributeError:
             raise MS2RescoreConfigurationError("No PSM file provided. Please select a file.")
         return {
-            "psm_file": psm_files,  # there cannot be spaces in the file path
+            "psm_file": psm_files,
             "psm_file_type": self.psm_file_type.get(),
         }
 
@@ -321,11 +318,6 @@ class AdvancedConfiguration(ctk.CTkFrame):
         self.spectrum_id_pattern = widgets.LabeledEntry(self, label="Spectrum ID regex pattern")
         self.spectrum_id_pattern.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
 
-        self.weightsfile = widgets.LabeledFileSelect(
-            self, label="Pretrained Percolator weights", file_option="openfile"
-        )
-        self.weightsfile.grid(row=6, column=0, columnspan=2, sticky="nsew")
-
         self.file_prefix = widgets.LabeledFileSelect(
             self, label="Filename for output files", file_option="savefile"
         )
@@ -344,7 +336,6 @@ class AdvancedConfiguration(ctk.CTkFrame):
             "id_decoy_pattern": self.id_decoy_pattern.get(),
             "psm_id_pattern": self.psm_id_pattern.get(),
             "spectrum_id_pattern": self.spectrum_id_pattern.get(),
-            "weightsfile": self.weightsfile.get(),
             "output_path": self.file_prefix.get(),
             "config_file": self.config_file.get(),
             "write_report": self.generate_report.get(),
@@ -466,7 +457,7 @@ class DeepLCConfiguration(ctk.CTkFrame):
 
         self.num_epochs = widgets.LabeledFloatSpinbox(
             self,
-            label="Number of epochs",
+            label="Number of transfer learning epochs",
             step_size=5,
             initial_value=20,
         )  # way to remove float in spinbox label?
@@ -569,25 +560,29 @@ class MokapotRescoringConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="Mokapot cofiguration")
+        self.title = widgets.Heading(self, text="Mokapot coffeeguration")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
-        self.write_weights = widgets.LabeledSwitch(self, label="Write weightsfile", default=True)
+        self.write_weights = widgets.LabeledSwitch(
+            self, label="Write model weights to file", default=True
+        )
         self.write_weights.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
 
-        self.write_txt = widgets.LabeledSwitch(self, label="Write txt output file", default=True)
+        self.write_txt = widgets.LabeledSwitch(self, label="Write TXT output files", default=True)
         self.write_txt.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
 
-        self.write_flashlfq = widgets.LabeledSwitch(self, label="Write flashlfq", default=False)
+        self.write_flashlfq = widgets.LabeledSwitch(
+            self, label="Write file for FlashLFQ", default=False
+        )
         self.write_flashlfq.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
 
         self.protein_kwargs = widgets.TableInput(
             self,
-            label="mokapot protein kwargs",
+            label="`mokapot.read_fasta` options (see Mokapot documentation)",
             columns=2,
-            header_labels=["keyword", "value"],
+            header_labels=["Parameter", "Value"],
         )
-        self.protein_kwargs.grid(row=4, column=0, sticky="new")  # leave this in?
+        self.protein_kwargs.grid(row=4, column=0, sticky="nsew")
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
@@ -617,12 +612,17 @@ class PercolatorRescoringConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="Percolator cofiguration")
+        self.title = widgets.Heading(self, text="Percolator configuration")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
+
+        self.weights_file = widgets.LabeledFileSelect(
+            self, label="Pretrained Percolator model weights", file_option="openfile"
+        )
+        self.weights_file.grid(row=1, column=0, columnspan=2, sticky="nsew")
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
-        config = {}
+        config = {"init-weights": self.weights_file.get()}
         return config
 
 
@@ -641,8 +641,8 @@ def app():
         function=function,
     )
     root.protocol("WM_DELETE_WINDOW", sys.exit)
-    root.geometry(f"{1250}x{700}")
-    root.minsize(1000, 700)
+    dpi = root.winfo_fpixels("1i")
+    root.geometry(f"{int(15*dpi)}x{int(10*dpi)}")
     root.title("MS²Rescore")
     root.wm_iconbitmap(os.path.join(str(_IMG_DIR), "program_icon.ico"))
 

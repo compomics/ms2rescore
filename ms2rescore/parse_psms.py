@@ -1,16 +1,17 @@
 import logging
 import re
 from typing import Dict, Union
+from itertools import chain
 
 import psm_utils.io
 from psm_utils import PSMList
 
-from ms2rescore.exceptions import MS2RescoreConfigurationError, MS2RescoreError
+from ms2rescore.exceptions import MS2RescoreConfigurationError
 
 logger = logging.getLogger(__name__)
 
 
-def parse_psms(config: Dict, psm_list: Union[PSMList, None], output_file_root: str) -> PSMList:
+def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
     """
     Parse PSMs and prepare for rescoring.
 
@@ -21,8 +22,6 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None], output_file_root: s
         top-level key).
     psm_list
         PSMList object containing PSMs. If None, PSMs will be read from ``psm_file``.
-    output_file_root
-        Path to output file root (without file extension). #TODO doesn't get used?
 
     """
     # Read PSMs, find decoys, calculate q-values
@@ -61,12 +60,12 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None], output_file_root: s
 
 def _read_psms(config, psm_list):
     if isinstance(psm_list, PSMList):
-        logger.info("Reading PSMs...")
         return psm_list
     else:
+        logger.info("Reading PSMs from file...")
         current_file = 1
         total_files = len(config["psm_file"])
-        all_psms = []
+        psm_list_list = []
         for psm_file in config["psm_file"]:
             logger.info(
                 f"Reading PSMs from PSM file ({current_file}/{total_files}): `{psm_file}`..."
@@ -86,10 +85,10 @@ def _read_psms(config, psm_list):
                     " for more information."
                 )
 
-            all_psms = all_psms + id_file_psm_list.psm_list
+            psm_list_list.append(id_file_psm_list)
             current_file += 1
 
-        return PSMList(psm_list=all_psms)
+        return PSMList(psm_list=chain.from_iterable(p.psm_list for p in psm_list_list))
 
 
 def _find_decoys(config, psm_list):

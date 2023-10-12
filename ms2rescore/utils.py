@@ -75,4 +75,4 @@ def infer_spectrum_path(
                 "files."
             )
 
-    return resolved_path
+    return Path(resolved_path)
