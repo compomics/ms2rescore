@@ -629,7 +629,11 @@ class PercolatorRescoringConfiguration(ctk.CTkFrame):
 def function(config):
     """Function to be executed in a separate process."""
     config = config.copy()
-    config = parse_configurations([config["ms2rescore"]["config_file"], config])
+    if config["ms2rescore"]["config_file"]:
+        config_list = [[config["ms2rescore"]["config_file"], config]]
+    else:
+        config_list = [config]
+    config = parse_configurations(config_list)
     rescore(configuration=config)
 
 
