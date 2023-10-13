@@ -67,7 +67,7 @@ jobs:
         run: dist/ms2rescore/ms2rescore.exe
 
       - name: Run Inno Setup
-        run: ISCC.exe ./ms2rescore_innosetup.iss /DMyAppVersion=$(ms2rescore -v)
+        run: ISCC.exe ./ms2rescore_innosetup.iss /DMyAppVersion=${{  github.ref_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
