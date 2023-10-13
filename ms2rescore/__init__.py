@@ -1,6 +1,6 @@
 """MS²Rescore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs."""
 
-__version__ = "3.0.0b1"
+__version__ = "3.0.0b2"
 
 from warnings import filterwarnings
 

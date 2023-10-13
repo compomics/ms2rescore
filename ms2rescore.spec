@@ -36,6 +36,8 @@ while requirements:
     requirement = requirements.pop()
     if re.match(skip_requirements_regex, requirement):
         continue
+    if requirement in ["tomli"]:
+        continue
     checked.add(requirement)
     module_version = importlib.metadata.version(re.match(r"^[\w\-]+", requirement)[0])
     try:
