@@ -115,6 +115,8 @@ def parse_configurations(configurations: List[Union[dict, str, Path, Namespace]]
 
     # Add configurations
     for config in configurations:
+        if not config:
+            continue
         if isinstance(config, dict):
             cascade_conf.add_dict(config)
         elif isinstance(config, str) or isinstance(config, Path):
