@@ -56,7 +56,7 @@ jobs:
           pip install . pyinstaller
 
       - name: Install Inno Setup
-        uses: crazy-max/ghaction-chocolatey@v1
+        uses: crazy-max/ghaction-chocolatey@v3
         with:
           args: install innosetup -y --allow-unofficial --force
 
@@ -67,7 +67,7 @@ jobs:
         run: dist/ms2rescore/ms2rescore.exe
 
       - name: Run Inno Setup
-        run: ISCC.exe ./ms2rescore_innosetup.iss /DMyAppVersion=${{  github.ref_name }}
+        run: ISCC.exe ./ms2rescore_innosetup.iss /DAppVersion=${{  github.ref_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
