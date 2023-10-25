@@ -27,7 +27,8 @@ requirements = {
     for req in requirements
     if "; extra ==" not in req  # Exclude optional dependencies
 }
-requirements.update([project])
+requirements.update([project, "xgboost"])
+
 hidden_imports = set()
 datas = []
 binaries = []
