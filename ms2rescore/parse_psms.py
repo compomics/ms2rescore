@@ -41,13 +41,29 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
         )
 
     logger.debug("Parsing modifications...")
+    modifications_found = set(
+        [
+            re.search(r"\[([^\[\]]*)\]", x.proforma).group(1)
+            for x in psm_list["peptidoform"]
+            if "[" in x.proforma
+        ]
+    )
+    logger.debug(f"Found modifications: {modifications_found}")
+    non_mapped_modifications = modifications_found - set(config["modification_mapping"].keys())
+    if non_mapped_modifications:
+        logger.warning(
+            f"Non-mapped modifications found: {non_mapped_modifications}\nThis can be ignored if Unimod modification label"
+        )
     psm_list.rename_modifications(config["modification_mapping"])
     psm_list.add_fixed_modifications(config["fixed_modifications"])
     psm_list.apply_fixed_modifications()
 
-    logger.debug("Applying `psm_id_pattern`...")
     if config["psm_id_pattern"]:
         pattern = re.compile(config["psm_id_pattern"])
+        logger.debug(f"Applying `psm_id_pattern`...")
+        logger.debug(
+            f"Parsing `{psm_list['spectrum_id'][0]}` to `{_match_psm_ids(psm_list['spectrum_id'][0], pattern)}`"
+        )
         new_ids = [_match_psm_ids(old_id, pattern) for old_id in psm_list["spectrum_id"]]
         psm_list["spectrum_id"] = new_ids
 
@@ -125,6 +141,6 @@ def _match_psm_ids(old_id, regex_pattern):
         return match[1]
     except (TypeError, IndexError):
         raise MS2RescoreConfigurationError(
-            "`psm_id_pattern` could not be matched to all PSM spectrum IDs."
+            f"`psm_id_pattern` could not be extracted from PSM spectrum IDs (i.e. {old_id})."
             " Ensure that the regex contains a capturing group?"
         )
