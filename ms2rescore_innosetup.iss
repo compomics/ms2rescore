@@ -4,7 +4,7 @@
 #define AppExeName "ms2rescore.exe"
 
 [Setup]
-AppId={2D3D12BD-3AE2-426E-8DE8-092148C12071}
+AppId={{2D3D12BD-3AE2-426E-8DE8-092148C12071}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}

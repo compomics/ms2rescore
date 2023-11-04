@@ -70,3 +70,12 @@ jobs:
 
       - name: Test built exe
         run: dist/ms2rescore/ms2rescore.exe
+
+      - name: Run Inno Setup
+        run: ISCC.exe ./ms2rescore_innosetup.iss /DAppVersion=${{  github.ref_name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/*.exe
