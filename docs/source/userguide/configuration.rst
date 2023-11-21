@@ -140,6 +140,10 @@ be configured separately. For instance:
     :alt: fixed modifications configuration in GUI
 
 
+.. caution::
+  Most search engines DO return fixed modifications as part of the modified peptide sequences.
+  In these cases, they must NOT be added to the ``fixed_modifications`` configuration.
+
 
 Mapping PSMs to spectra
 =======================

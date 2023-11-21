@@ -52,12 +52,13 @@ def rescore(
     Aside from updating the PSM ``score``, ``qvalue``, and ``pep`` values, the following output
     files are written:
 
-        - Target PSMs: ``{output_file_root}_target_psms.pout``
-        - Decoy PSMs: ``{output_file_root}_decoy_psms.pout``
-        - Target Peptides: ``{output_file_root}_target_peptides.pout``
-        - Decoy Peptides: ``{output_file_root}_decoy_peptides.pout``
-        - Target Proteins: ``{output_file_root}_target_proteins.pout``
-        - Decoy Proteins: ``{output_file_root}_decoy_proteins.pout``
+        - Target PSMs: ``{output_file_root}.percolator.psms.pout``
+        - Target peptides: ``{output_file_root}.percolator.peptides.pout``
+        - Target proteins: ``{output_file_root}.percolator.proteins.pout``
+        - Decoy PSMs: ``{output_file_root}.percolator.decoy.psms.pout``
+        - Decoy peptides: ``{output_file_root}.percolator.decoy.peptides.pout``
+        - Decoy proteins: ``{output_file_root}.percolator.decoy.proteins.pout``
+        - Feature weights: ``{output_file_root}.percolator.weights.tsv``
 
     Percolator is run through its command line interface. Percolator must be installed separately
     and the ``percolator`` command must be available in the PATH for this module to work.
@@ -79,13 +80,13 @@ def rescore(
 
     """
     percolator_kwargs = {
-        "results-psms": output_file_root + "_target_psms.pout",
-        "decoy-results-psms": output_file_root + "_decoy_psms.pout",
-        "results-peptides": output_file_root + "_target_peptides.pout",
-        "decoy-results-peptides": output_file_root + "_decoy_peptides.pout",
-        "results-proteins": output_file_root + "_target_proteins.pout",
-        "decoy-results-proteins": output_file_root + "_decoy_proteins.pout",
-        "weights": output_file_root + ".weights",
+        "results-psms": output_file_root + ".percolator.psms.pout",
+        "decoy-results-psms": output_file_root + ".percolator.decoy.psms.pout",
+        "results-peptides": output_file_root + ".percolator.peptides.pout",
+        "decoy-results-peptides": output_file_root + ".percolator.decoy.peptides.pout",
+        "results-proteins": output_file_root + ".percolator.proteins.pout",
+        "decoy-results-proteins": output_file_root + ".percolator.decoy.proteins.pout",
+        "weights": output_file_root + ".percolator.weights.tsv",
         "verbose": LOG_LEVEL_MAP[log_level],
         "num-threads": processes,
         "post-processing-tdc": True,

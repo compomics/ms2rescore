@@ -32,6 +32,7 @@ files:
 - [MS Amanda](http://ms.imp.ac.at/?goto=msamanda) `.csv`
 - [Sage](https://github.com/lazear/sage) `.sage.tsv`
 - [PeptideShaker](https://compomics.github.io/projects/peptide-shaker.html) `.mzid`
+- [ProteomeDiscoverer](#)`.msf`
 - [MSGFPlus](https://omics.pnl.gov/software/ms-gf) `.mzid`
 - [Mascot](https://www.matrixscience.com/) `.mzid`
 - [MaxQuant](https://www.maxquant.org/) `msms.txt`
@@ -44,6 +45,13 @@ MS²Rescore is available as a [desktop application][desktop], a [command line to
 ## Citing
 
 **Latest MS²Rescore publication:**
+
+> **MS²Rescore 3.0 is a modular, flexible, and user-friendly platform to boost peptide identifications, as showcased with MS Amanda 3.0.**
+> Louise Marie Buur*, Arthur Declercq*, Marina Strobl, Robbin Bouwmeester, Sven Degroeve, Lennart Martens, Viktoria Dorfer*, and Ralf Gabriels*.
+> _ChemRxiv_ (2023) [doi:10.26434/chemrxiv-2023-rvr9n](https://doi.org/10.26434/chemrxiv-2023-rvr9n) <br/>
+> *contributed equally <span class="__dimensions_badge_embed__" data-doi="10.26434/chemrxiv-2023-rvr9n" data-hide-zero-citations="true" data-style="small_rectangle"></span>
+
+**MS²Rescore for immunopeptidomics:**
 
 > **MS2Rescore: Data-driven rescoring dramatically boosts immunopeptide identification rates.**
 > Arthur Declercq, Robbin Bouwmeester, Aurélie Hirschler, Christine Carapito, Sven Degroeve, Lennart Martens, and Ralf Gabriels.
