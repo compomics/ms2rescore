@@ -10,10 +10,10 @@
 
 Modular and user-friendly platform for AI-assisted rescoring of peptide identifications
 
-> ⚠️ Note: This is the documentation for the fully redeveloped version 3.0 of MS²Rescore, which is
-> now in the beta stage. While MS²Rescore 3.0 has been drastically improved over the previous
-> version, you might run into some unforeseen issues. Please report any issues you encounter on the
-> [issue tracker][issues] or post your questions on the [GitHub Discussions][discussions] forum.
+> ⚠️ Note: This is the documentation for the fully redeveloped version 3.0 of MS²Rescore, While
+> MS²Rescore 3.0 has been drastically improved over the previous version, you might run into some
+> unforeseen issues. Please report any issues you encounter on the [issue tracker][issues] or post
+> your questions on the [GitHub Discussions][discussions] forum.
 
 ## About MS²Rescore
 
@@ -24,6 +24,8 @@ identifications, which allows you to get **more peptide IDs** at the same false 
 (FDR) threshold, or to set a **more stringent FDR threshold** while still retaining a similar
 number of peptide IDs. MS²Rescore is **ideal for challenging proteomics identification workflows**,
 such as proteogenomics, metaproteomics, or immunopeptidomics.
+
+![MS²Rescore overview](https://raw.githubusercontent.com/compomics/ms2rescore/main/docs/source/_static/img/ms2rescore-overview.png)
 
 MS²Rescore can read peptide identifications in any format supported by [psm_utils][psm_utils]
 (see [Supported file formats][file-formats]) and has been tested with various search engines output
@@ -48,8 +50,7 @@ MS²Rescore is available as a [desktop application][desktop], a [command line to
 
 > **MS²Rescore 3.0 is a modular, flexible, and user-friendly platform to boost peptide identifications, as showcased with MS Amanda 3.0.**
 > Louise Marie Buur*, Arthur Declercq*, Marina Strobl, Robbin Bouwmeester, Sven Degroeve, Lennart Martens, Viktoria Dorfer*, and Ralf Gabriels*.
-> _ChemRxiv_ (2023) [doi:10.26434/chemrxiv-2023-rvr9n](https://doi.org/10.26434/chemrxiv-2023-rvr9n) <br/>
-> *contributed equally <span class="__dimensions_badge_embed__" data-doi="10.26434/chemrxiv-2023-rvr9n" data-hide-zero-citations="true" data-style="small_rectangle"></span>
+> _ChemRxiv_ (2023) [doi:10.26434/chemrxiv-2023-rvr9n](https://doi.org/10.26434/chemrxiv-2023-rvr9n) <br/> > \*contributed equally <span class="__dimensions_badge_embed__" data-doi="10.26434/chemrxiv-2023-rvr9n" data-hide-zero-citations="true" data-style="small_rectangle"></span>
 
 **MS²Rescore for immunopeptidomics:**
 
