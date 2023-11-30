@@ -111,9 +111,20 @@ def rescore(
     logger.debug(f"Running percolator command {' '.join(percolator_cmd)}")
     try:
         output = subprocess.run(percolator_cmd, capture_output=True)
-    except subprocess.CalledProcessError:
+    except FileNotFoundError as e:
+        if subprocess.getstatusoutput("percolator")[0] != 0:
+            raise MS2RescoreError(
+                "Could not run Percolator. Please ensure that the program is installed and "
+                "available in your PATH. See "
+                "https://ms2rescore.readthedocs.io/en/latest/installation/#installing-percolator "
+                "for more information."
+            ) from e
+        else:
+            logger.warn(f"Running Percolator resulted in an error:\n{output.stdout}")
+            raise MS2RescoreError("Percolator error") from e
+    except subprocess.CalledProcessError as e:
         logger.warn(f"Running Percolator resulted in an error:\n{output.stdout}")
-        raise MS2RescoreError("Percolator error")
+        raise MS2RescoreError("Percolator error") from e
 
     logger.info(
         "Percolator output: \n" + _decode_string(output.stderr), extra={"highlighter": None}
@@ -192,12 +203,3 @@ def _decode_string(encoded_string):
             pass
     else:
         raise MS2RescoreError("Could not infer encoding of Percolator logs.")
-
-
-def _validate_cli_dependency(command):
-    """Validate that command returns zero exit status."""
-    if subprocess.getstatusoutput(command)[0] != 0:
-        raise MS2RescoreError(
-            f"Could not run command '{command}'. Please ensure that the program is installed and "
-            "available in your PATH."
-        )
