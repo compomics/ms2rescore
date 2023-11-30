@@ -193,3 +193,11 @@ contains interactive charts that visualize the results and various quality contr
    :alt: Output files
 
    Overview of the output files after rescoring the X!Tandem example.
+
+Double click the ``*.ms2rescore.report.html`` file to open it in the default web browser:
+
+.. figure:: ../_static/img/qc-reports.png
+   :width: 100%
+   :alt: Rescoring report
+
+   Rescoring QC report with interactive charts.

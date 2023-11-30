@@ -10,7 +10,7 @@
 
 Modular and user-friendly platform for AI-assisted rescoring of peptide identifications
 
-> ⚠️ Note: This is the documentation for the fully redeveloped version 3.0 of MS²Rescore, While
+> ⚠️ Note: This is the documentation for the fully redeveloped version 3.0 of MS²Rescore. While
 > MS²Rescore 3.0 has been drastically improved over the previous version, you might run into some
 > unforeseen issues. Please report any issues you encounter on the [issue tracker][issues] or post
 > your questions on the [GitHub Discussions][discussions] forum.
@@ -50,7 +50,7 @@ MS²Rescore is available as a [desktop application][desktop], a [command line to
 
 > **MS²Rescore 3.0 is a modular, flexible, and user-friendly platform to boost peptide identifications, as showcased with MS Amanda 3.0.**
 > Louise Marie Buur*, Arthur Declercq*, Marina Strobl, Robbin Bouwmeester, Sven Degroeve, Lennart Martens, Viktoria Dorfer*, and Ralf Gabriels*.
-> _ChemRxiv_ (2023) [doi:10.26434/chemrxiv-2023-rvr9n](https://doi.org/10.26434/chemrxiv-2023-rvr9n) <br/> > \*contributed equally <span class="__dimensions_badge_embed__" data-doi="10.26434/chemrxiv-2023-rvr9n" data-hide-zero-citations="true" data-style="small_rectangle"></span>
+> _ChemRxiv_ (2023) [doi:10.26434/chemrxiv-2023-rvr9n](https://doi.org/10.26434/chemrxiv-2023-rvr9n) <br/> \*contributed equally <span class="__dimensions_badge_embed__" data-doi="10.26434/chemrxiv-2023-rvr9n" data-hide-zero-citations="true" data-style="small_rectangle"></span>
 
 **MS²Rescore for immunopeptidomics:**
 
