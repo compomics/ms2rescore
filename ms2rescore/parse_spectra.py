@@ -139,14 +139,14 @@ def _parse_values_spectrum_id(config, psm_list, missing_rt, missing_im):
 
     if missing_rt and "retention_time" in psm_list["spectrum_id"][0]:
         rt_dict = {
-            psm.spectrum_id: float(rt_pattern.match(psm.spectrum_id).group(1)) for psm in psm_list
+            psm.spectrum_id: float(rt_pattern.search(psm.spectrum_id).group(1)) for psm in psm_list
         }
         missing_rt = False
     else:
         rt_dict = {}
     if missing_im and "IonMobility" in psm_list["spectrum_id"][0]:
         im_dict = {
-            psm.spectrum_id: float(im_pattern.match(psm.spectrum_id).group(1)) for psm in psm_list
+            psm.spectrum_id: float(im_pattern.search(psm.spectrum_id).group(1)) for psm in psm_list
         }
         missing_im = False
     else:
