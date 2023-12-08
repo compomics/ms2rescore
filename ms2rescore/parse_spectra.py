@@ -26,6 +26,13 @@ def get_missing_values(config, psm_list, missing_rt=False, missing_im=False):
             psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
             spectrum_file = infer_spectrum_path(config["spectrum_path"], run)
 
+            rt_dict = None
+            im_dict = None
+            rt_dict_mzml = None
+            im_dict_mzml = None
+            rt_dict_mgf = None
+            im_dict_mgf = None
+
             rt_dict, im_dict, missing_rt, missing_im = _parse_values_spectrum_id(
                 config, psm_list, missing_rt, missing_im
             )
