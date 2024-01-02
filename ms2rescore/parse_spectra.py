@@ -28,26 +28,21 @@ def get_missing_values(config, psm_list, missing_rt=False, missing_im=False):
 
             rt_dict = None
             im_dict = None
-            rt_dict_mzml = None
-            im_dict_mzml = None
-            rt_dict_mgf = None
-            im_dict_mgf = None
-
-            rt_dict, im_dict, missing_rt, missing_im = _parse_values_spectrum_id(
-                config, psm_list, missing_rt, missing_im
-            )
 
             if missing_im or missing_rt:
                 if spectrum_file.suffix.lower() == ".mzml":
-                    rt_dict_mzml, im_dict_mzml = _parse_values_from_mzml(
+                    rt_dict, im_dict = _parse_values_from_mzml(
                         spectrum_file, config, run, missing_rt, missing_im
                     )
                 elif spectrum_file.suffix.lower() == ".mgf":
-                    rt_dict_mgf, im_dict_mgf = _parse_values_from_mgf(
+                    rt_dict, im_dict = _parse_values_from_mgf(
                         spectrum_file, config, run, missing_rt, missing_im
                     )
-            rt_dict = rt_dict or rt_dict_mzml or rt_dict_mgf
-            im_dict = im_dict or im_dict_mzml or im_dict_mgf
+                else:
+                    raise MS2RescoreError(
+                        f"Could not parse retention time and/or ion mobility from spectrum file for run {run}. "
+                        "Please make sure that the spectrum file is either in mzML or MGF format."
+                    )
 
             for value_dict, value in zip([rt_dict, im_dict], ["retention_time", "ion_mobility"]):
                 if value_dict:
@@ -137,29 +132,6 @@ def _parse_values_from_mzml(
                 )
 
     return rt_dict, im_dict
-
-
-def _parse_values_spectrum_id(config, psm_list, missing_rt, missing_im):
-    """Parse the missing values from the spectrum_id."""
-    rt_pattern = re.compile(r'RetentionTime:"([\d\.]+)"')
-    im_pattern = re.compile(r'IonMobility:"([\d\.]+)"')
-
-    if missing_rt and "retention_time" in psm_list["spectrum_id"][0]:
-        rt_dict = {
-            psm.spectrum_id: float(rt_pattern.search(psm.spectrum_id).group(1)) for psm in psm_list
-        }
-        missing_rt = False
-    else:
-        rt_dict = {}
-    if missing_im and "IonMobility" in psm_list["spectrum_id"][0]:
-        im_dict = {
-            psm.spectrum_id: float(im_pattern.search(psm.spectrum_id).group(1)) for psm in psm_list
-        }
-        missing_im = False
-    else:
-        im_dict = {}
-
-    return rt_dict, im_dict, missing_rt, missing_im
 
 
 class ParseMGFError(MS2RescoreError):

@@ -101,6 +101,18 @@
                     "default": "(.*)",
                     "format": "regex"
                 },
+                "psm_id_rt_pattern": {
+                    "description": "Regex pattern to extract index or scan number from spectrum file. Requires at least one capturing group.",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
+                    "default": null,
+                    "format": "regex"
+                },
+                "psm_id_im_pattern": {
+                    "description": "Regex pattern to extract index or scan number from spectrum file. Requires at least one capturing group.",
+                    "oneOf": [{ "type": "string" }, { "type": "null" }],
+                    "default": null,
+                    "format": "regex"
+                },
                 "psm_id_pattern": {
                     "description": "Regex pattern to extract index or scan number from PSM file. Requires at least one capturing group.",
                     "oneOf": [{ "type": "string" }, { "type": "null" }],
