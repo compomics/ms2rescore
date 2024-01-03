@@ -38,7 +38,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         json.dump(configuration, f, indent=4)
 
     logger.debug("Using %i of %i available CPUs.", int(config["processes"]), int(cpu_count()))
-    exit()
+
     # Parse PSMs
     psm_list = parse_psms(config, psm_list)
 
