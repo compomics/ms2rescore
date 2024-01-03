@@ -27,6 +27,9 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         PSMList object containing PSMs. If None, PSMs will be read from configuration ``psm_file``.
 
     """
+    logger.debug(
+        f"Running MS²Rescore with following configuration: {json.dumps(configuration, indent=4)}"
+    )
     config = configuration["ms2rescore"]
     output_file_root = config["output_path"]
 
@@ -35,7 +38,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         json.dump(configuration, f, indent=4)
 
     logger.debug("Using %i of %i available CPUs.", int(config["processes"]), int(cpu_count()))
-
+    exit()
     # Parse PSMs
     psm_list = parse_psms(config, psm_list)
 
