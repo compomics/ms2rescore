@@ -10,6 +10,7 @@
     - **`deeplc`**: Refer to *[#/definitions/deeplc](#definitions/deeplc)*.
     - **`maxquant`**: Refer to *[#/definitions/maxquant](#definitions/maxquant)*.
     - **`ionmob`**: Refer to *[#/definitions/ionmob](#definitions/ionmob)*.
+    - **`im2deep`**: Refer to *[#/definitions/im2deep](#definitions/im2deep)*.
   - **`rescoring_engine`** *(object)*: Rescoring engine to use and its configuration. Leave empty to skip rescoring and write features to file. Default: `{"mokapot": {}}`.
     - **`.*`**: Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
     - **`percolator`**: Refer to *[#/definitions/percolator](#definitions/percolator)*.
@@ -40,6 +41,14 @@
       - *string*
       - *null*
   - **`spectrum_id_pattern`**: Regex pattern to extract index or scan number from spectrum file. Requires at least one capturing group. Default: `"(.*)"`.
+    - **One of**
+      - *string*
+      - *null*
+  - **`psm_id_rt_pattern`**: Regex pattern to extract index or scan number from spectrum file. Requires at least one capturing group. Default: `null`.
+    - **One of**
+      - *string*
+      - *null*
+  - **`psm_id_im_pattern`**: Regex pattern to extract index or scan number from spectrum file. Requires at least one capturing group. Default: `null`.
     - **One of**
       - *string*
       - *null*
@@ -75,6 +84,8 @@
   - **`ionmob_model`** *(string)*: Path to Ionmob model directory. Default: `"GRUPredictor"`.
   - **`reference_dataset`** *(string)*: Path to Ionmob reference dataset file. Default: `"Meier_unimod.parquet"`.
   - **`tokenizer`** *(string)*: Path to tokenizer json file. Default: `"tokenizer.json"`.
+- <a id="definitions/im2deep"></a>**`im2deep`** *(object)*: Ion mobility feature generator configuration using IM2Deep. Can contain additional properties. Refer to *[#/definitions/feature_generator](#definitions/feature_generator)*.
+  - **`reference_dataset`** *(string)*: Path to IM2Deep reference dataset file. Default: `"Meier_unimod.parquet"`.
 - <a id="definitions/mokapot"></a>**`mokapot`** *(object)*: Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function. Can contain additional properties. Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
   - **`write_weights`** *(boolean)*: Write Mokapot weights to a text file. Default: `false`.
   - **`write_txt`** *(boolean)*: Write Mokapot results to a text file. Default: `false`.
