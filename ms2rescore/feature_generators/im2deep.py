@@ -10,6 +10,15 @@ from inspect import getfullargspec
 from itertools import chain
 from typing import List, Optional, Union
 
+# Hardcoded for now because only one model is available and not yet in a separate package
+im2deep_dir = os.path.dirname(os.path.realpath(__file__))
+DEFAULT_MODELS = [
+    "im2deep_models/full_hc_trainset_1fd8363d9af9dcad3be7553c39396960.hdf5",
+    "im2deep_models/full_hc_trainset_8c22d89667368f2f02ad996469ba157e.hdf5",
+    "im2deep_models/full_hc_trainset_cb975cfdd4105f97efa0b3afffe075cc.hdf5",
+]
+DEFAULT_MODELS = [os.path.join(im2deep_dir, mod) for mod in DEFAULT_MODELS]
+
 import numpy as np
 import pandas as pd
 from psm_utils import PSMList
@@ -61,15 +70,9 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
             self.im2deep_kwargs["im2deep_retrain"] = False
 
         self.im2deep_predictor = None
-        ## TODO: Only one model as of now so probably not required
-        # if "path_model" in self.im2deep_kwargs:
-        #     self.user_model = self.im2deep_kwargs.pop("path_model")
-        #     logging.debug(f"Using user-provided DeepLC model: {self.user_model}")
-        # else:
-        #     self.user_model = None
+        self.im2deep_model = DEFAULT_MODELS
 
     @property
-    # TODO adapt to ionmob-esque features? Now DeepLC-esque features
     def feature_names(self) -> List[str]:
         return [
             "ccs_observed",
@@ -119,6 +122,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                     self.im2deep_predictor = self.DeepLC(
                         n_jobs=self.processes,
                         verbose=self._verbose,
+                        path_model=self.im2deep_model,
                         # TODO: only one model as of now, so these models should be available somewhere, I guess DeepLC for now until IM2Deep becomes its own package?
                         # path_model=self.selected_model or self.user_model,
                         predict_ccs=True,
@@ -139,8 +143,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                         self.selected_model = list(self.im2deep_predictor.models.keys())
                         self.im2deep_kwargs["deeplc_retrain"] = False
                         logger.debug(
-                            f"Selected model: {self.selected_model} based on "
-                            "calibration of first run. Using this model (after new "
+                            f"Selected model: {self.selected_model}. Using this model (after new "
                             "calibrations) for all subsequent runs."
                         )
 
