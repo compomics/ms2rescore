@@ -44,7 +44,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         **kwargs,
     ):
         """Placeholder"""  # TODO
-        super().__init__(*args**kwargs)
+        super().__init__(*args, **kwargs)
         self.lower_score_is_better = lower_score_is_better
         self.reference_dataset = reference_dataset
         self.spectrum_path = spectrum_path

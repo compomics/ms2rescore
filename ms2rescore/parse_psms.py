@@ -28,9 +28,11 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
     psm_list = _read_psms(config, psm_list)
     _find_decoys(config, psm_list)
     _calculate_qvalues(config, psm_list)
+    logger.debug(psm_list[0])
     if config["psm_id_rt_pattern"] or config["psm_id_im_pattern"]:
         logger.debug("Parsing retention time and/or ion mobility from spectrum_id...")
         _parse_values_spectrum_id(config, psm_list)
+        logger.debug(psm_list[0])
 
     # Store scoring values for comparison later
     for psm in psm_list:
