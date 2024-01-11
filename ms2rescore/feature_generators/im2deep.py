@@ -64,10 +64,10 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         }
         self.im2deep_kwargs.update({"config_file": None})
 
-        # TODO: Might not work?
+        # TODO: Might not work? Actually might but use deeplc_retrain instead?
         # Set default IM2Deep arguments
-        if "im2deep_retrain" not in self.im2deep_kwargs:
-            self.im2deep_kwargs["im2deep_retrain"] = False
+        # if "im2deep_retrain" not in self.im2deep_kwargs:
+        #     self.im2deep_kwargs["im2deep_retrain"] = False
 
         self.im2deep_predictor = None
         self.im2deep_model = DEFAULT_MODELS
@@ -119,7 +119,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
                     logger.debug("Calibrating IM2Deep...")
 
-                    self.im2deep_predictor = self.DeepLC(
+                    self.im2deep_predictor = self.im2deep(
                         n_jobs=self.processes,
                         verbose=self._verbose,
                         path_model=self.im2deep_model,
@@ -130,10 +130,12 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                     )
 
                     # Convert ion mobility to CCS and calibrate CCS values
-                    psm_list_run["ccs_observed"] = im2ccs(
+                    psm_list_run["ccs_observed"] = self.im2ccs(
                         psm_list_run["ion_mobility"],
-                        psm_list_run["mz"],
-                        psm_list_run["charge"],
+                        psm_list_run["precursor_mz"],
+                        # Gives error psm_list does not have attribute get_precursor_charge
+                        # So we have to iterate over the psm_list_run?
+                        psm_list_run.get_precursor_charge(),
                     )
                     shift_factor = self.calculate_ccs_shift(psm_list_run)
                     psm_list_run["ccs_observed"] = psm_list_run["ccs_observed"] + shift_factor
@@ -253,7 +255,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
             f"Number of high confidence hits for calculating shift: {len(high_conf_hits)}"
         )
 
-        shift_factor = get_ccs_shift(
+        shift_factor = self.get_ccs_shift(
             df[["charge", "peptidoform", "ccs"]][df["spectrum_id"].isin(high_conf_hits)],
             self.reference_dataset,
         )
