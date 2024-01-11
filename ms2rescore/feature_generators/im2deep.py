@@ -265,7 +265,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         return shift_factor
 
     # TODO ion mobility to CCS conversion? Is this necessary?
-    def im2ccs(reverse_im, mz, charge, mass_gas=28.013, temp=31.85, t_diff=273.15) -> float:
+    def im2ccs(reverse_im, mz, charge, mass_gas=28.013, temp=31.85, t_diff=273.15):
         """
         Convert ion mobility to CCS.  #TODO: Took this from ionmob. how to reference?
 
