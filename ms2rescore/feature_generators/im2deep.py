@@ -12,10 +12,11 @@ from typing import List, Optional, Union
 
 # Hardcoded for now because only one model is available and not yet in a separate package
 im2deep_dir = os.path.dirname(os.path.realpath(__file__))
+# TODO: put in im2deep package
 DEFAULT_MODELS = [
-    "im2deep_models/full_hc_trainset_1fd8363d9af9dcad3be7553c39396960.hdf5",
-    "im2deep_models/full_hc_trainset_8c22d89667368f2f02ad996469ba157e.hdf5",
-    "im2deep_models/full_hc_trainset_cb975cfdd4105f97efa0b3afffe075cc.hdf5",
+    "../im2deep_data/full_hc_trainset_1fd8363d9af9dcad3be7553c39396960.hdf5",
+    "../im2deep_data/full_hc_trainset_8c22d89667368f2f02ad996469ba157e.hdf5",
+    "../im2deep_data/full_hc_trainset_cb975cfdd4105f97efa0b3afffe075cc.hdf5",
 ]
 DEFAULT_MODELS = [os.path.join(im2deep_dir, mod) for mod in DEFAULT_MODELS]
 
@@ -23,6 +24,11 @@ import numpy as np
 import pandas as pd
 from psm_utils import PSMList
 from psm_utils.io import peptide_record
+
+# TODO: no hardcoding, put in im2deep package
+DEFAULT_REFERENCE_DATASET = peptide_record.PeptideRecordReader(
+    "/home/robbe/ms2rescore/ms2rescore/im2deep_data/peprec_CCS_with_index.csv"
+).read_file()
 from numpy import ndarray
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
@@ -46,7 +52,6 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         """Placeholder"""  # TODO
         super().__init__(*args, **kwargs)
         self.lower_score_is_better = lower_score_is_better
-        self.reference_dataset = reference_dataset
         self.spectrum_path = spectrum_path
         self.processes = processes
         self.deeplc_kwargs = kwargs or {}
@@ -71,6 +76,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
         self.im2deep_predictor = None
         self.im2deep_model = DEFAULT_MODELS
+        self.reference_dataset = DEFAULT_REFERENCE_DATASET
 
     @property
     def feature_names(self) -> List[str]:
@@ -130,19 +136,21 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                     )
 
                     # Convert ion mobility to CCS and calibrate CCS values
-                    psm_list_run["ccs_observed"] = self.im2ccs(
+                    # TODO: Now I overwrite ion_mobility field in PSM with CCS. Should probably make new field? Or do it like ionmob by first converting to df.
+                    psm_list_run["ion_mobility"] = self.im2ccs(
                         psm_list_run["ion_mobility"],
                         psm_list_run["precursor_mz"],
                         # Gives error psm_list does not have attribute get_precursor_charge
                         # So we have to iterate over the psm_list_run?
-                        psm_list_run.get_precursor_charge(),
+                        np.array([psm.get_precursor_charge() for psm in psm_list_run]),
                     )
                     shift_factor = self.calculate_ccs_shift(psm_list_run)
-                    psm_list_run["ccs_observed"] = psm_list_run["ccs_observed"] + shift_factor
+                    psm_list_run["ion_mobility"] = psm_list_run["ion_mobility"] + shift_factor
 
                     # TODO: probably not required since only one model as of now
                     if not self.selected_model:
-                        self.selected_model = list(self.im2deep_predictor.models.keys())
+                        # self.selected_model = list(self.im2deep_predictor.model.keys())
+                        self.selected_model = self.im2deep_predictor.model
                         self.im2deep_kwargs["deeplc_retrain"] = False
                         logger.debug(
                             f"Selected model: {self.selected_model}. Using this model (after new "
@@ -152,10 +160,12 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                     logger.debug("Predicting CCS values...")
                     predictions = np.array(
                         self.im2deep_predictor.make_preds(
-                            seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
+                            seq_df=self._psm_list_to_deeplc_peprec(psm_list_run), calibrate=False
                         )
                     )
-                    observations = psm_list_run["ccs_observed"]
+
+                    # TODO: probably reverse calculation of shift_factor so it becomes + instead of -?
+                    observations = psm_list_run["ion_mobility"] - shift_factor
                     ccs_diffs_run = np.abs(predictions - observations)
 
                     logger.debug("Adding features to PSMs...")
@@ -187,18 +197,24 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
     # TODO: As for now, DeepLC uses the column 'tr' as observed CCS. This should be changed eventually
     @staticmethod
     def _psm_list_to_deeplc_peprec(psm_list: PSMList) -> pd.DataFrame:
+        logger.debug(psm_list.to_dataframe().columns)
         peprec = peptide_record.to_dataframe(psm_list)
+        logger.debug(peprec.columns)
+        peprec["ccs_observed"] = psm_list[
+            "ion_mobility"
+        ]  # Since peptide_record.to_dataframe does not support ion_mobility property in PeptideRecord
         peprec = peprec.rename(
             columns={
-                "observed_ccs": "tr",
+                "ccs_observed": "tr",
                 "peptide": "seq",
             }
         )[["tr", "charge", "seq", "modifications"]]
         return peprec
 
     # TODO: change? Now it uses reduced mobility instead of CCS (see ionmob line 173). Also, it uses the same model for all runs so only one reference dataset is supported
+    # TODO: Catch when no overlapping peptide-charge pairs are found
     def get_ccs_shift(
-        self, df: pd.DataFrame, reference_dataset: pd.DataFrame, use_charge_state: int = 2
+        self, df: pd.DataFrame, reference_dataset: PSMList, use_charge_state: int = 2
     ) -> ndarray:
         """
         Calculate CCS shift factor, i.e. a constant offset based on identical precursors as in reference.
@@ -221,21 +237,41 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
             logger.debug(f"Using charge state {use_charge_state} for CCS shift calculation.")
 
         tmp_df = df.copy(deep=True)
-        tmp_ref_df = reference_dataset.copy(deep=True)
+        tmp_ref_df = reference_dataset.copy(deep=True).to_dataframe()
 
         tmp_df["sequence"] = tmp_df["peptidoform"].apply(lambda x: x.proforma.split("\\")[0])
         tmp_df["charge"] = tmp_df["peptidoform"].apply(lambda x: x.precursor_charge)
-        tmp_ref_df["sequence"] = tmp_ref_df["peptidoform"].apply(
-            lambda x: x.proforma.split("\\")[0]
-        )
-        tmp_ref_df["charge"] = tmp_ref_df["peptidoform"].apply(lambda x: x.precursor_charge)
+        tmp_ref_df["sequence"] = tmp_df["peptidoform"].apply(lambda x: x.proforma.split("\\")[0])
+        tmp_ref_df["charge"] = tmp_df["peptidoform"].apply(lambda x: x.precursor_charge)
+        # tmp_ref_df["sequence"] = tmp_ref_df["peptidoform"].apply(
+        #     lambda x: x.proforma.split("\\")[0]
+        # )
+        # tmp_ref_df["charge"] = tmp_ref_df["peptidoform"].apply(lambda x: x.precursor_charge)
 
         reference_tmp = tmp_ref_df[tmp_ref_df["charge"] == use_charge_state]
         df_tmp = tmp_df[tmp_df["charge"] == use_charge_state]
-
-        both = pd.merge(left=reference_tmp, right=df_tmp, on=["sequence", "charge"], how="inner")
-
-        return np.mean(both["ccs_x"] - both["ccs_y"])
+        logger.debug(reference_tmp.columns)
+        logger.debug(df_tmp.columns)
+        both = pd.merge(
+            left=reference_tmp,
+            right=df_tmp,
+            right_on=["sequence", "charge"],
+            left_on=["sequence", "charge"],
+            how="inner",
+            suffixes=("_data", "_ref"),
+        )
+        logger.debug(
+            "{} overlapping peptide-charge pairs found between PSMs and reference dataset".format(
+                both.shape[0]
+            )
+        )
+        logger.debug(both.columns)
+        logger.debug(both["ccs"])
+        logger.debug(both["retention_time_ref"])
+        logger.debug(np.mean(both["ccs"] - both["retention_time_ref"]))
+        return np.mean(
+            both["ccs"] - both["retention_time_ref"]
+        )  # In reference dataset, CCS is stored in observed_retention_time because psm_utils does not support ion_mobility property in PeptideRecord
 
     def calculate_ccs_shift(self, psm_list: PSMList) -> float:
         """
@@ -247,7 +283,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
         """
         df = psm_list.to_dataframe()
-        df.rename({"ccs_observed": "ccs"}, axis=1, inplace=True)
+        df.rename({"ion_mobility": "ccs"}, axis=1, inplace=True)
         df["charge"] = [peptidoform.precursor_charge for peptidoform in df["peptidoform"]]
         df = df[df["charge"] < 5]  # predictions do not go higher for IM2Deep
         high_conf_hits = list(df["spectrum_id"][df["score"].rank(pct=True) > 0.95])
@@ -255,8 +291,11 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
             f"Number of high confidence hits for calculating shift: {len(high_conf_hits)}"
         )
 
+        # Filter df for high_conf_hits
+        df = df[df["spectrum_id"].isin(high_conf_hits)]
         shift_factor = self.get_ccs_shift(
-            df[["charge", "peptidoform", "ccs"]][df["spectrum_id"].isin(high_conf_hits)],
+            # df[["charge", "peptidoform", "ccs"]][df["spectrum_id"].isin(high_conf_hits)],
+            df,
             self.reference_dataset,
         )
 
@@ -265,7 +304,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         return shift_factor
 
     # TODO ion mobility to CCS conversion? Is this necessary?
-    def im2ccs(reverse_im, mz, charge, mass_gas=28.013, temp=31.85, t_diff=273.15):
+    def im2ccs(self, reverse_im, mz, charge, mass_gas=28.013, temp=31.85, t_diff=273.15):
         """
         Convert ion mobility to CCS.  #TODO: Took this from ionmob. how to reference?
 
