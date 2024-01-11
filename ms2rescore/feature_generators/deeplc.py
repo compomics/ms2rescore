@@ -159,9 +159,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                         path_model=self.selected_model or self.user_model,
                         **self.deeplc_kwargs,
                     )
-                    self.deeplc_predictor.calibrate_preds(
-                        seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
-                    )
+                    self.deeplc_predictor.calibrate_preds(psm_list_calibration)
                     # Still calibrate for each run, but do not try out all model options.
                     # Just use model that was selected based on first run
                     if not self.selected_model:
@@ -174,11 +172,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                         )
 
                     logger.debug("Predicting retention times...")
-                    predictions = np.array(
-                        self.deeplc_predictor.make_preds(
-                            seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
-                        )
-                    )
+                    predictions = np.array(self.deeplc_predictor.make_preds(psm_list_run))
                     observations = psm_list_run["retention_time"]
                     rt_diffs_run = np.abs(predictions - observations)
 
@@ -203,18 +197,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                             peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
                         )
                 current_run += 1
-
-    # TODO: Remove when DeepLC supports PSMList directly
-    @staticmethod
-    def _psm_list_to_deeplc_peprec(psm_list: PSMList) -> pd.DataFrame:
-        peprec = peptide_record.to_dataframe(psm_list)
-        peprec = peprec.rename(
-            columns={
-                "observed_retention_time": "tr",
-                "peptide": "seq",
-            }
-        )[["tr", "seq", "modifications"]]
-        return peprec
 
     def _get_calibration_psms(self, psm_list: PSMList):
         """Get N best scoring target PSMs for calibration."""
