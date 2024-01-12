@@ -337,7 +337,6 @@ def _get_features_context(
                 + baseline_chart.to_html(**PLOTLY_HTML_KWARGS),
             }
         )
-
     return context
 
 
