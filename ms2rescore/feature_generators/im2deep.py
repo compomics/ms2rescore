@@ -27,8 +27,10 @@ from psm_utils import PSMList
 from psm_utils.io import peptide_record
 from numpy import ndarray
 
-# TODO: no hardcoding, put in im2deep package
-DEFAULT_REFERENCE_DATASET = pd.read_csv("ms2rescore/im2deep_data/reference_ccs.csv")
+# TODO: put in im2deep package
+DEFAULT_REFERENCE_DATASET = pd.read_csv(
+    os.path.join(im2deep_dir, "../im2deep_data/reference_ccs.csv")
+)
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
 
@@ -143,9 +145,6 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                     psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
                         lambda x: x["ccs_observed"] + shift_factor, axis=1
                     )
-                    psm_list_run_df.to_csv(
-                        "/home/robbe/ms2rescore/ms2rescore/im2deep_data/debug.csv"
-                    )
 
                     # TODO: probably not required since only one model as of now
                     if not self.selected_model:
@@ -189,13 +188,11 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
     @staticmethod
     def _psm_list_df_to_deeplc_peprec(psm_list_df: pd.DataFrame) -> pd.DataFrame:
         # TODO: As for now, DeepLC uses the column 'tr' as observed CCS. This should be changed
-        logger.debug(psm_list_df.columns)
         psm_list_df["seq"] = psm_list_df["peptidoform"].apply(lambda x: x.sequence)
         psm_list_df["charge"] = psm_list_df["peptidoform"].apply(lambda x: x.precursor_charge)
         psm_list_df["modifications"] = psm_list_df["peptidoform"].apply(
             lambda x: peptide_record.proforma_to_peprec(x)[1]
         )
-        logger.debug(psm_list_df["modifications"])
         peprec = psm_list_df.rename(
             columns={
                 "ccs_observed": "tr",

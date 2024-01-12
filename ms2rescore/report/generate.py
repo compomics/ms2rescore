@@ -337,6 +337,27 @@ def _get_features_context(
                 + baseline_chart.to_html(**PLOTLY_HTML_KWARGS),
             }
         )
+
+    # IM2Deep specific charts
+    if "im2deep" in feature_names:
+        import deeplc.plot
+
+        # TODO: the axis titles are gonna be retention time based so need to make them changeable in deeplc.plot
+        scatter_chart = deeplc.plot.scatter(
+            df=features[
+                (psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)
+            ],  # noqa: E712
+            predicted_column="ccs_predicted_im2deep",
+            observed_column="ccs_observed_im2deep",
+        )
+
+        context["charts"].append(
+            {
+                "title": TEXTS["charts"]["im2deep_performance"]["title"],
+                "description": TEXTS["charts"]["im2deep_performance"]["description"],
+                "chart": scatter_chart.to_html(**PLOTLY_HTML_KWARGS),
+            }
+        )
     return context
 
 
