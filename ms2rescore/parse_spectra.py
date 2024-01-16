@@ -125,11 +125,16 @@ def _parse_values_from_mzml(
                     spectrum["scanList"]["scan"][0]["reverse ion mobility"]
                 )
             except KeyError:
-                raise ParsingError(
-                    "Could not parse ion mobility (`reverse ion mobility`) from spectrum file "
-                    f"for run {run}. Please make sure that the ion mobility key is present in the "
-                    "spectrum file or disable the relevant feature generator."
-                )
+                try:
+                    im_dict[matched_id] = float(
+                        spectrum["scanList"]["scan"][0]["inverse reduced ion mobility"]
+                    )
+                except KeyError:
+                    raise ParsingError(
+                        "Could not parse ion mobility (`reverse ion mobility`) from spectrum file "
+                        f"for run {run}. Please make sure that the ion mobility key is present in the "
+                        "spectrum file or disable the relevant feature generator."
+                    )
 
     return rt_dict, im_dict
 
