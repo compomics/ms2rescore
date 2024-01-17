@@ -109,6 +109,8 @@ def _parse_values_from_mzml(
     )
 
     for spectrum in MzML(str(spectrum_file)):
+        if spectrum["ms level"] != 2:
+            continue
         matched_id = spectrum_id_pattern.match(spectrum["id"]).group()
         if missing_rt:
             try:
