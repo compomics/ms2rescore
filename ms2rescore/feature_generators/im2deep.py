@@ -74,7 +74,9 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
         self.im2deep_predictor = None
         self.im2deep_model = DEFAULT_MODELS
-        self.reference_dataset = DEFAULT_REFERENCE_DATASET
+        self.reference_dataset = (
+            reference_dataset if reference_dataset else DEFAULT_REFERENCE_DATASET
+        )
 
     # TODO name differently than ionmob so it doesnt get overwritten
     @property
