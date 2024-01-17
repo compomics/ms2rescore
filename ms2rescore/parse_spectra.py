@@ -121,13 +121,16 @@ def _parse_values_from_mzml(
                 )
         if missing_im:
             try:
+                # TODO Can this be in the scanList or only in the precursorList?
                 im_dict[matched_id] = float(
                     spectrum["scanList"]["scan"][0]["reverse ion mobility"]
                 )
             except KeyError:
                 try:
                     im_dict[matched_id] = float(
-                        spectrum["scanList"]["scan"][0]["inverse reduced ion mobility"]
+                        spectrum["precursorList"]["precursor"][0]["selectedIonList"][
+                            "selectedIon"
+                        ][0]["inverse reduced ion mobility"]
                     )
                 except KeyError:
                     raise ParsingError(
