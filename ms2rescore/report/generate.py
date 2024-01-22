@@ -349,6 +349,9 @@ def _get_features_context(
             ],  # noqa: E712
             predicted_column="ccs_predicted_im2deep",
             observed_column="ccs_observed_im2deep",
+            xaxis_label="Observed CCS",
+            yaxis_label="Predicted CCS",
+            plot_title="Predicted vs. observed CCS"
         )
 
         context["charts"].append(
