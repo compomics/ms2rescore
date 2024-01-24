@@ -11,6 +11,7 @@ from ms2rescore.parse_psms import parse_psms
 from ms2rescore.parse_spectra import get_missing_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
+from ms2rescore import exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -151,9 +152,12 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
 
     # Write report
     if config["write_report"]:
-        generate.generate_report(
-            output_file_root, psm_list=psm_list, feature_names=feature_names, use_txt_log=True
-        )
+        try:
+            generate.generate_report(
+                output_file_root, psm_list=psm_list, feature_names=feature_names, use_txt_log=True
+            )
+        except exceptions.ReportGenerationError as e:
+            logger.error(e)
 
 
 def _write_feature_names(feature_names, output_file_root):

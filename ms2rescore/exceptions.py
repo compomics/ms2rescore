@@ -23,3 +23,9 @@ class ModificationParsingError(IDFileParsingError):
     """Identification file parsing error."""
 
     pass
+
+
+class ReportGenerationError(MS2RescoreError):
+    """Error while generating report."""
+
+    pass
