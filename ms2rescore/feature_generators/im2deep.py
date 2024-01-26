@@ -48,6 +48,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         reference_dataset: Optional[str] = None,
         spectrum_path: Optional[str] = None,
         processes: int = 1,
+        calibrate_per_charge: bool = True,
         **kwargs,
     ):
         """Placeholder"""  # TODO
@@ -75,6 +76,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         self.im2deep_predictor = None
         self.im2deep_model = DEFAULT_MODELS
         self.reference_dataset = DEFAULT_REFERENCE_DATASET
+        self.calibrate_per_charge = calibrate_per_charge
 
     # TODO name differently than ionmob so it doesnt get overwritten
     @property
@@ -141,10 +143,35 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                         axis=1,
                     )
 
-                    shift_factor = self.calculate_ccs_shift(psm_list_run_df)
-                    psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
-                        lambda x: x["ccs_observed"] + shift_factor, axis=1
-                    )
+                    if not self.calibrate_per_charge:
+                        shift_factor = self.calculate_ccs_shift(
+                            psm_list_run_df, per_charge=self.calibrate_per_charge
+                        )
+                        psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
+                            lambda x: x["ccs_observed"] + shift_factor, axis=1
+                        )
+
+                    else:
+                        general_shift_factor = self.calculate_ccs_shift(
+                            psm_list_run_df, per_charge=False
+                        )
+                        shift_factor_dict = self.calculate_ccs_shift(
+                            psm_list_run_df, per_charge=self.calibrate_per_charge
+                        )
+                        # If no overlapping high-confidence precursors for a certain charge, use overall shift factor for that charge
+                        for charge in psm_list_run_df["charge"].unique():
+                            if charge not in shift_factor_dict:
+                                logger.info(
+                                    "No overlapping high-confidence precursors for charge {}. Using overall shift factor for that charge.".format(
+                                        charge
+                                    )
+                                )
+                                shift_factor_dict[charge] = general_shift_factor
+                        logger.info("Shift factors per charge: {}".format(shift_factor_dict))
+                        psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
+                            lambda x: x["ccs_observed"] + shift_factor_dict[x["charge"]],
+                            axis=1,
+                        )
 
                     # TODO: probably not required since only one model as of now
                     if not self.selected_model:
@@ -203,7 +230,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
     # TODO: What to do when no overlapping peptide-charge pairs are found?
     def get_ccs_shift(
         self, df: pd.DataFrame, reference_dataset: pd.DataFrame, use_charge_state: int = 2
-    ) -> ndarray:
+    ) -> float:
         """
         Calculate CCS shift factor, i.e. a constant offset based on identical precursors as in reference.
 
@@ -254,7 +281,53 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
         return 0 if both.shape[0] == 0 else np.mean(both["CCS"] - both["ccs_observed"])
 
-    def calculate_ccs_shift(self, psm_df: pd.DataFrame) -> float:
+    def get_ccs_shift_per_charge(
+        self, df: pd.DataFrame, reference_dataset: pd.DataFrame
+    ) -> ndarray:
+        """
+        Calculate CCS shift factor per charge state, i.e. a constant offset based on identical precursors as in reference.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            PSMs with CCS values.
+        reference_dataset : pd.DataFrame
+            Reference dataset with CCS values.
+
+        Returns
+        -------
+        ndarray
+            CCS shift factors per charge state.
+
+        """
+        tmp_df = df.copy(deep=True)
+        tmp_ref_df = reference_dataset.copy(deep=True)
+
+        tmp_df["sequence"] = tmp_df["peptidoform"].apply(lambda x: x.proforma.split("\\")[0])
+        tmp_df["charge"] = tmp_df["peptidoform"].apply(lambda x: x.precursor_charge)
+        tmp_ref_df["sequence"] = tmp_ref_df["peptidoform"].apply(
+            lambda x: Peptidoform(x).proforma.split("\\")[0]
+        )
+        tmp_ref_df["charge"] = tmp_ref_df["peptidoform"].apply(
+            lambda x: Peptidoform(x).precursor_charge
+        )
+
+        reference_tmp = tmp_ref_df
+        df_tmp = tmp_df
+        both = pd.merge(
+            left=reference_tmp,
+            right=df_tmp,
+            right_on=["sequence", "charge"],
+            left_on=["sequence", "charge"],
+            how="inner",
+            suffixes=("_ref", "_data"),
+        )
+
+        return (
+            both.groupby("charge").apply(lambda x: np.mean(x["CCS"] - x["ccs_observed"])).to_dict()
+        )
+
+    def calculate_ccs_shift(self, psm_df: pd.DataFrame, per_charge=True) -> float:
         """
         Apply CCS shift to CCS values.
 
@@ -271,16 +344,23 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
         # Filter df for high_conf_hits
         psm_df = psm_df[psm_df["spectrum_id"].isin(high_conf_hits)]
-        shift_factor = self.get_ccs_shift(
-            psm_df,
-            self.reference_dataset,
-        )
 
-        logger.debug(f"CCS shift factor: {shift_factor}")
+        if not per_charge:
+            shift_factor = self.get_ccs_shift(
+                psm_df,
+                self.reference_dataset,
+            )
+            logger.debug(f"CCS shift factor: {shift_factor}")
+            return shift_factor
 
-        return shift_factor
+        else:
+            shift_factor_dict = self.get_ccs_shift_per_charge(
+                psm_df,
+                self.reference_dataset,
+            )
+            # logger.debug(f"CCS shift factor dict: {shift_factor_dict}")
+            return shift_factor_dict
 
-    # TODO ion mobility to CCS conversion? Is this necessary?
     def im2ccs(self, reverse_im, mz, charge, mass_gas=28.013, temp=31.85, t_diff=273.15):
         """
         Convert ion mobility to CCS.  #TODO: Took this from ionmob. how to reference?
