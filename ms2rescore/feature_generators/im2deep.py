@@ -14,9 +14,9 @@ from typing import List, Optional, Union
 im2deep_dir = os.path.dirname(os.path.realpath(__file__))
 # TODO: put in im2deep package
 DEFAULT_MODELS = [
-    "../im2deep_data/mods/full_hc_peprec_CCS_1fd8363d9af9dcad3be7553c39396960.hdf5",
-    "../im2deep_data/mods/full_hc_peprec_CCS_8c22d89667368f2f02ad996469ba157e.hdf5",
-    "../im2deep_data/mods/full_hc_peprec_CCS_cb975cfdd4105f97efa0b3afffe075cc.hdf5",
+    "../im2deep_data/mods/full_hc_peprec_CCS_v3_1fd8363d9af9dcad3be7553c39396960.hdf5",
+    "../im2deep_data/mods/full_hc_peprec_CCS_v3_8c22d89667368f2f02ad996469ba157e.hdf5",
+    "../im2deep_data/mods/full_hc_peprec_CCS_v3_cb975cfdd4105f97efa0b3afffe075cc.hdf5",
 ]
 DEFAULT_MODELS = [os.path.join(im2deep_dir, mod) for mod in DEFAULT_MODELS]
 
