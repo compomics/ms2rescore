@@ -151,7 +151,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     # Make new PSM list for this run (chain PSMs per spectrum to flat list)
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
-                    
                     psm_list_calibration = self._get_calibration_psms(psm_list_run)
                     logger.debug(f"Calibrating DeepLC with {len(psm_list_calibration)} PSMs...")
                     self.deeplc_predictor = self.DeepLC(
@@ -202,7 +201,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
     def _get_calibration_psms(self, psm_list: PSMList):
         """Get N best scoring target PSMs for calibration."""
         psm_list_targets = psm_list[~psm_list["is_decoy"]]
-        if self.calibration_set_size
+        if self.calibration_set_size:
             n_psms = self._get_number_of_calibration_psms(psm_list_targets)
             indices = np.argsort(psm_list_targets["score"])
             indices = indices[:n_psms] if self.lower_psm_score_better else indices[-n_psms:]
@@ -215,9 +214,8 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                 )
             elif (len(identified_psms) < 500) & (self.deeplc_kwargs["deeplc_retrain"]):
                 logger.warning(
-                    " Less than 500 target PSMs with q-value <= 0.01 found for retraining. Turning of deeplc_retrain, as this is not enough data for retraining."
+                    " Less than 500 target PSMs with q-value <= 0.01 found for retraining. Consider turning of deeplc_retrain, as this is likely not enough data for retraining."
                 )
-                self.deeplc_kwargs["deeplc_retrain"] = False # Automatically do this or just warn user?
 
                 return identified_psms
 
