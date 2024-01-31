@@ -143,12 +143,34 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                         axis=1,
                     )
 
+                    # TODO: probably not required since only one model as of now
+                    if not self.selected_model:
+                        # self.selected_model = list(self.im2deep_predictor.model.keys())
+                        self.selected_model = self.im2deep_predictor.model
+                        self.im2deep_kwargs["deeplc_retrain"] = False
+                        logger.debug(
+                            f"Selected model: {self.selected_model}. Using this model (after new "
+                            "calibrations) for all subsequent runs."
+                        )
+
+                    logger.debug("Predicting CCS values...")
+                    uncalibrated_predictions = np.array(
+                        self.im2deep_predictor.make_preds(
+                            seq_df=self._psm_list_df_to_deeplc_peprec(psm_list_run_df),
+                            calibrate=False,
+                        )
+                    )
+
+                    psm_list_run_df["ccs_predicted"] = uncalibrated_predictions
+                    observations = psm_list_run_df["ccs_observed"]
+
+                    logger.debug("Calibrating predictions...")
                     if not self.calibrate_per_charge:
                         shift_factor = self.calculate_ccs_shift(
                             psm_list_run_df, per_charge=self.calibrate_per_charge
                         )
-                        psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
-                            lambda x: x["ccs_observed"] + shift_factor, axis=1
+                        psm_list_run_df["calibrated_ccs_predicted"] = psm_list_run_df.apply(
+                            lambda x: x["ccs_predicted"] + shift_factor, axis=1
                         )
 
                     else:
@@ -168,34 +190,14 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                                 )
                                 shift_factor_dict[charge] = general_shift_factor
                         logger.info("Shift factors per charge: {}".format(shift_factor_dict))
-                        psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
-                            lambda x: x["ccs_observed"] + shift_factor_dict[x["charge"]],
+                        psm_list_run_df["calibrated_ccs_predicted"] = psm_list_run_df.apply(
+                            lambda x: x["ccs_predicted"] + shift_factor_dict[x["charge"]],
                             axis=1,
                         )
 
-                    # TODO: probably not required since only one model as of now
-                    if not self.selected_model:
-                        # self.selected_model = list(self.im2deep_predictor.model.keys())
-                        self.selected_model = self.im2deep_predictor.model
-                        self.im2deep_kwargs["deeplc_retrain"] = False
-                        logger.debug(
-                            f"Selected model: {self.selected_model}. Using this model (after new "
-                            "calibrations) for all subsequent runs."
-                        )
-
-                    logger.debug("Predicting CCS values...")
-                    predictions = np.array(
-                        self.im2deep_predictor.make_preds(
-                            seq_df=self._psm_list_df_to_deeplc_peprec(psm_list_run_df),
-                            calibrate=False,
-                        )
-                    )
-
-                    observations = psm_list_run_df["ccs_observed"]
-                    ccs_diffs_run = np.abs(predictions - observations)
-
                     logger.debug("Adding features to PSMs...")
-
+                    predictions = psm_list_run_df["calibrated_ccs_predicted"]
+                    ccs_diffs_run = np.abs(predictions - observations)
                     for i, psm in enumerate(psm_list_run):
                         psm["rescoring_features"].update(
                             {
@@ -246,10 +248,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
             CCS shift factor.
 
         """
-        if use_charge_state > 4 or use_charge_state < 2:
-            raise ValueError("Charge state needs to be higher than 1 and lower than 5.")
-        else:
-            logger.debug(f"Using charge state {use_charge_state} for CCS shift calculation.")
+        logger.debug(f"Using charge state {use_charge_state} for CCS shift calculation.")
 
         tmp_df = df.copy(deep=True)
         tmp_ref_df = reference_dataset.copy(deep=True)
@@ -278,8 +277,9 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                 both.shape[0]
             )
         )
-
-        return 0 if both.shape[0] == 0 else np.mean(both["CCS"] - both["ccs_observed"])
+        # How much CCS in observed data is larger than reference CCS, so predictions
+        # need to be increased by this amount
+        return 0 if both.shape[0] == 0 else np.mean(both["ccs_observed"] - both["CCS"])
 
     def get_ccs_shift_per_charge(
         self, df: pd.DataFrame, reference_dataset: pd.DataFrame
@@ -324,7 +324,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         )
 
         return (
-            both.groupby("charge").apply(lambda x: np.mean(x["CCS"] - x["ccs_observed"])).to_dict()
+            both.groupby("charge").apply(lambda x: np.mean(x["ccs_observed"] - x["CCS"])).to_dict()
         )
 
     def calculate_ccs_shift(self, psm_df: pd.DataFrame, per_charge=True) -> float:
@@ -350,7 +350,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                 psm_df,
                 self.reference_dataset,
             )
-            logger.debug(f"CCS shift factor: {shift_factor}")
+            logger.debug(f"General CCS shift factor: {shift_factor}")
             return shift_factor
 
         else:
