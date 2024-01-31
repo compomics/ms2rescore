@@ -41,7 +41,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         self,
         *args,
         lower_score_is_better: bool = False,
-        calibration_set_size: Union[int, float] = 0.15,
+        calibration_set_size: Union[int, float] = None,
         spectrum_path: Optional[str] = None,
         processes: int = 1,
         **kwargs,
@@ -151,8 +151,9 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     # Make new PSM list for this run (chain PSMs per spectrum to flat list)
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
-                    logger.debug("Calibrating DeepLC...")
+                    
                     psm_list_calibration = self._get_calibration_psms(psm_list_run)
+                    logger.debug(f"Calibrating DeepLC with {len(psm_list_calibration)} PSMs...")
                     self.deeplc_predictor = self.DeepLC(
                         n_jobs=self.processes,
                         verbose=self._verbose,
@@ -172,7 +173,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                         )
 
                     logger.debug("Predicting retention times...")
-                    predictions = np.array(self.deeplc_predictor.make_preds(psm_list_run))
+                    predictions = np.array(self.deeplc_predictàor.make_preds(psm_list_run))
                     observations = psm_list_run["retention_time"]
                     rt_diffs_run = np.abs(predictions - observations)
 
@@ -201,10 +202,24 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
     def _get_calibration_psms(self, psm_list: PSMList):
         """Get N best scoring target PSMs for calibration."""
         psm_list_targets = psm_list[~psm_list["is_decoy"]]
-        n_psms = self._get_number_of_calibration_psms(psm_list_targets)
-        indices = np.argsort(psm_list_targets["score"])
-        indices = indices[:n_psms] if self.lower_psm_score_better else indices[-n_psms:]
-        return psm_list_targets[indices]
+        if self.calibration_set_size
+            n_psms = self._get_number_of_calibration_psms(psm_list_targets)
+            indices = np.argsort(psm_list_targets["score"])
+            indices = indices[:n_psms] if self.lower_psm_score_better else indices[-n_psms:]
+            return psm_list_targets[indices]
+        else:
+            identified_psms = psm_list_targets[psm_list_targets["q_value"] <= 0.01]
+            if len(identified_psms) == 0:
+                raise ValueError(
+                    "No target PSMs with q-value <= 0.01 found. Please set calibration set size for calibrating deeplc."
+                )
+            elif (len(identified_psms) < 500) & (self.deeplc_kwargs["deeplc_retrain"]):
+                logger.warning(
+                    " Less than 500 target PSMs with q-value <= 0.01 found for retraining. Turning of deeplc_retrain, as this is not enough data for retraining."
+                )
+                self.deeplc_kwargs["deeplc_retrain"] = False # Automatically do this or just warn user?
+
+                return identified_psms
 
     def _get_number_of_calibration_psms(self, psm_list):
         """Get number of calibration PSMs given `calibration_set_size` and total number of PSMs."""
