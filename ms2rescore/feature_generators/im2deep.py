@@ -14,9 +14,9 @@ from typing import List, Optional, Union
 im2deep_dir = os.path.dirname(os.path.realpath(__file__))
 # TODO: put in im2deep package
 DEFAULT_MODELS = [
-    "../im2deep_data/mods/full_hc_peprec_CCS_v3_1fd8363d9af9dcad3be7553c39396960.hdf5",
-    "../im2deep_data/mods/full_hc_peprec_CCS_v3_8c22d89667368f2f02ad996469ba157e.hdf5",
-    "../im2deep_data/mods/full_hc_peprec_CCS_v3_cb975cfdd4105f97efa0b3afffe075cc.hdf5",
+    "../im2deep_data/mods/full_hc_peprec_CCS_v4_1fd8363d9af9dcad3be7553c39396960.hdf5",
+    "../im2deep_data/mods/full_hc_peprec_CCS_v4_8c22d89667368f2f02ad996469ba157e.hdf5",
+    "../im2deep_data/mods/full_hc_peprec_CCS_v4_cb975cfdd4105f97efa0b3afffe075cc.hdf5",
 ]
 DEFAULT_MODELS = [os.path.join(im2deep_dir, mod) for mod in DEFAULT_MODELS]
 
@@ -28,9 +28,8 @@ from psm_utils.io import peptide_record
 from numpy import ndarray
 
 # TODO: put in im2deep package
-DEFAULT_REFERENCE_DATASET = pd.read_csv(
-    os.path.join(im2deep_dir, "../im2deep_data/reference_ccs.csv")
-)
+DEFAULT_REFERENCE_DATASET = os.path.join(im2deep_dir, "../im2deep_data/reference_ccs.csv")
+
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
 
@@ -77,6 +76,10 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         self.im2deep_model = DEFAULT_MODELS
         self.reference_dataset = DEFAULT_REFERENCE_DATASET
         self.calibrate_per_charge = calibrate_per_charge
+        if not reference_dataset:
+            self.reference_dataset = pd.read_csv(DEFAULT_REFERENCE_DATASET)
+        else:
+            self.reference_dataset = pd.read_csv(reference_dataset)
 
     # TODO name differently than ionmob so it doesnt get overwritten
     @property
