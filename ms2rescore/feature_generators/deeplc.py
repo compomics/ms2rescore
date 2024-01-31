@@ -194,7 +194,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                             }
                     for psm in psm_list_run:
                         psm["rescoring_features"].update(
-                            peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
+                            peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]'']
                         )
                 current_run += 1
 
@@ -207,7 +207,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
             indices = indices[:n_psms] if self.lower_psm_score_better else indices[-n_psms:]
             return psm_list_targets[indices]
         else:
-            identified_psms = psm_list_targets[psm_list_targets["q_value"] <= 0.01]
+            identified_psms = psm_list_targets[psm_list_targets["qvalue"] <= 0.01]
             if len(identified_psms) == 0:
                 raise ValueError(
                     "No target PSMs with q-value <= 0.01 found. Please set calibration set size for calibrating deeplc."
