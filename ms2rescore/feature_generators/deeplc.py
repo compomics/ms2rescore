@@ -173,7 +173,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                         )
 
                     logger.debug("Predicting retention times...")
-                    predictions = np.array(self.deeplc_predictàor.make_preds(psm_list_run))
+                    predictions = np.array(self.deeplc_predictor.make_preds(psm_list_run))
                     observations = psm_list_run["retention_time"]
                     rt_diffs_run = np.abs(predictions - observations)
 
