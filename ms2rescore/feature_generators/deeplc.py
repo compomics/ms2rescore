@@ -194,7 +194,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                             }
                     for psm in psm_list_run:
                         psm["rescoring_features"].update(
-                            peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]'']
+                            peptide_rt_diff_dict[psm.peptidoform.proforma.split("\\")[0]]
                         )
                 current_run += 1
 
