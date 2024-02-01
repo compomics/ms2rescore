@@ -41,7 +41,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         self,
         *args,
         lower_score_is_better: bool = False,
-        calibration_set_size: Union[int, float] = None,
+        calibration_set_size: Union[int, float, None] = None,
         spectrum_path: Optional[str] = None,
         processes: int = 1,
         **kwargs,
@@ -216,8 +216,8 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                 logger.warning(
                     " Less than 500 target PSMs with q-value <= 0.01 found for retraining. Consider turning of deeplc_retrain, as this is likely not enough data for retraining."
                 )
-
-                return identified_psms
+                print(identified_psms)
+            return identified_psms
 
     def _get_number_of_calibration_psms(self, psm_list):
         """Get number of calibration PSMs given `calibration_set_size` and total number of PSMs."""
