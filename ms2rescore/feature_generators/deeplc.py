@@ -216,7 +216,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                 logger.warning(
                     " Less than 500 target PSMs with q-value <= 0.01 found for retraining. Consider turning of deeplc_retrain, as this is likely not enough data for retraining."
                 )
-                print(identified_psms)
             return identified_psms
 
     def _get_number_of_calibration_psms(self, psm_list):
