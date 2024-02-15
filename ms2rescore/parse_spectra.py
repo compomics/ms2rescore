@@ -16,7 +16,7 @@ from ms2rescore.utils import infer_spectrum_path
 logger = logging.getLogger(__name__)
 
 
-def get_missing_values(config, psm_list, missing_rt=False, missing_im=False):
+def fill_missing_values(config, psm_list, missing_rt=False, missing_im=False):
     """Get missing RT/IM features from spectrum file."""
     logger.debug("Extracting missing RT/IM values from spectrum file(s).")
 

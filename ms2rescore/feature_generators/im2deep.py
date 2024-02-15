@@ -31,7 +31,24 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         calibrate_per_charge: bool = True,
         **kwargs,
     ):
-        """Placeholder"""  # TODO
+        """
+        Initialize the IM2DeepFeatureGenerator.
+
+        Parameters:
+        - `lower_score_is_better`: A boolean indicating whether lower scores are better for the generated features.
+        - `spectrum_path`: Optional path to the spectrum file used for IM2Deep predictions.
+        - `processes`: Number of parallel processes to use for IM2Deep predictions.
+        - `calibrate_per_charge`: A boolean indicating whether to calibrate CCS values per charge state.
+        - `**kwargs`: Additional keyword arguments.
+
+        Returns:
+        None
+
+        Note:
+        The IM2DeepFeatureGenerator requires initialization with relevant parameters. It inherits from FeatureGeneratorBase.
+
+        ```
+        """
         super().__init__(*args, **kwargs)
         self.lower_score_is_better = lower_score_is_better
         self.spectrum_path = spectrum_path
@@ -51,7 +68,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         }
         self.im2deep_kwargs.update({"config_file": None})
 
-        # TODO: Implement deeplc_retrain?
+        # TODO: Implement im2deep_retrain?
 
         self.im2deep_predictor = None
         self.calibrate_per_charge = calibrate_per_charge
@@ -167,7 +184,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
             np.sqrt(reduced_mass * (temp + t_diff)) * 1 / reverse_im
         )
 
-    # TODO: Make threshold a parameter
+    # TODO: replace threshold by identified psms?
     def make_cal_df(self, psm_list_df, threshold=0.95):
         """Make dataframe for calibration of IM2Deep predictions.
 

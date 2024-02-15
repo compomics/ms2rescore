@@ -145,9 +145,11 @@ def _collect_files(output_path_prefix, use_txt_log=False):
         "configuration": Path(output_path_prefix + ".full-config.json").resolve(),
         "feature names": Path(output_path_prefix + ".feature_names.tsv").resolve(),
         "feature weights": Path(output_path_prefix + ".mokapot.weights.tsv").resolve(),
-        "log": Path(output_path_prefix + ".log.txt").resolve()
-        if use_txt_log
-        else Path(output_path_prefix + ".log.html").resolve(),
+        "log": (
+            Path(output_path_prefix + ".log.txt").resolve()
+            if use_txt_log
+            else Path(output_path_prefix + ".log.html").resolve()
+        ),
     }
     for file, path in files.items():
         if Path(path).is_file():
@@ -342,7 +344,6 @@ def _get_features_context(
     if "im2deep" in feature_names:
         import deeplc.plot
 
-        # TODO: the axis titles are gonna be retention time based so need to make them changeable in deeplc.plot
         scatter_chart = deeplc.plot.scatter(
             df=features[
                 (psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)

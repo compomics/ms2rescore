@@ -529,7 +529,7 @@ class IonmobConfiguration(ctk.CTkFrame):
 
 class Im2DeepConfiguration(ctk.CTkFrame):
     def __init__(self, *args, **kwargs):
-        """IonMob configuration frame."""
+        """IM2Deep configuration frame."""
         super().__init__(*args, **kwargs)
 
         self.configure(fg_color="transparent")
