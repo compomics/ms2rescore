@@ -32,8 +32,8 @@ classifiers = [
 dynamic = ["version"]
 requires-python = ">=3.8"
 dependencies = [
-    "numpy>=1.16.0, python_version != '3.11'",
-    "numpy==1.24.3, python_version == '3.11'",  # Incompatibility with sklearn, pygam, and TF...
+    "numpy>=1.16.0; python_version != '3.11'",
+    "numpy==1.24.3; python_version == '3.11'",  # Incompatibility with sklearn, pygam, and TF...
     "pandas>=1.0",
     "rich>=12",
     "pyteomics>=4.1.0, <4.7",
