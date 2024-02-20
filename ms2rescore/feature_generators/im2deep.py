@@ -1,5 +1,11 @@
 """
-Placeholder
+IM2Deep ion mobility-based feature generator.
+
+IM2Deep is a fully modification-aware peptide ion mobility predictor. It uses a deep convolutional
+neural network to predict retention times based on the atomic composition of the (modified) amino
+acid residues in the peptide. See
+`github.com/compomics/deeplc <https://github.com/compomics/IM2Deep>`_ for more information.
+
 """
 
 import contextlib
@@ -34,20 +40,22 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         """
         Initialize the IM2DeepFeatureGenerator.
 
-        Parameters:
-        - `lower_score_is_better`: A boolean indicating whether lower scores are better for the generated features.
-        - `spectrum_path`: Optional path to the spectrum file used for IM2Deep predictions.
-        - `processes`: Number of parallel processes to use for IM2Deep predictions.
-        - `calibrate_per_charge`: A boolean indicating whether to calibrate CCS values per charge state.
-        - `**kwargs`: Additional keyword arguments.
+        Parameters
+        ----------
+        lower_score_is_better : bool, optional
+            A boolean indicating whether lower scores are better for the generated features.
+        spectrum_path : str or None, optional
+            Optional path to the spectrum file used for IM2Deep predictions.
+        processes : int, optional
+            Number of parallel processes to use for IM2Deep predictions.
+        calibrate_per_charge : bool, optional
+            A boolean indicating whether to calibrate CCS values per charge state.
+        **kwargs : dict, optional
+            Additional keyword arguments.
 
-        Returns:
+        Returns
+        -------
         None
-
-        Note:
-        The IM2DeepFeatureGenerator requires initialization with relevant parameters. It inherits from FeatureGeneratorBase.
-
-        ```
         """
         super().__init__(*args, **kwargs)
         self.lower_score_is_better = lower_score_is_better
@@ -161,7 +169,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
     def im2ccs(self, reverse_im, mz, charge, mass_gas=28.013, temp=31.85, t_diff=273.15):
         """
-        Convert ion mobility to CCS.  #TODO: Took this from ionmob. how to reference?
+        Convert ion mobility to CCS.
 
         Parameters
         ----------
@@ -176,7 +184,13 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
         temp : float, optional
             Temperature in Celsius, by default 31.85
         t_diff : float, optional
-            Factor to convert Celsius to Kelvin, by default 273.15"""
+            Factor to convert Celsius to Kelvin, by default 273.15
+
+        Notes
+        -----
+        Adapted from theGreatHerrLebert/ionmob (https://doi.org/10.1093/bioinformatics/btad486)
+
+        """
 
         SUMMARY_CONSTANT = 18509.8632163405
         reduced_mass = (mz * charge * mass_gas) / (mz * charge + mass_gas)
