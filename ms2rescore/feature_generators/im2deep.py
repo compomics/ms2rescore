@@ -4,7 +4,7 @@ IM2Deep ion mobility-based feature generator.
 IM2Deep is a fully modification-aware peptide ion mobility predictor. It uses a deep convolutional
 neural network to predict retention times based on the atomic composition of the (modified) amino
 acid residues in the peptide. See
-`github.com/compomics/deeplc <https://github.com/compomics/IM2Deep>`_ for more information.
+`github.com/compomics/IM2Deep <https://github.com/compomics/IM2Deep>`_ for more information.
 
 """
 
