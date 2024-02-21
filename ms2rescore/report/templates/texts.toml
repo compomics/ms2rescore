@@ -105,3 +105,9 @@ bottom chart shows the distribution of RMAE values of DeepLC predictions on 460 
 datasets. The red line indicates the RMAE value for all target PSMs that passed the 1% FDR threshold
 of the current dataset. A lower RMAE value indicates better performance.
 """
+
+[charts.im2deep_performance]
+title = "IM2Deep model performance"
+description = """
+IM2Deep model performance can be visualized by plotting the predicted CCS against the observed CCS.
+"""

@@ -7,6 +7,7 @@ from ms2rescore.feature_generators.deeplc import DeepLCFeatureGenerator
 from ms2rescore.feature_generators.ionmob import IonMobFeatureGenerator
 from ms2rescore.feature_generators.maxquant import MaxQuantFeatureGenerator
 from ms2rescore.feature_generators.ms2pip import MS2PIPFeatureGenerator
+from ms2rescore.feature_generators.im2deep import IM2DeepFeatureGenerator
 
 FEATURE_GENERATORS = {
     "basic": BasicFeatureGenerator,
@@ -14,4 +15,5 @@ FEATURE_GENERATORS = {
     "deeplc": DeepLCFeatureGenerator,
     "maxquant": MaxQuantFeatureGenerator,
     "ionmob": IonMobFeatureGenerator,
+    "im2deep": IM2DeepFeatureGenerator,
 }

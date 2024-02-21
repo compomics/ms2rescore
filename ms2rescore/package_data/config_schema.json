@@ -29,6 +29,9 @@
                         },
                         "ionmob": {
                             "$ref": "#/definitions/ionmob"
+                        },
+                        "im2deep": {
+                            "$ref": "#/definitions/im2deep"
                         }
                     },
                     "default": {
@@ -233,6 +236,19 @@
                     "description": "Path to tokenizer json file",
                     "type": "string",
                     "default": "tokenizer.json"
+                }
+            }
+        },
+        "im2deep": {
+            "$ref": "#/definitions/feature_generator",
+            "description": "Ion mobility feature generator configuration using IM2Deep",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "reference_dataset": {
+                    "description": "Path to IM2Deep reference dataset file",
+                    "type": "string",
+                    "default": "Meier_unimod.parquet"
                 }
             }
         },
