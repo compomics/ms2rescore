@@ -63,7 +63,7 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
 
     if config["psm_id_pattern"]:
         pattern = re.compile(config["psm_id_pattern"])
-        logger.debug(f"Applying `psm_id_pattern`...")
+        logger.debug("Applying `psm_id_pattern`...")
         logger.debug(
             f"Parsing `{psm_list['spectrum_id'][0]}` to `{_match_psm_ids(psm_list['spectrum_id'][0], pattern)}`"
         )

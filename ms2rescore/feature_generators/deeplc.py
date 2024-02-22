@@ -21,12 +21,10 @@ import os
 from collections import defaultdict
 from inspect import getfullargspec
 from itertools import chain
-from typing import List, Optional, Union
+from typing import List, Union
 
 import numpy as np
-import pandas as pd
 from psm_utils import PSMList
-from psm_utils.io import peptide_record
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
 
@@ -42,7 +40,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         *args,
         lower_score_is_better: bool = False,
         calibration_set_size: Union[int, float, None] = None,
-        spectrum_path: Optional[str] = None,
         processes: int = 1,
         **kwargs,
     ) -> None:
@@ -59,9 +56,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         calibration_set_size: int or float
             Amount of best PSMs to use for DeepLC calibration. If this value is lower
             than the number of available PSMs, all PSMs will be used. (default: 0.15)
-        spectrum_path
-            Path to spectrum file or directory with spectrum files. If None, inferred from `run`
-            field in PSMs. Defaults to None.
         processes: {int, None}
             Number of processes to use in DeepLC. Defaults to 1.
         kwargs: dict
@@ -77,7 +71,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
 
         self.lower_psm_score_better = lower_score_is_better
         self.calibration_set_size = calibration_set_size
-        self.spectrum_path = spectrum_path
         self.processes = processes
         self.deeplc_kwargs = kwargs or {}
 
