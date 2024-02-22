@@ -8,6 +8,7 @@ import sys
 import webbrowser
 from pathlib import Path
 from typing import Dict, List, Tuple
+import platform
 
 import customtkinter as ctk
 from joblib import parallel_backend
@@ -648,6 +649,7 @@ def app():
     dpi = root.winfo_fpixels("1i")
     root.geometry(f"{int(15*dpi)}x{int(10*dpi)}")
     root.title("MS²Rescore")
-    root.wm_iconbitmap(os.path.join(str(_IMG_DIR), "program_icon.ico"))
+    if platform.system() != "Linux":
+        root.wm_iconbitmap(os.path.join(str(_IMG_DIR), "program_icon.png"))
 
     root.mainloop()
