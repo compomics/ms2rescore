@@ -650,6 +650,6 @@ def app():
     root.geometry(f"{int(15*dpi)}x{int(10*dpi)}")
     root.title("MS²Rescore")
     if platform.system() != "Linux":
-        root.wm_iconbitmap(os.path.join(str(_IMG_DIR), "program_icon.png"))
+        root.wm_iconbitmap(os.path.join(str(_IMG_DIR), "program_icon.ico"))
 
     root.mainloop()
