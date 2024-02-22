@@ -13,9 +13,11 @@ import logging
 import os
 from inspect import getfullargspec
 from itertools import chain
-from typing import List, Optional
+from typing import List
 
 import numpy as np
+import pandas as pd
+from im2deep.calibrate import im2ccs
 from im2deep.im2deep import predict_ccs
 from psm_utils import PSMList
 
@@ -31,10 +33,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
     def __init__(
         self,
         *args,
-        lower_score_is_better: bool = False,
-        spectrum_path: Optional[str] = None,
         processes: int = 1,
-        calibrate_per_charge: bool = True,
         **kwargs,
     ):
         """
@@ -42,44 +41,22 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
         Parameters
         ----------
-        lower_score_is_better : bool, optional
-            A boolean indicating whether lower scores are better for the generated features.
-        spectrum_path : str or None, optional
-            Optional path to the spectrum file used for IM2Deep predictions.
         processes : int, optional
-            Number of parallel processes to use for IM2Deep predictions.
-        calibrate_per_charge : bool, optional
-            A boolean indicating whether to calibrate CCS values per charge state.
+            Number of parallel processes to use for IM2Deep predictions. Default is 1.
         **kwargs : dict, optional
-            Additional keyword arguments.
+            Additional keyword arguments to `im2deep.predict_ccs`.
 
-        Returns
-        -------
-        None
         """
         super().__init__(*args, **kwargs)
-        self.lower_score_is_better = lower_score_is_better
-        self.spectrum_path = spectrum_path
-        self.processes = processes
-        self.deeplc_kwargs = kwargs or {}
 
         self._verbose = logger.getEffectiveLevel() <= logging.DEBUG
 
-        # Lazy-load DeepLC
-        from deeplc import DeepLC
-
-        self.im2deep = DeepLC
-
-        # Remove any kwargs that are not DeepLC arguments
+        # Remove any kwargs that are not IM2Deep arguments
+        self.im2deep_kwargs = kwargs or {}
         self.im2deep_kwargs = {
-            k: v for k, v in self.deeplc_kwargs.items() if k in getfullargspec(DeepLC).args
+            k: v for k, v in self.im2deep_kwargs.items() if k in getfullargspec(predict_ccs).args
         }
-        self.im2deep_kwargs.update({"config_file": None})
-
-        # TODO: Implement im2deep_retrain?
-
-        self.im2deep_predictor = None
-        self.calibrate_per_charge = calibrate_per_charge
+        self.im2deep_kwargs["n_jobs"] = processes
 
     @property
     def feature_names(self) -> List[str]:
@@ -93,7 +70,6 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
     def add_features(self, psm_list: PSMList) -> None:
         """Add IM2Deep-derived features to PSMs"""
-
         logger.info("Adding IM2Deep-derived features to PSMs")
 
         # Get easy-access nested version of PSMlist
@@ -105,8 +81,6 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
         for runs in psm_dict.values():
             # Reset IM2Deep predictor for each collection of runs
-            self.im2deep_predictor = None
-            self.selected_model = None
             for run, psms in runs.items():
                 logger.info(
                     f"Running IM2Deep for PSMs from run ({current_run}/{total_runs}): `{run}`..."
@@ -126,30 +100,25 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                     # Convert ion mobility to CCS and calibrate CCS values
                     psm_list_run_df = psm_list_run.to_dataframe()
                     psm_list_run_df["charge"] = [
-                        peptidoform.precursor_charge
-                        for peptidoform in psm_list_run_df["peptidoform"]
+                        pep.precursor_charge for pep in psm_list_run_df["peptidoform"]
                     ]
-                    psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
-                        lambda x: self.im2ccs(
-                            x["ion_mobility"],
-                            x["precursor_mz"],  # TODO: Why does ionmob use calculated mz?
-                            x["charge"],
-                        ),
-                        axis=1,
+                    psm_list_run_df["ccs_observed"] = im2ccs(
+                        psm_list_run_df["ion_mobility"],
+                        psm_list_run_df["precursor_mz"],
+                        psm_list_run_df["charge"],
                     )
 
                     # Create dataframe with high confidence hits for calibration
-                    cal_psm_df = self.make_cal_df(psm_list_run_df)
+                    cal_psm_df = self.make_calibration_df(psm_list_run_df)
 
                     # Make predictions with IM2Deep
                     logger.debug("Predicting CCS values...")
-                    calibrated_predictions = predict_ccs(
-                        psm_list_run, cal_psm_df, write_output=False
+                    predictions = predict_ccs(
+                        psm_list_run, cal_psm_df, write_output=False, **self.im2deep_kwargs
                     )
 
                     # Add features to PSMs
                     logger.debug("Adding features to PSMs...")
-                    predictions = calibrated_predictions
                     observations = psm_list_run_df["ccs_observed"]
                     ccs_diffs_run = np.abs(predictions - observations)
                     for i, psm in enumerate(psm_list_run):
@@ -167,62 +136,34 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
                 current_run += 1
 
-    def im2ccs(self, reverse_im, mz, charge, mass_gas=28.013, temp=31.85, t_diff=273.15):
+    @staticmethod
+    def make_calibration_df(psm_list_df: pd.DataFrame, threshold: float = 0.25) -> pd.DataFrame:
         """
-        Convert ion mobility to CCS.
+        Make dataframe for calibration of IM2Deep predictions.
 
         Parameters
         ----------
-        reverse_im : float
-            Reduced ion mobility.
-        mz : float
-            Precursor m/z.
-        charge : int
-            Precursor charge.
-        mass_gas : float, optional
-            Mass of gas, by default 28.013
-        temp : float, optional
-            Temperature in Celsius, by default 31.85
-        t_diff : float, optional
-            Factor to convert Celsius to Kelvin, by default 273.15
-
-        Notes
-        -----
-        Adapted from theGreatHerrLebert/ionmob (https://doi.org/10.1093/bioinformatics/btad486)
-
-        """
-
-        SUMMARY_CONSTANT = 18509.8632163405
-        reduced_mass = (mz * charge * mass_gas) / (mz * charge + mass_gas)
-        return (SUMMARY_CONSTANT * charge) / (
-            np.sqrt(reduced_mass * (temp + t_diff)) * 1 / reverse_im
-        )
-
-    # TODO: replace threshold by identified psms?
-    def make_cal_df(self, psm_list_df, threshold=0.95):
-        """Make dataframe for calibration of IM2Deep predictions.
-
-        Parameters
-        ----------
-        psm_list_df : pd.DataFrame
+        psm_list_df
             DataFrame with PSMs.
-        threshold : float, optional
-            Threshold for high confidence hits, by default 0.95.
+        threshold
+            Percentage of highest scoring identified target PSMs to use for calibration,
+            default 0.95.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with high confidence hits for calibration."""
+            DataFrame with high confidence hits for calibration.
 
-        psm_list_df = psm_list_df[
-            psm_list_df["charge"] < 5
-        ]  # predictions do not go higher for IM2Deep
-        high_conf_hits = list(
-            psm_list_df["spectrum_id"][psm_list_df["score"].rank(pct=True) > threshold]
-        )
+        """
+        identified_psms = psm_list_df[
+            (psm_list_df["qvalue"] < 0.01)
+            & (~psm_list_df["is_decoy"])
+            & (psm_list_df["charge"] < 5)  # predictions do not go higher for IM2Deep
+        ]
+        calibration_psms = identified_psms[
+            identified_psms["qvalue"] < identified_psms["qvalue"].quantile(1 - threshold)
+        ]
         logger.debug(
-            f"Number of high confidence hits for calculating shift: {len(high_conf_hits)}"
+            f"Number of high confidence hits for calculating shift: {len(calibration_psms)}"
         )
-        # Filter df for high_conf_hits
-        cal_psm_df = psm_list_df[psm_list_df["spectrum_id"].isin(high_conf_hits)]
-        return cal_psm_df
+        return calibration_psms
