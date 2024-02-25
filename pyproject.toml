@@ -55,6 +55,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ionmob = ["ionmob>=0.2", "tensorflow"]
+ms2 = ["rustyms"]
 dev = ["ruff", "black", "pytest", "pytest-cov", "pre-commit"]
 docs = [
     "sphinx",
