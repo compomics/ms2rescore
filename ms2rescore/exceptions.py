@@ -23,3 +23,9 @@ class ModificationParsingError(IDFileParsingError):
     """Identification file parsing error."""
 
     pass
+
+
+class ParseSpectrumError(MS2RescoreError):
+    """Error parsing spectrum file."""
+
+    pass
