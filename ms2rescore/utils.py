@@ -4,6 +4,9 @@ import re
 from glob import glob
 from pathlib import Path
 from typing import Optional, Union
+import cProfile
+import pstats
+import io
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 
@@ -76,3 +79,22 @@ def infer_spectrum_path(
             )
 
     return Path(resolved_path)
+
+
+def profile(fnc):
+    """A decorator that uses cProfile to profile a function"""
+
+    def inner(*args, **kwargs):
+
+        pr = cProfile.Profile()
+        pr.enable()
+        retval = fnc(*args, **kwargs)
+        pr.disable()
+        s = io.StringIO()
+        sortby = "time"
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        logger.info(s.getvalue())
+        return retval
+
+    return inner
