@@ -11,10 +11,12 @@ from ms2rescore.parse_psms import parse_psms
 from ms2rescore.parse_spectra import fill_missing_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
+from ms2rescore.utils import profile
 
 logger = logging.getLogger(__name__)
 
 
+@profile
 def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     """
     Run full MS²Rescore workflow with passed configuration.
@@ -62,7 +64,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         "ionmob" in config["feature_generators"] or "im2deep" in config["feature_generators"]
     ) and (None in psm_list["ion_mobility"])
 
-    logger.info(f"RT required: {rt_required}, IM required: {im_required}")
+    logger.debug(f"RT required: {rt_required}, IM required: {im_required}")
 
     if rt_required or im_required:
         logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
