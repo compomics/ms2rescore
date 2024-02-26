@@ -54,18 +54,19 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         f"PSMs already contain the following rescoring features: {psm_list_feature_names}"
     )
 
-    # # TODO: avoid hard coding feature generators in some way
-    # rt_required = ("deeplc" in config["feature_generators"]) and (
-    #     None in psm_list["retention_time"]
-    # )
-    # im_required = ("ionmob" or "im2deep" in config["feature_generators"]) and (
-    #     None in psm_list["ion_mobility"]
-    # )
-    # logger.debug(f"RT required: {rt_required}, IM required: {im_required}")
+    # TODO: avoid hard coding feature generators in some way
+    rt_required = ("deeplc" in config["feature_generators"]) and (
+        None in psm_list["retention_time"]
+    )
+    im_required = (
+        "ionmob" in config["feature_generators"] or "im2deep" in config["feature_generators"]
+    ) and (None in psm_list["ion_mobility"])
 
-    # if rt_required or im_required:
-    #     logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
-    #     fill_missing_values(config, psm_list, missing_rt=rt_required, missing_im=im_required)
+    logger.info(f"RT required: {rt_required}, IM required: {im_required}")
+
+    if rt_required or im_required:
+        logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
+        fill_missing_values(config, psm_list, missing_rt=rt_required, missing_im=im_required)
 
     # Add rescoring features
     for fgen_name, fgen_config in config["feature_generators"].items():
@@ -82,7 +83,6 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         fgen.add_features(psm_list)
         logger.debug(f"Adding features from {fgen_name}: {set(fgen.feature_names)}")
         feature_names[fgen_name] = set(fgen.feature_names)
-    exit()
 
     # Filter out psms that do not have all added features
     all_feature_names = {f for fgen in feature_names.values() for f in fgen}
