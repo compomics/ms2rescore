@@ -4,7 +4,6 @@ MS2-based feature generator.
 """
 
 import logging
-import multiprocessing
 import re
 from typing import List, Optional, Union
 from itertools import chain
@@ -15,7 +14,6 @@ import numpy as np
 from psm_utils import PSMList
 from pyteomics import mass, mzml, mgf
 from rustyms import RawSpectrum, LinearPeptide, FragmentationModel, MassMode
-from rich.progress import track
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
 from ms2rescore.utils import infer_spectrum_path
@@ -62,6 +60,7 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
 
         """
         super().__init__(*args, **kwargs)
+
         self.spectrum_path = spectrum_path
         self.spectrum_id_pattern = spectrum_id_pattern
         self.fragmentation_model = FRAGMENTATION_MODELS[fragmentation_model.lower()]
@@ -100,7 +99,6 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
                 )
                 psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
                 spectrum_filename = infer_spectrum_path(self.spectrum_path, run)
-                logger.debug(f"Using spectrum file `{spectrum_filename}`")
 
                 self._calculate_features(psm_list_run, spectrum_filename)
                 current_run += 1
@@ -175,6 +173,9 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
 
     def _calculate_spectrum_features(self, psm, annotated_spectrum):
 
+        if not annotated_spectrum:
+            return {}
+
         features = defaultdict(list)
         b_ions_matched = [False] * (len(psm.peptidoform.sequence))
         y_ions_matched = [False] * (len(psm.peptidoform.sequence))
@@ -241,12 +242,14 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
             mz_array=pyteomics_spectrum["m/z array"],
             intensity_array=pyteomics_spectrum["intensity array"],
         )
-
-        annotated_spectrum = spectrum.annotate(
-            peptide=LinearPeptide(psm.peptidoform.proforma),
-            model=self.fragmentation_model,
-            mode=self.mass_mode,
-        )
+        try:
+            annotated_spectrum = spectrum.annotate(
+                peptide=LinearPeptide(psm.peptidoform.proforma.split("/")[0]),
+                model=self.fragmentation_model,
+                mode=self.mass_mode,
+            )
+        except:  # noqa E722
+            return []
 
         return annotated_spectrum.spectrum
 
