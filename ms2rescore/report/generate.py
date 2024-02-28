@@ -318,16 +318,12 @@ def _get_features_context(
         import deeplc.plot
 
         scatter_chart = deeplc.plot.scatter(
-            df=features[
-                (psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)
-            ],  # noqa: E712
+            df=features[(~psm_list["is_decoy"]) & (psm_list["qvalue"] <= 0.01)],
             predicted_column="predicted_retention_time_best",
             observed_column="observed_retention_time_best",
         )
         baseline_chart = deeplc.plot.distribution_baseline(
-            df=features[
-                (psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)
-            ],  # noqa: E712
+            df=features[(~psm_list["is_decoy"]) & (psm_list["qvalue"] <= 0.01)],
             predicted_column="predicted_retention_time_best",
             observed_column="observed_retention_time_best",
         )
@@ -345,9 +341,7 @@ def _get_features_context(
         import deeplc.plot
 
         scatter_chart = deeplc.plot.scatter(
-            df=features[
-                (psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)
-            ],  # noqa: E712
+            df=features[(~psm_list["is_decoy"]) & (psm_list["qvalue"] <= 0.01)],
             predicted_column="ccs_predicted_im2deep",
             observed_column="ccs_observed_im2deep",
             xaxis_label="Observed CCS",
