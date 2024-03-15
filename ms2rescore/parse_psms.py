@@ -60,7 +60,7 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
 
     if config["psm_id_pattern"]:
         pattern = re.compile(config["psm_id_pattern"])
-        logger.debug(f"Applying `psm_id_pattern`...")
+        logger.debug("Applying `psm_id_pattern`...")
         logger.debug(
             f"Parsing `{psm_list['spectrum_id'][0]}` to `{_match_psm_ids(psm_list['spectrum_id'][0], pattern)}`"
         )
@@ -81,7 +81,9 @@ def _read_psms(config, psm_list):
         logger.info("Reading PSMs from file...")
         current_file = 1
         total_files = len(config["psm_file"])
-        psm_list_list = []
+        valid_psms_list = []
+        total_psms = 0
+        valid_psms = 0
         for psm_file in config["psm_file"]:
             logger.info(
                 f"Reading PSMs from PSM file ({current_file}/{total_files}): `{psm_file}`..."
@@ -101,10 +103,17 @@ def _read_psms(config, psm_list):
                     " for more information."
                 )
 
-            psm_list_list.append(id_file_psm_list)
+            total_psms += len(id_file_psm_list.psm_list)
+            for psm in id_file_psm_list.psm_list:
+                if not _has_invalid_aminoacids(psm):
+                    valid_psms_list.append(psm)
+                    valid_psms += 1
             current_file += 1
-
-        return PSMList(psm_list=list(chain.from_iterable(p.psm_list for p in psm_list_list)))
+        if total_psms - valid_psms > 0:
+            logger.warning(
+                f"{total_psms - valid_psms} PSMs with invalid amino acids were removed."
+            )
+        return PSMList(psm_list=valid_psms_list)
 
 
 def _find_decoys(config, psm_list):
@@ -144,3 +153,9 @@ def _match_psm_ids(old_id, regex_pattern):
             f"`psm_id_pattern` could not be extracted from PSM spectrum IDs (i.e. {old_id})."
             " Ensure that the regex contains a capturing group?"
         )
+
+
+def _has_invalid_aminoacids(psm):
+    """Check if a PSM contains invalid amino acids."""
+
+    return any(aa not in "ACDEFGHIKLMNPQRSTVWY" for aa in psm.peptidoform.sequence)
