@@ -36,7 +36,7 @@ dependencies = [
     "numpy==1.24.3; python_version == '3.11'",  # Incompatibility with sklearn, pygam, and TF...
     "pandas>=1.0",
     "rich>=12",
-    "pyteomics>=4.1.0",
+    "pyteomics>=4.1.0,<4.7.0",
     "lxml>=4.5",
     "ms2pip>=4.0.0-dev4",
     "click>=7",
