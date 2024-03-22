@@ -360,15 +360,20 @@ class FeatureGeneratorConfig(ctk.CTkFrame):
         self.deeplc_config = DeepLCConfiguration(self)
         self.deeplc_config.grid(row=2, column=0, pady=(0, 20), sticky="nsew")
 
+        self.im2deep_config = Im2DeepConfiguration(self)
+        self.im2deep_config.grid(row=3, column=0, pady=(0, 20), sticky="nsew")
+
         self.ionmob_config = IonmobConfiguration(self)
-        self.ionmob_config.grid(row=3, column=0, pady=(0, 20), sticky="nsew")
+        self.ionmob_config.grid(row=4, column=0, pady=(0, 20), sticky="nsew")
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
         basic_enabled, basic_config = self.basic_config.get()
         ms2pip_enabled, ms2pip_config = self.ms2pip_config.get()
         deeplc_enabled, deeplc_config = self.deeplc_config.get()
+        im2deep_enabled, im2deep_config = self.im2deep_config.get()
         ionmob_enabled, ionmob_config = self.ionmob_config.get()
+
         config = {}
         if basic_enabled:
             config["basic"] = basic_config
@@ -520,6 +525,27 @@ class IonmobConfiguration(ctk.CTkFrame):
         """Return the configuration as a dictionary."""
         enabled = self.enabled.get()
         config = {"ionmob_model": self.model.get()}
+        return enabled, config
+
+
+class Im2DeepConfiguration(ctk.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        """IM2Deep configuration frame."""
+        super().__init__(*args, **kwargs)
+
+        self.configure(fg_color="transparent")
+        self.grid_columnconfigure(0, weight=1)
+
+        self.title = widgets.Heading(self, text="im2deep")
+        self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
+
+        self.enabled = widgets.LabeledSwitch(self, label="Enable im2deep", default=False)
+        self.enabled.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
+
+    def get(self) -> Dict:
+        """Return the configuration as a dictionary."""
+        enabled = self.enabled.get()
+        config = {}
         return enabled, config
 
 
