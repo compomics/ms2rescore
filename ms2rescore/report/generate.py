@@ -145,11 +145,9 @@ def _collect_files(output_path_prefix, use_txt_log=False):
         "configuration": Path(output_path_prefix + ".full-config.json").resolve(),
         "feature names": Path(output_path_prefix + ".feature_names.tsv").resolve(),
         "feature weights": Path(output_path_prefix + ".mokapot.weights.tsv").resolve(),
-        "log": (
-            Path(output_path_prefix + ".log.txt").resolve()
-            if use_txt_log
-            else Path(output_path_prefix + ".log.html").resolve()
-        ),
+        "log": Path(output_path_prefix + ".log.txt").resolve()
+        if use_txt_log
+        else Path(output_path_prefix + ".log.html").resolve(),
     }
     for file, path in files.items():
         if Path(path).is_file():
@@ -318,12 +316,16 @@ def _get_features_context(
         import deeplc.plot
 
         scatter_chart = deeplc.plot.scatter(
-            df=features[(~psm_list["is_decoy"]) & (psm_list["qvalue"] <= 0.01)],
+            df=features[
+                (psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)
+            ],  # noqa: E712
             predicted_column="predicted_retention_time_best",
             observed_column="observed_retention_time_best",
         )
         baseline_chart = deeplc.plot.distribution_baseline(
-            df=features[(~psm_list["is_decoy"]) & (psm_list["qvalue"] <= 0.01)],
+            df=features[
+                (psm_list["is_decoy"] == False) & (psm_list["qvalue"] <= 0.01)
+            ],  # noqa: E712
             predicted_column="predicted_retention_time_best",
             observed_column="observed_retention_time_best",
         )
@@ -336,26 +338,6 @@ def _get_features_context(
             }
         )
 
-    # IM2Deep specific charts
-    if "im2deep" in feature_names:
-        import deeplc.plot
-
-        scatter_chart = deeplc.plot.scatter(
-            df=features[(~psm_list["is_decoy"]) & (psm_list["qvalue"] <= 0.01)],
-            predicted_column="ccs_predicted_im2deep",
-            observed_column="ccs_observed_im2deep",
-            xaxis_label="Observed CCS",
-            yaxis_label="Predicted CCS",
-            plot_title="Predicted vs. observed CCS",
-        )
-
-        context["charts"].append(
-            {
-                "title": TEXTS["charts"]["im2deep_performance"]["title"],
-                "description": TEXTS["charts"]["im2deep_performance"]["description"],
-                "chart": scatter_chart.to_html(**PLOTLY_HTML_KWARGS),
-            }
-        )
     return context
 
 
