@@ -86,7 +86,9 @@ def _read_psms(config, psm_list):
         logger.info("Reading PSMs from file...")
         current_file = 1
         total_files = len(config["psm_file"])
-        psm_list_list = []
+        valid_psms_list = []
+        total_psms = 0
+        valid_psms = 0
         for psm_file in config["psm_file"]:
             logger.info(
                 f"Reading PSMs from PSM file ({current_file}/{total_files}): `{psm_file}`..."
@@ -106,10 +108,17 @@ def _read_psms(config, psm_list):
                     " for more information."
                 )
 
-            psm_list_list.append(id_file_psm_list)
+            total_psms += len(id_file_psm_list.psm_list)
+            for psm in id_file_psm_list.psm_list:
+                if not _has_invalid_aminoacids(psm):
+                    valid_psms_list.append(psm)
+                    valid_psms += 1
             current_file += 1
-
-        return PSMList(psm_list=list(chain.from_iterable(p.psm_list for p in psm_list_list)))
+        if total_psms - valid_psms > 0:
+            logger.warning(
+                f"{total_psms - valid_psms} PSMs with invalid amino acids were removed."
+            )
+        return PSMList(psm_list=valid_psms_list)
 
 
 def _find_decoys(config, psm_list):
@@ -189,3 +198,9 @@ def _parse_values_spectrum_id(config, psm_list):
                 "Please make sure the ion mobility key is present in the spectrum_id "
                 "and the value is in a capturing group or disable the relevant feature generator."
             )
+
+
+def _has_invalid_aminoacids(psm):
+    """Check if a PSM contains invalid amino acids."""
+
+    return any(aa not in "ACDEFGHIKLMNPQRSTVWY" for aa in psm.peptidoform.sequence)

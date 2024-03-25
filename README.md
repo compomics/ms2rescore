@@ -10,10 +10,10 @@
 
 Modular and user-friendly platform for AI-assisted rescoring of peptide identifications
 
-> ⚠️ Note: This is the documentation for the fully redeveloped version 3.0 of MS²Rescore, which is
-> now in the beta stage. While MS²Rescore 3.0 has been drastically improved over the previous
-> version, you might run into some unforeseen issues. Please report any issues you encounter on the
-> [issue tracker][issues] or post your questions on the [GitHub Discussions][discussions] forum.
+> ⚠️ Note: This is the documentation for the fully redeveloped version 3.0 of MS²Rescore. While
+> MS²Rescore 3.0 has been drastically improved over the previous version, you might run into some
+> unforeseen issues. Please report any issues you encounter on the [issue tracker][issues] or post
+> your questions on the [GitHub Discussions][discussions] forum.
 
 ## About MS²Rescore
 
@@ -25,6 +25,8 @@ identifications, which allows you to get **more peptide IDs** at the same false 
 number of peptide IDs. MS²Rescore is **ideal for challenging proteomics identification workflows**,
 such as proteogenomics, metaproteomics, or immunopeptidomics.
 
+![MS²Rescore overview](https://raw.githubusercontent.com/compomics/ms2rescore/main/docs/source/_static/img/ms2rescore-overview.png)
+
 MS²Rescore can read peptide identifications in any format supported by [psm_utils][psm_utils]
 (see [Supported file formats][file-formats]) and has been tested with various search engines output
 files:
@@ -32,6 +34,7 @@ files:
 - [MS Amanda](http://ms.imp.ac.at/?goto=msamanda) `.csv`
 - [Sage](https://github.com/lazear/sage) `.sage.tsv`
 - [PeptideShaker](https://compomics.github.io/projects/peptide-shaker.html) `.mzid`
+- [ProteomeDiscoverer](#)`.msf`
 - [MSGFPlus](https://omics.pnl.gov/software/ms-gf) `.mzid`
 - [Mascot](https://www.matrixscience.com/) `.mzid`
 - [MaxQuant](https://www.maxquant.org/) `msms.txt`
@@ -44,6 +47,12 @@ MS²Rescore is available as a [desktop application][desktop], a [command line to
 ## Citing
 
 **Latest MS²Rescore publication:**
+
+> **MS²Rescore 3.0 is a modular, flexible, and user-friendly platform to boost peptide identifications, as showcased with MS Amanda 3.0.**
+> Louise Marie Buur*, Arthur Declercq*, Marina Strobl, Robbin Bouwmeester, Sven Degroeve, Lennart Martens, Viktoria Dorfer*, and Ralf Gabriels*.
+> _Journal of Proteome Research_ (2024) [doi:10.1021/acs.jproteome.3c00785](https://doi.org/10.1021/acs.jproteome.3c00785) <br/> \*contributed equally <span class="__dimensions_badge_embed__" data-doi="10.1021/acs.jproteome.3c00785" data-hide-zero-citations="true" data-style="small_rectangle"></span>
+
+**MS²Rescore for immunopeptidomics:**
 
 > **MS2Rescore: Data-driven rescoring dramatically boosts immunopeptide identification rates.**
 > Arthur Declercq, Robbin Bouwmeester, Aurélie Hirschler, Christine Carapito, Sven Degroeve, Lennart Martens, and Ralf Gabriels.

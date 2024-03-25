@@ -52,12 +52,13 @@ def rescore(
     Aside from updating the PSM ``score``, ``qvalue``, and ``pep`` values, the following output
     files are written:
 
-        - Target PSMs: ``{output_file_root}_target_psms.pout``
-        - Decoy PSMs: ``{output_file_root}_decoy_psms.pout``
-        - Target Peptides: ``{output_file_root}_target_peptides.pout``
-        - Decoy Peptides: ``{output_file_root}_decoy_peptides.pout``
-        - Target Proteins: ``{output_file_root}_target_proteins.pout``
-        - Decoy Proteins: ``{output_file_root}_decoy_proteins.pout``
+        - Target PSMs: ``{output_file_root}.percolator.psms.pout``
+        - Target peptides: ``{output_file_root}.percolator.peptides.pout``
+        - Target proteins: ``{output_file_root}.percolator.proteins.pout``
+        - Decoy PSMs: ``{output_file_root}.percolator.decoy.psms.pout``
+        - Decoy peptides: ``{output_file_root}.percolator.decoy.peptides.pout``
+        - Decoy proteins: ``{output_file_root}.percolator.decoy.proteins.pout``
+        - Feature weights: ``{output_file_root}.percolator.weights.tsv``
 
     Percolator is run through its command line interface. Percolator must be installed separately
     and the ``percolator`` command must be available in the PATH for this module to work.
@@ -79,13 +80,13 @@ def rescore(
 
     """
     percolator_kwargs = {
-        "results-psms": output_file_root + "_target_psms.pout",
-        "decoy-results-psms": output_file_root + "_decoy_psms.pout",
-        "results-peptides": output_file_root + "_target_peptides.pout",
-        "decoy-results-peptides": output_file_root + "_decoy_peptides.pout",
-        "results-proteins": output_file_root + "_target_proteins.pout",
-        "decoy-results-proteins": output_file_root + "_decoy_proteins.pout",
-        "weights": output_file_root + ".weights",
+        "results-psms": output_file_root + ".percolator.psms.pout",
+        "decoy-results-psms": output_file_root + ".percolator.decoy.psms.pout",
+        "results-peptides": output_file_root + ".percolator.peptides.pout",
+        "decoy-results-peptides": output_file_root + ".percolator.decoy.peptides.pout",
+        "results-proteins": output_file_root + ".percolator.proteins.pout",
+        "decoy-results-proteins": output_file_root + ".percolator.decoy.proteins.pout",
+        "weights": output_file_root + ".percolator.weights.tsv",
         "verbose": LOG_LEVEL_MAP[log_level],
         "num-threads": processes,
         "post-processing-tdc": True,
@@ -110,9 +111,20 @@ def rescore(
     logger.debug(f"Running percolator command {' '.join(percolator_cmd)}")
     try:
         output = subprocess.run(percolator_cmd, capture_output=True)
-    except subprocess.CalledProcessError:
+    except FileNotFoundError as e:
+        if subprocess.getstatusoutput("percolator")[0] != 0:
+            raise MS2RescoreError(
+                "Could not run Percolator. Please ensure that the program is installed and "
+                "available in your PATH. See "
+                "https://ms2rescore.readthedocs.io/en/latest/installation/#installing-percolator "
+                "for more information."
+            ) from e
+        else:
+            logger.warn(f"Running Percolator resulted in an error:\n{output.stdout}")
+            raise MS2RescoreError("Percolator error") from e
+    except subprocess.CalledProcessError as e:
         logger.warn(f"Running Percolator resulted in an error:\n{output.stdout}")
-        raise MS2RescoreError("Percolator error")
+        raise MS2RescoreError("Percolator error") from e
 
     logger.info(
         "Percolator output: \n" + _decode_string(output.stderr), extra={"highlighter": None}
@@ -191,12 +203,3 @@ def _decode_string(encoded_string):
             pass
     else:
         raise MS2RescoreError("Could not infer encoding of Percolator logs.")
-
-
-def _validate_cli_dependency(command):
-    """Validate that command returns zero exit status."""
-    if subprocess.getstatusoutput(command)[0] != 0:
-        raise MS2RescoreError(
-            f"Could not run command '{command}'. Please ensure that the program is installed and "
-            "available in your PATH."
-        )

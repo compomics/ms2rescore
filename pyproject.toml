@@ -32,8 +32,7 @@ classifiers = [
 dynamic = ["version"]
 requires-python = ">=3.8"
 dependencies = [
-    "numpy>=1.16.0; python_version != '3.11'",
-    "numpy==1.24.3; python_version == '3.11'", # Incompatibility with sklearn, pygam, and TF...
+    "numpy==1.24.3; python_version == '3.11'",  # Incompatibility with sklearn, pygam, and TF...
     "pandas>=1.0",
     "rich>=12",
     "pyteomics>=4.1.0, <4.7",
@@ -41,8 +40,8 @@ dependencies = [
     "ms2pip>=4.0.0-dev5",
     "click>=7",
     "cascade-config>=0.4.0",
-    "deeplc>=2.2.32",
-    "deeplcretrainer>=0.1.17",
+    "deeplc>=2.2",
+    "deeplcretrainer>=0.2",
     "tomli>=2; python_version < '3.11'",
     "psm_utils>=0.4",
     "customtkinter>=5,<6",
