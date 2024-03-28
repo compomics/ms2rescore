@@ -36,7 +36,7 @@ def infer_spectrum_path(
             )
 
     # If passed path is directory, join with run name
-    elif os.path.isdir(configured_path):
+    elif os.path.isdir(configured_path) and not configured_path.endswith(".d"):
         if run_name:
             resolved_path = os.path.join(configured_path, run_name)
         else:
@@ -46,7 +46,9 @@ def infer_spectrum_path(
             )
 
     # If passed path is file, use that, but warn if basename doesn't match expected
-    elif os.path.isfile(configured_path):
+    elif os.path.isfile(configured_path) or (
+        os.path.isdir(configured_path) and configured_path.endswith(".d")
+    ):
         if run_name and Path(configured_path).stem != Path(run_name).stem:
             logger.warning(
                 "Passed spectrum path (`%s`) does not match run name found in PSM "
@@ -63,15 +65,15 @@ def infer_spectrum_path(
         )
 
     # Match with file extension if not in resolved_path yet
-    if not re.match(".mgf$|.mzml$", resolved_path, flags=re.IGNORECASE):
+    if not re.match(r"\.mgf$|\.mzml$|\.d$", resolved_path, flags=re.IGNORECASE):
         for filename in glob(resolved_path + "*"):
-            if re.match(r".*(\.mgf$|\.mzml$)", filename, flags=re.IGNORECASE):
+            if re.match(r".*(\.mgf$|\.mzml$|\.d)", filename, flags=re.IGNORECASE):
                 resolved_path = filename
                 break
         else:
             raise MS2RescoreConfigurationError(
                 "Resolved spectrum filename does not contain a supported file "
-                "extension (mgf or mzml) and could not find any matching existing "
+                "extension (mzML, MGF, or .d) and could not find any matching existing "
                 "files."
             )
 
