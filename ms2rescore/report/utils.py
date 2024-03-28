@@ -80,10 +80,7 @@ def get_confidence_estimates(
 
         try:
             confidence[when] = lin_psm_dataset.assign_confidence()
-        except RuntimeError as e:
-            raise ReportGenerationError(
-                f"Error while assigning confidence estimates to PSMs ({when} rescoring). "
-                "Could not generate report."
-            ) from e
+        except RuntimeError:
+            confidence[when] = None
 
     return confidence["before"], confidence["after"]

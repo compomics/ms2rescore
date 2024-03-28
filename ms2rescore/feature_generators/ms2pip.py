@@ -53,6 +53,7 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
         ms2_tolerance: float = 0.02,
         spectrum_path: Optional[str] = None,
         spectrum_id_pattern: str = "(.*)",
+        model_dir: Optional[str] = None,
         processes: 1,
         **kwargs,
     ) -> None:
@@ -71,6 +72,8 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
         spectrum_id_pattern : str, optional
             Regular expression pattern to extract spectrum ID from spectrum file. Defaults to
             :py:const:`.*`.
+        model_dir
+            Directory containing MS²PIP models. Defaults to :py:const:`None` (use MS²PIP default).
         processes : int, optional
             Number of processes to use. Defaults to 1.
 
@@ -85,6 +88,7 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
         self.ms2_tolerance = ms2_tolerance
         self.spectrum_path = spectrum_path
         self.spectrum_id_pattern = spectrum_id_pattern
+        self.model_dir = model_dir
         self.processes = processes
 
     @property
@@ -194,6 +198,7 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
                         model=self.model,
                         ms2_tolerance=self.ms2_tolerance,
                         compute_correlations=False,
+                        model_dir=self.model_dir,
                         processes=self.processes,
                     )
                 except NoMatchingSpectraFound as e:

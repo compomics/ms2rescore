@@ -157,7 +157,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
                 output_file_root, psm_list=psm_list, feature_names=feature_names, use_txt_log=True
             )
         except exceptions.ReportGenerationError as e:
-            logger.error(e)
+            logger.exception(e)
 
 
 def _write_feature_names(feature_names, output_file_root):
