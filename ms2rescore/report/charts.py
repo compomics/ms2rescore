@@ -349,7 +349,7 @@ def identification_overlap(
 
     """
     levels = before.levels  # ["psms", "peptides", "proteins"] if all available
-    indexers = ["index", "index", "mokapot protein group"]
+    indexers = ["index", "peptide", "mokapot protein group"]
 
     overlap_data = defaultdict(dict)
     for level, indexer in zip(levels, indexers):
