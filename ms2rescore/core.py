@@ -63,7 +63,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     im_required = "ionmob" in config["feature_generators"] and None in psm_list["ion_mobility"]
     if rt_required or im_required:
         logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
-        get_missing_values(config, psm_list, missing_rt=rt_required, missing_im=im_required)
+        get_missing_values(psm_list, config, rt_required=rt_required, im_required=im_required)
 
     # Add rescoring features
     for fgen_name, fgen_config in config["feature_generators"].items():
