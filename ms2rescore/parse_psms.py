@@ -1,6 +1,5 @@
 import logging
 import re
-from itertools import chain
 from typing import Dict, Union
 
 import psm_utils.io
@@ -60,9 +59,9 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
 
     if config["psm_id_pattern"]:
         pattern = re.compile(config["psm_id_pattern"])
-        logger.debug("Applying `psm_id_pattern`...")
+        logger.debug("Applying 'psm_id_pattern'...")
         logger.debug(
-            f"Parsing `{psm_list['spectrum_id'][0]}` to `{_match_psm_ids(psm_list['spectrum_id'][0], pattern)}`"
+            f"Parsing '{psm_list[0].spectrum_id}' to '{_match_psm_ids(psm_list[0].spectrum_id, pattern)}'"
         )
         new_ids = [_match_psm_ids(old_id, pattern) for old_id in psm_list["spectrum_id"]]
         psm_list["spectrum_id"] = new_ids
@@ -86,7 +85,7 @@ def _read_psms(config, psm_list):
         valid_psms = 0
         for psm_file in config["psm_file"]:
             logger.info(
-                f"Reading PSMs from PSM file ({current_file}/{total_files}): `{psm_file}`..."
+                f"Reading PSMs from PSM file ({current_file}/{total_files}): '{psm_file}'..."
             )
             try:
                 id_file_psm_list = psm_utils.io.read_file(
@@ -97,8 +96,8 @@ def _read_psms(config, psm_list):
                 )
             except psm_utils.io.PSMUtilsIOException:
                 raise MS2RescoreConfigurationError(
-                    "Error occurred while reading PSMs. Please check the `psm_file` and "
-                    "`psm_file_type` settings. See "
+                    "Error occurred while reading PSMs. Please check the 'psm_file' and "
+                    "'psm_file_type' settings. See "
                     "https://ms2rescore.readthedocs.io/en/latest/userguide/input-files/"
                     " for more information."
                 )
@@ -129,7 +128,7 @@ def _find_decoys(config, psm_list):
     if not any(psm_list["is_decoy"]):
         raise MS2RescoreConfigurationError(
             "No decoy PSMs found. Please check if decoys are present in the PSM file and that "
-            "the `id_decoy_pattern` option is correct. See "
+            "the 'id_decoy_pattern' option is correct. See "
             "https://ms2rescore.readthedocs.io/en/latest/userguide/configuration/#selecting-decoy-psms"
             " for more information."
         )
@@ -150,7 +149,7 @@ def _match_psm_ids(old_id, regex_pattern):
         return match[1]
     except (TypeError, IndexError):
         raise MS2RescoreConfigurationError(
-            f"`psm_id_pattern` could not be extracted from PSM spectrum IDs (i.e. {old_id})."
+            f"'psm_id_pattern' could not be extracted from PSM spectrum IDs (i.e. {old_id})."
             " Ensure that the regex contains a capturing group?"
         )
 

@@ -18,13 +18,12 @@ def get_missing_values(
     psm_list: PSMList, config: dict, rt_required: bool = False, im_required: bool = False
 ):
     """Get missing RT/IM features from spectrum file."""
-    logger.debug("Extracting missing RT/IM values from spectrum file(s).")
-
     psm_dict = psm_list.get_psm_dict()
     for runs in psm_dict.values():
-        for run, psms in track(runs.items(), description="Extracting RT/IM values..."):
+        for run, psms in runs.items():
             psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
             spectrum_file = infer_spectrum_path(config["spectrum_path"], run)
+            logger.debug("Reading spectrum file: '%s'", spectrum_file)
             precursors = get_precursor_info(str(spectrum_file))
 
             if config["spectrum_id_pattern"]:
