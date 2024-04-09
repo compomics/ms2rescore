@@ -35,34 +35,35 @@ def infer_spectrum_path(
                 "and no run name in PSM file found."
             )
 
-    is_bruker_dir = configured_path.endswith(".d") or _is_minitdf(configured_path)
+    else:
+        is_bruker_dir = configured_path.endswith(".d") or _is_minitdf(configured_path)
 
-    # If passed path is directory (that is not Bruker raw), join with run name
-    if os.path.isdir(configured_path) and not is_bruker_dir:
-        if run_name:
-            resolved_path = os.path.join(configured_path, run_name)
+        # If passed path is directory (that is not Bruker raw), join with run name
+        if os.path.isdir(configured_path) and not is_bruker_dir:
+            if run_name:
+                resolved_path = os.path.join(configured_path, run_name)
+            else:
+                raise MS2RescoreConfigurationError(
+                    "Could not resolve spectrum file name: Spectrum path is directory "
+                    "but no run name in PSM file found."
+                )
+
+        # If passed path is file, use that, but warn if basename doesn't match expected
+        elif os.path.isfile(configured_path) or (os.path.isdir(configured_path) and is_bruker_dir):
+            if run_name and Path(configured_path).stem != Path(run_name).stem:
+                logger.warning(
+                    "Passed spectrum path (`%s`) does not match run name found in PSM "
+                    "file (`%s`). Continuing with passed spectrum path.",
+                    configured_path,
+                    run_name,
+                )
+            resolved_path = configured_path
         else:
             raise MS2RescoreConfigurationError(
-                "Could not resolve spectrum file name: Spectrum path is directory "
-                "but no run name in PSM file found."
+                "Configured `spectrum_path` must be `None` or a path to an existing file "
+                "or directory. If `None` or path to directory, spectrum run information "
+                "should be present in the PSM file."
             )
-
-    # If passed path is file, use that, but warn if basename doesn't match expected
-    elif os.path.isfile(configured_path) or (os.path.isdir(configured_path) and is_bruker_dir):
-        if run_name and Path(configured_path).stem != Path(run_name).stem:
-            logger.warning(
-                "Passed spectrum path (`%s`) does not match run name found in PSM "
-                "file (`%s`). Continuing with passed spectrum path.",
-                configured_path,
-                run_name,
-            )
-        resolved_path = configured_path
-    else:
-        raise MS2RescoreConfigurationError(
-            "Configured `spectrum_path` must be `None` or a path to an existing file "
-            "or directory. If `None` or path to directory, spectrum run information "
-            "should be present in the PSM file."
-        )
 
     # Match with file extension if not in resolved_path yet
     if not _is_minitdf(resolved_path) and not re.match(
@@ -74,8 +75,8 @@ def infer_spectrum_path(
                 break
         else:
             raise MS2RescoreConfigurationError(
-                "Resolved spectrum filename does not contain a supported file "
-                "extension (mzML, MGF, or .d) and could not find any matching existing "
+                f"Resolved spectrum filename ('{resolved_path}') does not contain a supported "
+                "file extension (mzML, MGF, or .d) and could not find any matching existing "
                 "files."
             )
 
