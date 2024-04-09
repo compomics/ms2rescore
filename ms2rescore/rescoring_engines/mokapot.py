@@ -31,6 +31,7 @@ from mokapot.dataset import LinearPsmDataset
 from pyteomics.mass import nist_mass
 
 logger = logging.getLogger(__name__)
+logging.getLogger("numba").setLevel(logging.WARNING)
 
 
 def rescore(
