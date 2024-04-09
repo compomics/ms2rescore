@@ -1,0 +1,25 @@
+{
+    "$schema": "./config_schema.json",
+    "ms2rescore": {
+        "feature_generators": {
+            "basic": {},
+            "ms2pip": {
+                "model": "timsTOF",
+                "ms2_tolerance": 0.02
+            },
+            "deeplc": {
+                "deeplc_retrain": false
+            },
+            "im2deep": {},
+            "maxquant": {}
+        },
+        "rescoring_engine": {
+            "mokapot": {
+                "write_weights": true,
+                "write_txt": true,
+                "write_flashlfq": true
+            }
+        },
+        "psm_file": null
+    }
+}
