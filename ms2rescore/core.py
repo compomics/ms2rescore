@@ -62,9 +62,9 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     rt_required = ("deeplc" in config["feature_generators"]) and (
         None in psm_list["retention_time"]
     )
-    im_required = ("ionmob" or "im2deep" in config["feature_generators"]) and (
-        None in psm_list["ion_mobility"]
-    )
+    im_required = (
+        "ionmob" in config["feature_generators"] or "im2deep" in config["feature_generators"]
+    ) and (None in psm_list["ion_mobility"])
     logger.debug(f"RT required: {rt_required}, IM required: {im_required}")
 
     if rt_required or im_required:
