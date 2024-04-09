@@ -22,7 +22,6 @@ import subprocess
 from typing import Any, Dict, Optional
 from copy import deepcopy
 
-import numpy as np
 import psm_utils
 
 from ms2rescore.exceptions import MS2RescoreError
