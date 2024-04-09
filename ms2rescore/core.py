@@ -6,12 +6,12 @@ from typing import Dict, Optional
 import psm_utils.io
 from psm_utils import PSMList
 
+from ms2rescore import exceptions
 from ms2rescore.feature_generators import FEATURE_GENERATORS
 from ms2rescore.parse_psms import parse_psms
 from ms2rescore.parse_spectra import get_missing_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
-from ms2rescore import exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +62,9 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     rt_required = ("deeplc" in config["feature_generators"]) and (
         None in psm_list["retention_time"]
     )
-    im_required = ("ionmob" or "im2deep" in config["feature_generators"]) and (
-        None in psm_list["ion_mobility"]
-    )
+    im_required = (
+        "ionmob" in config["feature_generators"] or "im2deep" in config["feature_generators"]
+    ) and (None in psm_list["ion_mobility"])
     logger.debug(f"RT required: {rt_required}, IM required: {im_required}")
 
     if rt_required or im_required:
