@@ -10,7 +10,8 @@
             "deeplc": {
                 "deeplc_retrain": false
             },
-            "im2deep": {}
+            "im2deep": {},
+            "maxquant": {}
         },
         "rescoring_engine": {
             "mokapot": {
