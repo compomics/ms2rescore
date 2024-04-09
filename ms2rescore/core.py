@@ -8,7 +8,7 @@ from psm_utils import PSMList
 
 from ms2rescore.feature_generators import FEATURE_GENERATORS
 from ms2rescore.parse_psms import parse_psms
-from ms2rescore.parse_spectra import fill_missing_values
+from ms2rescore.parse_spectra import get_missing_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
 from ms2rescore import exceptions
@@ -69,7 +69,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
 
     if rt_required or im_required:
         logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
-        fill_missing_values(config, psm_list, missing_rt=rt_required, missing_im=im_required)
+        get_missing_values(psm_list, config, rt_required=rt_required, im_required=im_required)
 
     # Add rescoring features
     for fgen_name, fgen_config in config["feature_generators"].items():
@@ -163,7 +163,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
                 output_file_root, psm_list=psm_list, feature_names=feature_names, use_txt_log=True
             )
         except exceptions.ReportGenerationError as e:
-            logger.error(e)
+            logger.exception(e)
 
 
 def _write_feature_names(feature_names, output_file_root):

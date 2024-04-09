@@ -171,6 +171,10 @@ def convert_psm_list(
     feature_df.columns = [f"feature:{f}" for f in feature_df.columns]
     combined_df = pd.concat([psm_df[required_columns], feature_df], axis=1)
 
+    # Ensure filename for FlashLFQ txt output
+    if not combined_df["run"].notnull().all():
+        combined_df["run"] = "ms_run"
+
     feature_names = [f"feature:{f}" for f in feature_names] if feature_names else None
 
     lin_psm_data = LinearPsmDataset(

@@ -166,6 +166,11 @@ def _get_stats_context(confidence_before, confidence_after):
     levels = ["psms", "peptides", "proteins"]
     level_names = ["PSMs", "Peptides", "Protein groups"]
     card_colors = ["card-bg-blue", "card-bg-green", "card-bg-red"]
+
+    # Cannot report stats if confidence estimates are not present
+    if not confidence_before or not confidence_after:
+        return stats
+
     for level, level_name, card_color in zip(levels, level_names, card_colors):
         try:
             before = confidence_before.accepted[level.lower()]

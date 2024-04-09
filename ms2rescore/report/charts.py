@@ -214,6 +214,14 @@ def score_scatter_plot(
         Column with index for each PSM, peptide, or protein to use for merging data frames.
 
     """
+    if not before or not after:
+        figure = go.Figure()
+        figure.add_annotation(
+            text="No data available for comparison.",
+            showarrow=False,
+        )
+        return figure
+
     # Restructure data
     merge_columns = [indexer, "mokapot score", "mokapot q-value", "mokapot PEP"]
     ce_psms_targets = pd.merge(
@@ -288,6 +296,14 @@ def fdr_plot_comparison(
         Column with index for each PSM, peptide, or protein to use for merging dataframes.
 
     """
+    if not before or not after:
+        figure = go.Figure()
+        figure.add_annotation(
+            text="No data available for comparison.",
+            showarrow=False,
+        )
+        return figure
+
     # Prepare data
     ce_psms_targets_melted = (
         pd.merge(
@@ -336,7 +352,7 @@ def fdr_plot_comparison(
 def identification_overlap(
     before: mokapot.LinearConfidence,
     after: mokapot.LinearConfidence,
-) -> go.Figure():
+) -> go.Figure:
     """
     Plot stacked bar charts of removed, retained, and gained PSMs, peptides, and proteins.
 
@@ -348,6 +364,14 @@ def identification_overlap(
         Mokapot linear confidence results after rescoring.
 
     """
+    if not before or not after:
+        figure = go.Figure()
+        figure.add_annotation(
+            text="No data available for comparison.",
+            showarrow=False,
+        )
+        return figure
+
     levels = before.levels  # ["psms", "peptides", "proteins"] if all available
     indexers = ["index", "peptide", "mokapot protein group"]
 
