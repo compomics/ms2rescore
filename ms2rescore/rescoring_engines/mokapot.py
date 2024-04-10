@@ -90,7 +90,7 @@ def rescore(
 
     # Rescore
     logger.debug(f"Mokapot brew options: `{kwargs}`")
-    confidence_results, models = brew(lin_psm_data, **kwargs)
+    confidence_results, models = brew(lin_psm_data, rng=8, **kwargs)
 
     # Reshape confidence estimates to match PSMList
     mokapot_values_targets = (
