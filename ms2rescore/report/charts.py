@@ -373,7 +373,7 @@ def identification_overlap(
         return figure
 
     levels = before.levels  # ["psms", "peptides", "proteins"] if all available
-    indexers = ["index", "index", "mokapot protein group"]
+    indexers = ["index", "peptide", "mokapot protein group"]
 
     overlap_data = defaultdict(dict)
     for level, indexer in zip(levels, indexers):
@@ -386,7 +386,7 @@ def identification_overlap(
         set_after = set(df_after[df_after["mokapot q-value"] <= 0.01][indexer])
 
         overlap_data["removed"][level] = -len(set_before - set_after)
-        overlap_data["retained"][level] = len(set_before | set_after)
+        overlap_data["retained"][level] = len(set_after.intersection(set_before))
         overlap_data["gained"][level] = len(set_after - set_before)
 
     colors = ["#953331", "#316395", "#319545"]

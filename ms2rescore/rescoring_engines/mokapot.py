@@ -31,6 +31,7 @@ from mokapot.dataset import LinearPsmDataset
 from pyteomics.mass import nist_mass
 
 logger = logging.getLogger(__name__)
+logging.getLogger("numba").setLevel(logging.WARNING)
 
 
 def rescore(
@@ -89,7 +90,7 @@ def rescore(
 
     # Rescore
     logger.debug(f"Mokapot brew options: `{kwargs}`")
-    confidence_results, models = brew(lin_psm_data, **kwargs)
+    confidence_results, models = brew(lin_psm_data, rng=8, **kwargs)
 
     # Reshape confidence estimates to match PSMList
     mokapot_values_targets = (

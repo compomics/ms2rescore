@@ -175,8 +175,8 @@ def _fill_missing_precursor_info(psm_list, config):
         get_missing_values(psm_list, config, rt_required=rt_required, im_required=im_required)
 
     # Check if values are now present
-    for value_name in ["retention_time", "ion_mobility"]:
-        if (
+    for value_name, required in [("retention_time", rt_required), ("ion_mobility", im_required)]:
+        if required and (
             0.0 in psm_list[value_name]
             or None in psm_list[value_name]
             or np.isnan(psm_list[value_name]).any()

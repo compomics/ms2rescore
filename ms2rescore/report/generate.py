@@ -185,7 +185,7 @@ def _get_stats_context(confidence_before, confidence_after):
                 "item": level_name,
                 "card_color": card_color,
                 "number": after,
-                "diff": f"{after - before:+}",
+                "diff": f"({after - before:+})",
                 "percentage": f"{increase:.1f}%",
                 "is_increase": increase > 0,
                 "bar_percentage": before / after * 100 if increase > 0 else after / before * 100,
