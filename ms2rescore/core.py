@@ -175,7 +175,11 @@ def _fill_missing_precursor_info(psm_list, config):
         get_missing_values(psm_list, config, rt_required=rt_required, im_required=im_required)
 
     # Check if values are now present
-    for value_name in ["retention_time", "ion_mobility"]:
+    for value_name, required in zip(
+        ["retention_time", "ion_mobility"], [rt_required, im_required]
+    ):
+        if not required:
+            continue
         if (
             0.0 in psm_list[value_name]
             or None in psm_list[value_name]
