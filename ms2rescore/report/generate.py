@@ -180,12 +180,13 @@ def _get_stats_context(confidence_before, confidence_after):
         if not before or not after:
             continue
         increase = (after - before) / before * 100
+        diff = after - before
         stats.append(
             {
                 "item": level_name,
                 "card_color": card_color,
                 "number": after,
-                "diff": f"{after - before:+}",
+                "diff": f"({diff:+})",
                 "percentage": f"{increase:.1f}%",
                 "is_increase": increase > 0,
                 "bar_percentage": before / after * 100 if increase > 0 else after / before * 100,
