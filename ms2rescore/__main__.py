@@ -7,6 +7,9 @@ import logging
 import sys
 from pathlib import Path
 from typing import Union
+import cProfile
+import pstats
+import io
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -139,6 +142,14 @@ def _argument_parser() -> argparse.ArgumentParser:
         dest="fasta_file",
         help="path to FASTA file",
     )
+    parser.add_argument(
+        "--profile",
+        # metavar="BOOL",
+        action="store_true",
+        # type=bool,
+        # dest="profile",
+        help="boolean to enable profiling with cProfile",
+    )
 
     return parser
 
@@ -159,6 +170,22 @@ def _setup_logging(passed_level: str, log_file: Union[str, Path]):
             RichHandler(rich_tracebacks=True, console=CONSOLE, show_path=False),
         ],
     )
+
+
+def profile(fnc, filepath):
+    """A decorator that uses cProfile to profile a function"""
+
+    def inner(*args, **kwargs):
+        pr = cProfile.Profile()
+        pr.enable()
+        retval = fnc(*args, **kwargs)
+        pr.disable()
+        with open(filepath, "w") as f:
+            ps = pstats.Stats(pr, stream=f).sort_stats("cumulative")
+            ps.print_stats(r"(?<![\w-])ms2rescore(?![\w-])")  # Only print stats for ms2rescore
+        return retval
+
+    return inner
 
 
 def main_tims():
@@ -196,7 +223,13 @@ def main(tims=False):
 
     # Run MS²Rescore
     try:
-        rescore(configuration=config)
+        if cli_args.profile:
+            profiled_rescore = profile(
+                rescore, config["ms2rescore"]["output_path"] + ".profile.txt"
+            )
+            profiled_rescore(configuration=config)
+        else:
+            rescore(configuration=config)
     except Exception as e:
         LOGGER.exception(e)
         sys.exit(1)

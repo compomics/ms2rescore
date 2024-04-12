@@ -157,6 +157,11 @@
                     "description": "Write an HTML report with various QC metrics and charts",
                     "type": "boolean",
                     "default": false
+                },
+                "profile": {
+                    "description": "Write an txt report using cProfile for profiling",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         }
