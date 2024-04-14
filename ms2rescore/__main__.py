@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Union
 import cProfile
 import pstats
-import io
 
 from rich.console import Console
 from rich.logging import RichHandler
