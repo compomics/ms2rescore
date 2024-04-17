@@ -1,14 +1,14 @@
 """MS²Rescore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs."""
 
 import argparse
+import cProfile
 import importlib.resources
 import json
 import logging
+import pstats
 import sys
 from pathlib import Path
 from typing import Union
-import cProfile
-import pstats
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -175,14 +175,10 @@ def profile(fnc, filepath):
     """A decorator that uses cProfile to profile a function"""
 
     def inner(*args, **kwargs):
-        pr = cProfile.Profile()
-        pr.enable()
-        retval = fnc(*args, **kwargs)
-        pr.disable()
-        with open(filepath, "w") as f:
-            ps = pstats.Stats(pr, stream=f).sort_stats("cumulative")
-            ps.print_stats(r"(?<![\w-])ms2rescore(?![\w-])")  # Only print stats for ms2rescore
-        return retval
+        with cProfile.Profile() as profiler:
+            return_value = fnc(*args, **kwargs)
+        profiler.dump_stats(filepath + ".profile.prof")
+        return return_value
 
     return inner
 
@@ -223,9 +219,7 @@ def main(tims=False):
     # Run MS²Rescore
     try:
         if cli_args.profile:
-            profiled_rescore = profile(
-                rescore, config["ms2rescore"]["output_path"] + ".profile.txt"
-            )
+            profiled_rescore = profile(rescore, config["ms2rescore"]["output_path"])
             profiled_rescore(configuration=config)
         else:
             rescore(configuration=config)
