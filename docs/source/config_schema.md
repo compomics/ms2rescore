@@ -44,15 +44,15 @@
     - **One of**
       - *string*
       - *null*
-  - **`psm_id_rt_pattern`**: Regex pattern to extract retention time from psm identifier. Requires at least one capturing group. Default: `null`.
-    - **One of**
-      - *string*
-      - *null*
-  - **`psm_id_im_pattern`**: Regex pattern to extract ion mobility from psm identifier. Requires at least one capturing group. Default: `null`.
-    - **One of**
-      - *string*
-      - *null*
   - **`psm_id_pattern`**: Regex pattern to extract index or scan number from PSM file. Requires at least one capturing group. Default: `"(.*)"`.
+    - **One of**
+      - *string*
+      - *null*
+  - **`psm_id_rt_pattern`**: Regex pattern to extract retention time from PSM identifier. Requires at least one capturing group. Default: `null`.
+    - **One of**
+      - *string*
+      - *null*
+  - **`psm_id_im_pattern`**: Regex pattern to extract ion mobility from PSM identifier. Requires at least one capturing group. Default: `null`.
     - **One of**
       - *string*
       - *null*

@@ -123,7 +123,7 @@ be configured separately. For instance:
   .. code-block:: json
 
     "fixed_modifications": {
-      "C": "U:Carbamidomethyl"
+      "U:Carbamidomethyl": ["C"]
     }
 
 .. tab:: TOML
@@ -131,7 +131,7 @@ be configured separately. For instance:
     .. code-block:: toml
 
       [ms2rescore.fixed_modifications]
-      "Carbamidomethyl" = ["C"]
+      "U:Carbamidomethyl" = ["C"]
 
 .. tab:: GUI
 
@@ -139,6 +139,32 @@ be configured separately. For instance:
     :width: 500px
     :alt: fixed modifications configuration in GUI
 
+
+Fixed terminal modifications can be added by using the special labels ``N-term`` and ``C-term``.
+For example, to additionally add TMT6plex to the N-terminus and lysine residues, the following
+configuration can be used:
+
+.. tab:: JSON
+
+  .. code-block:: json
+
+    "fixed_modifications": {
+      "U:Carbamidomethyl": ["C"],
+      "U:TMT6plex": ["N-term", "K"]
+    }
+
+.. tab:: TOML
+
+    .. code-block:: toml
+
+      [ms2rescore.fixed_modifications]
+      "U:Carbamidomethyl" = ["C"]
+      "U:TMT6plex" = ["N-term", "K"]
+
+
+.. caution::
+  Most search engines DO return fixed modifications as part of the modified peptide sequences.
+  In these cases, they must NOT be added to the ``fixed_modifications`` configuration.
 
 
 Mapping PSMs to spectra

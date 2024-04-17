@@ -3,12 +3,14 @@ import logging
 from multiprocessing import cpu_count
 from typing import Dict, Optional
 
+import numpy as np
 import psm_utils.io
 from psm_utils import PSMList
 
+from ms2rescore import exceptions
 from ms2rescore.feature_generators import FEATURE_GENERATORS
 from ms2rescore.parse_psms import parse_psms
-from ms2rescore.parse_spectra import fill_missing_values
+from ms2rescore.parse_spectra import get_missing_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
 
@@ -27,6 +29,9 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         PSMList object containing PSMs. If None, PSMs will be read from configuration ``psm_file``.
 
     """
+    logger.debug(
+        f"Running MS²Rescore with following configuration: {json.dumps(configuration, indent=4)}"
+    )
     config = configuration["ms2rescore"]
     output_file_root = config["output_path"]
 
@@ -54,19 +59,8 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         f"PSMs already contain the following rescoring features: {psm_list_feature_names}"
     )
 
-    # TODO: avoid hard coding feature generators in some way
-    rt_required = ("deeplc" in config["feature_generators"]) and (
-        None in psm_list["retention_time"]
-    )
-    im_required = (
-        "ionmob" in config["feature_generators"] or "im2deep" in config["feature_generators"]
-    ) and (None in psm_list["ion_mobility"])
-
-    logger.debug(f"RT required: {rt_required}, IM required: {im_required}")
-
-    if rt_required or im_required:
-        logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
-        fill_missing_values(config, psm_list, missing_rt=rt_required, missing_im=im_required)
+    # Add missing precursor info from spectrum file if needed
+    _fill_missing_precursor_info(psm_list, config)
 
     # Add rescoring features
     for fgen_name, fgen_config in config["feature_generators"].items():
@@ -155,9 +149,55 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
 
     # Write report
     if config["write_report"]:
-        generate.generate_report(
-            output_file_root, psm_list=psm_list, feature_names=feature_names, use_txt_log=True
-        )
+        try:
+            generate.generate_report(
+                output_file_root, psm_list=psm_list, feature_names=feature_names, use_txt_log=True
+            )
+        except exceptions.ReportGenerationError as e:
+            logger.exception(e)
+
+
+def _fill_missing_precursor_info(psm_list, config):
+    """Fill missing precursor info from spectrum file if needed."""
+    # Check if required
+    # TODO: avoid hard coding feature generators in some way
+    rt_required = ("deeplc" in config["feature_generators"]) and any(
+        v is None or v == 0 or np.isnan(v) for v in psm_list["retention_time"]
+    )
+    im_required = (
+        "ionmob" in config["feature_generators"] or "im2deep" in config["feature_generators"]
+    ) and any(v is None or v == 0 or np.isnan(v) for v in psm_list["ion_mobility"])
+    logger.debug(f"RT required: {rt_required}, IM required: {im_required}")
+
+    # Add missing values
+    if rt_required or im_required:
+        logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
+        get_missing_values(psm_list, config, rt_required=rt_required, im_required=im_required)
+
+    # Check if values are now present
+    for value_name, required in [("retention_time", rt_required), ("ion_mobility", im_required)]:
+        if required and (
+            0.0 in psm_list[value_name]
+            or None in psm_list[value_name]
+            or np.isnan(psm_list[value_name]).any()
+        ):
+            if all(v is None or v == 0.0 or np.isnan(v) for v in psm_list[value_name]):
+                raise exceptions.MissingValuesError(
+                    f"Could not find any '{value_name}' values in PSM or spectrum files. Disable "
+                    f"feature generators that require '{value_name}' or ensure that the values are "
+                    "present in the input files."
+                )
+            else:
+                missing_value_psms = psm_list[
+                    [v is None or np.isnan(v) for v in psm_list[value_name]]
+                ]
+                logger.warning(
+                    f"Found {len(missing_value_psms)} PSMs with missing '{value_name}' values. "
+                    "These PSMs will be removed."
+                )
+                psm_list = psm_list[
+                    [v is not None and not np.isnan(v) for v in psm_list[value_name]]
+                ]
 
 
 def _write_feature_names(feature_names, output_file_root):

@@ -35,10 +35,10 @@ ms2rescore.feature_generators.deeplc
 
 
 
-ms2rescore.feature_generators.ms2pip
+ms2rescore.feature_generators.ionmob
 ####################################
 
-.. automodule:: ms2rescore.feature_generators.ms2pip
+.. automodule:: ms2rescore.feature_generators.ionmob
    :members:
 
 
@@ -47,4 +47,12 @@ ms2rescore.feature_generators.maxquant
 ######################################
 
 .. automodule:: ms2rescore.feature_generators.maxquant
+   :members:
+
+
+
+ms2rescore.feature_generators.ms2pip
+####################################
+
+.. automodule:: ms2rescore.feature_generators.ms2pip
    :members:

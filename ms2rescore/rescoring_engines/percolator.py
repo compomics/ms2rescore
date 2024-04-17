@@ -20,8 +20,8 @@ If you use Percolator through MS²Rescore, please cite:
 import logging
 import subprocess
 from typing import Any, Dict, Optional
+from copy import deepcopy
 
-import numpy as np
 import psm_utils
 
 from ms2rescore.exceptions import MS2RescoreError
@@ -52,12 +52,13 @@ def rescore(
     Aside from updating the PSM ``score``, ``qvalue``, and ``pep`` values, the following output
     files are written:
 
-        - Target PSMs: ``{output_file_root}_target_psms.pout``
-        - Decoy PSMs: ``{output_file_root}_decoy_psms.pout``
-        - Target Peptides: ``{output_file_root}_target_peptides.pout``
-        - Decoy Peptides: ``{output_file_root}_decoy_peptides.pout``
-        - Target Proteins: ``{output_file_root}_target_proteins.pout``
-        - Decoy Proteins: ``{output_file_root}_decoy_proteins.pout``
+        - Target PSMs: ``{output_file_root}.percolator.psms.pout``
+        - Target peptides: ``{output_file_root}.percolator.peptides.pout``
+        - Target proteins: ``{output_file_root}.percolator.proteins.pout``
+        - Decoy PSMs: ``{output_file_root}.percolator.decoy.psms.pout``
+        - Decoy peptides: ``{output_file_root}.percolator.decoy.peptides.pout``
+        - Decoy proteins: ``{output_file_root}.percolator.decoy.proteins.pout``
+        - Feature weights: ``{output_file_root}.percolator.weights.tsv``
 
     Percolator is run through its command line interface. Percolator must be installed separately
     and the ``percolator`` command must be available in the PATH for this module to work.
@@ -79,13 +80,13 @@ def rescore(
 
     """
     percolator_kwargs = {
-        "results-psms": output_file_root + "_target_psms.pout",
-        "decoy-results-psms": output_file_root + "_decoy_psms.pout",
-        "results-peptides": output_file_root + "_target_peptides.pout",
-        "decoy-results-peptides": output_file_root + "_decoy_peptides.pout",
-        "results-proteins": output_file_root + "_target_proteins.pout",
-        "decoy-results-proteins": output_file_root + "_decoy_proteins.pout",
-        "weights": output_file_root + ".weights",
+        "results-psms": output_file_root + ".percolator.psms.pout",
+        "decoy-results-psms": output_file_root + ".percolator.decoy.psms.pout",
+        "results-peptides": output_file_root + ".percolator.peptides.pout",
+        "decoy-results-peptides": output_file_root + ".percolator.decoy.peptides.pout",
+        "results-proteins": output_file_root + ".percolator.proteins.pout",
+        "decoy-results-proteins": output_file_root + ".percolator.decoy.proteins.pout",
+        "weights": output_file_root + ".percolator.weights.tsv",
         "verbose": LOG_LEVEL_MAP[log_level],
         "num-threads": processes,
         "post-processing-tdc": True,
@@ -102,17 +103,35 @@ def rescore(
     # Need to be able to link back to original PSMs, so reindex spectrum IDs, but copy PSM list
     # to avoid modifying original...
     # TODO: Better approach for this?
-    psm_list_reindexed = psm_list.copy()
-    psm_list_reindexed["spectrum_id"] = np.arange(len(psm_list_reindexed))
+
+    psm_list_reindexed = deepcopy(psm_list)
+    psm_list_reindexed.set_ranks()
+    psm_list_reindexed["spectrum_id"] = [
+        f"{psm.get_usi(as_url=False)}_{psm.rank}" for psm in psm_list_reindexed
+    ]
+    spectrum_id_index = {
+        spectrum_id: index for index, spectrum_id in enumerate(psm_list_reindexed["spectrum_id"])
+    }
 
     _write_pin_file(psm_list_reindexed, pin_filepath)
 
     logger.debug(f"Running percolator command {' '.join(percolator_cmd)}")
     try:
         output = subprocess.run(percolator_cmd, capture_output=True)
-    except subprocess.CalledProcessError:
+    except FileNotFoundError as e:
+        if subprocess.getstatusoutput("percolator")[0] != 0:
+            raise MS2RescoreError(
+                "Could not run Percolator. Please ensure that the program is installed and "
+                "available in your PATH. See "
+                "https://ms2rescore.readthedocs.io/en/latest/installation/#installing-percolator "
+                "for more information."
+            ) from e
+        else:
+            logger.warn(f"Running Percolator resulted in an error:\n{output.stdout}")
+            raise MS2RescoreError("Percolator error") from e
+    except subprocess.CalledProcessError as e:
         logger.warn(f"Running Percolator resulted in an error:\n{output.stdout}")
-        raise MS2RescoreError("Percolator error")
+        raise MS2RescoreError("Percolator error") from e
 
     logger.info(
         "Percolator output: \n" + _decode_string(output.stderr), extra={"highlighter": None}
@@ -122,10 +141,13 @@ def rescore(
         psm_list,
         percolator_kwargs["results-psms"],
         percolator_kwargs["decoy-results-psms"],
+        spectrum_id_index,
     )
 
 
-def _update_psm_scores(psm_list: psm_utils.PSMList, target_pout: str, decoy_pout: str):
+def _update_psm_scores(
+    psm_list: psm_utils.PSMList, target_pout: str, decoy_pout: str, spectrum_id_index: list
+):
     """
     Update PSM scores with Percolator results.
 
@@ -138,7 +160,9 @@ def _update_psm_scores(psm_list: psm_utils.PSMList, target_pout: str, decoy_pout
     psm_list_percolator = psm_utils.PSMList(psm_list=target_psms.psm_list + decoy_psms.psm_list)
 
     # Sort by reindexed spectrum_id so order matches original PSM list
-    psm_list_percolator[np.argsort(psm_list_percolator["spectrum_id"])]
+    psm_list_percolator = sorted(
+        psm_list_percolator, key=lambda psm: spectrum_id_index[psm["spectrum_id"]]
+    )
 
     if not len(psm_list) == len(psm_list_percolator):
         raise MS2RescoreError(
@@ -191,12 +215,3 @@ def _decode_string(encoded_string):
             pass
     else:
         raise MS2RescoreError("Could not infer encoding of Percolator logs.")
-
-
-def _validate_cli_dependency(command):
-    """Validate that command returns zero exit status."""
-    if subprocess.getstatusoutput(command)[0] != 0:
-        raise MS2RescoreError(
-            f"Could not run command '{command}'. Please ensure that the program is installed and "
-            "available in your PATH."
-        )

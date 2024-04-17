@@ -48,7 +48,7 @@ Docker container
     :target: https://quay.io/repository/biocontainers/ms2rescore
 
 First check the latest version tag on
-`biocontainers/ms2rescore/tags <https://quay.io/repository/biocontainers/ms2rescore?tab=tags>`__.
+`biocontainers/ms2rescore/tags <https://quay.io/repository/biocontainers/ms2rescore?tab=tags>`_.
 Then pull and run the container with:
 
 .. code-block:: bash
@@ -59,6 +59,23 @@ where ``<working-directory>`` is the absolute path to the directory with your MS
 files, ``<tag>`` is the container version tag, and ``<ms2rescore-arguments>`` are the ms2rescore
 command line options (see :ref:`Command line interface`).
 
+
+Installing Percolator
+=====================
+
+To use :ref:`percolator` as rescoring engine, it must be installed separately. Percolator is
+available for most platforms and can be downloaded from the
+`GitHub releases page <https://github.com/percolator/percolator/releases/latest>`_. Ensure that
+the ``percolator`` executable is in your ``PATH``. On Windows, this can be done by checking the
+``Add percolator to the system PATH for current user`` option during installation:
+
+.. figure:: ../_static/img/percolator-install-path.png
+   :width: 60%
+   :alt: Percolator installation on Windows
+
+.. note::
+   Alternatively, :ref:`mokapot` can be used as rescoring engine, which does not require a separate
+   installation.
 
 For development
 ===============

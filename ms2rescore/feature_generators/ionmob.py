@@ -1,3 +1,19 @@
+"""
+``ionmob`` collisional cross section (CCS)-based feature generator.
+
+``ionmob`` is a predictor for peptide collisional cross sections (CCS), as measured in ion mobility
+devices, such as the Bruker timsTOF instruments. More info can be found on the
+`ionmob GitHub page <https://github.com/theGreatHerrLebert/ionmob>`_.
+
+If you use ``ionmob`` in your work, please cite the following publication:
+
+.. epigraph::
+    Teschner, D. et al. Ionmob: a Python package for prediction of peptide collisional
+    cross-section values. *Bioinformatics* 39, btad486 (2023).
+    `doi:10.1093/bioinformatics/btad486 <https://doi.org/10.1093/bioinformatics/btad486>`_
+
+"""
+
 import logging
 from itertools import chain
 from pathlib import Path
