@@ -20,7 +20,8 @@ If you use Mokapot through MS²Rescore, please cite:
 """
 
 import logging
-from typing import Any, List, Optional, Tuple, Dict
+import re
+from typing import Any, Dict, List, Optional, Tuple
 
 import mokapot
 import numpy as np
@@ -93,15 +94,12 @@ def rescore(
     confidence_results, models = brew(lin_psm_data, rng=8, **kwargs)
 
     # Reshape confidence estimates to match PSMList
+    keys = ["mokapot score", "mokapot q-value", "mokapot PEP"]
     mokapot_values_targets = (
-        confidence_results.confidence_estimates["psms"]
-        .set_index("index")
-        .sort_index()[["mokapot score", "mokapot q-value", "mokapot PEP"]]
+        confidence_results.confidence_estimates["psms"].set_index("index").sort_index()[keys]
     )
     mokapot_values_decoys = (
-        confidence_results.decoy_confidence_estimates["psms"]
-        .set_index("index")
-        .sort_index()[["mokapot score", "mokapot q-value", "mokapot PEP"]]
+        confidence_results.decoy_confidence_estimates["psms"].set_index("index").sort_index()[keys]
     )
     q = np.full((len(psm_list), 3), np.nan)
     q[mokapot_values_targets.index] = mokapot_values_targets.values
@@ -111,6 +109,26 @@ def rescore(
     psm_list["score"] = q[:, 0]
     psm_list["qvalue"] = q[:, 1]
     psm_list["pep"] = q[:, 2]
+
+    # Repeat for peptide-level scores
+    peptide_info = pd.concat(
+        [
+            confidence_results.confidence_estimates["peptides"].set_index(["peptide"])[keys],
+            confidence_results.decoy_confidence_estimates["peptides"].set_index(["peptide"])[keys],
+        ],
+        axis=0,
+    ).to_dict(orient="index")
+
+    peptidoform_without_charge = re.compile(r"(/\d+$)")
+    for psm in psm_list:
+        peptide_scores = peptide_info[peptidoform_without_charge.sub("", str(psm.peptidoform), 1)]
+        psm.metadata.update(
+            {
+                "peptide_score": peptide_scores["mokapot score"],
+                "peptide_qvalue": peptide_scores["mokapot q-value"],
+                "peptide_pep": peptide_scores["mokapot PEP"],
+            }
+        )
 
     # Write results
     if write_weights:
@@ -174,7 +192,7 @@ def convert_psm_list(
 
     # Ensure filename for FlashLFQ txt output
     if not combined_df["run"].notnull().all():
-        combined_df["run"] = "ms_run"
+        combined_df["run"] = "nan"
 
     feature_names = [f"feature:{f}" for f in feature_names] if feature_names else None
 
