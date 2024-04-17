@@ -4,9 +4,6 @@ import re
 from glob import glob
 from pathlib import Path
 from typing import Optional, Union
-import cProfile
-import pstats
-import io
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 
