@@ -5,7 +5,6 @@ import cProfile
 import importlib.resources
 import json
 import logging
-import pstats
 import sys
 from pathlib import Path
 from typing import Union
