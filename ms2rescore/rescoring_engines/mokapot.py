@@ -111,21 +111,19 @@ def rescore(
     psm_list["pep"] = q[:, 2]
 
     # Repeat for peptide-level scores
-    peptides_targets = confidence_results.confidence_estimates["peptides"].set_index(
-        ["peptide", "run"]
-    )[keys]
+    peptides_targets = confidence_results.confidence_estimates["peptides"].set_index(["peptide"])[
+        keys
+    ]
     peptides_decoys = confidence_results.decoy_confidence_estimates["peptides"].set_index(
-        ["peptide", "run"]
+        ["peptide"]
     )[keys]
     peptide_info = pd.concat([peptides_targets, peptides_decoys], axis=0).to_dict(orient="index")
 
     # Add peptide-level scores to PSM metadata
-    run_key = "na" if not all(psm.run for psm in psm_list) else None
+    # run_key = "na" if not all(psm.run for psm in psm_list) else None
     no_charge_pattern = re.compile(r"(/\d+$)")
     for psm in psm_list:
-        peptide_scores = peptide_info[
-            (no_charge_pattern.sub("", str(psm.peptidoform), 1), run_key or psm.run)
-        ]
+        peptide_scores = peptide_info[(no_charge_pattern.sub("", str(psm.peptidoform), 1))]
         psm.metadata.update(
             {
                 "peptide_score": peptide_scores["mokapot score"],
