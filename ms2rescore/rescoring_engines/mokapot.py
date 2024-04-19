@@ -111,17 +111,21 @@ def rescore(
     psm_list["pep"] = q[:, 2]
 
     # Repeat for peptide-level scores
-    peptide_info = pd.concat(
-        [
-            confidence_results.confidence_estimates["peptides"].set_index(["peptide"])[keys],
-            confidence_results.decoy_confidence_estimates["peptides"].set_index(["peptide"])[keys],
-        ],
-        axis=0,
-    ).to_dict(orient="index")
+    peptides_targets = confidence_results.confidence_estimates["peptides"].set_index(
+        ["peptide", "run"]
+    )[keys]
+    peptides_decoys = confidence_results.decoy_confidence_estimates["peptides"].set_index(
+        ["peptide", "run"]
+    )[keys]
+    peptide_info = pd.concat([peptides_targets, peptides_decoys], axis=0).to_dict(orient="index")
 
-    peptidoform_without_charge = re.compile(r"(/\d+$)")
+    # Add peptide-level scores to PSM metadata
+    run_key = "na" if not all(psm.run for psm in psm_list) else None
+    no_charge_pattern = re.compile(r"(/\d+$)")
     for psm in psm_list:
-        peptide_scores = peptide_info[peptidoform_without_charge.sub("", str(psm.peptidoform), 1)]
+        peptide_scores = peptide_info[
+            (no_charge_pattern.sub("", str(psm.peptidoform), 1), run_key or psm.run)
+        ]
         psm.metadata.update(
             {
                 "peptide_score": peptide_scores["mokapot score"],
@@ -192,7 +196,7 @@ def convert_psm_list(
 
     # Ensure filename for FlashLFQ txt output
     if not combined_df["run"].notnull().all():
-        combined_df["run"] = "nan"
+        combined_df["run"] = "na"
 
     feature_names = [f"feature:{f}" for f in feature_names] if feature_names else None
 
