@@ -27,6 +27,9 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
     psm_list = _read_psms(config, psm_list)
     _find_decoys(config, psm_list)
     _calculate_qvalues(config, psm_list)
+    if config["psm_id_rt_pattern"] or config["psm_id_im_pattern"]:
+        logger.debug("Parsing retention time and/or ion mobility from PSM identifier...")
+        _parse_values_spectrum_id(config, psm_list)
 
     # Store scoring values for comparison later
     for psm in psm_list:
@@ -51,7 +54,8 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
     non_mapped_modifications = modifications_found - set(config["modification_mapping"].keys())
     if non_mapped_modifications:
         logger.warning(
-            f"Non-mapped modifications found: {non_mapped_modifications}\nThis can be ignored if Unimod modification label"
+            f"Non-mapped modifications found: {non_mapped_modifications}\n"
+            "This can be ignored if they are Unimod modification labels."
         )
     psm_list.rename_modifications(config["modification_mapping"])
     psm_list.add_fixed_modifications(config["fixed_modifications"])
@@ -65,10 +69,6 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
         )
         new_ids = [_match_psm_ids(old_id, pattern) for old_id in psm_list["spectrum_id"]]
         psm_list["spectrum_id"] = new_ids
-
-    # TODO: Temporary fix until implemented in psm_utils
-    # Ensure that spectrum IDs are strings (Pydantic 2.0 does not coerce int to str)
-    psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
 
     return psm_list
 
@@ -152,6 +152,46 @@ def _match_psm_ids(old_id, regex_pattern):
             f"'psm_id_pattern' could not be extracted from PSM spectrum IDs (i.e. {old_id})."
             " Ensure that the regex contains a capturing group?"
         )
+
+
+def _parse_values_spectrum_id(config, psm_list):
+    """Parse retention time and or ion mobility values from the spectrum_id."""
+
+    if config["psm_id_rt_pattern"]:
+        logger.debug(
+            "Parsing retention time from spectrum_id with regex pattern "
+            f"{config['psm_id_rt_pattern']}"
+        )
+        try:
+            rt_pattern = re.compile(config["psm_id_rt_pattern"])
+            psm_list["retention_time"] = [
+                float(rt_pattern.search(psm.spectrum_id).group(1)) for psm in psm_list
+            ]
+        except AttributeError:
+            raise MS2RescoreConfigurationError(
+                f"Could not parse retention time from spectrum_id with the "
+                f"{config['psm_id_rt_pattern']} regex pattern. "
+                "Please make sure the retention time key is present in the spectrum_id "
+                "and the value is in a capturing group or disable the relevant feature generator."
+            )
+
+    if config["psm_id_im_pattern"]:
+        logger.debug(
+            "Parsing ion mobility from spectrum_id with regex pattern "
+            f"{config['psm_id_im_pattern']}"
+        )
+        try:
+            im_pattern = re.compile(config["psm_id_im_pattern"])
+            psm_list["ion_mobility"] = [
+                float(im_pattern.search(psm.spectrum_id).group(1)) for psm in psm_list
+            ]
+        except AttributeError:
+            raise MS2RescoreConfigurationError(
+                f"Could not parse ion mobility from spectrum_id with the "
+                f"{config['psm_id_im_pattern']} regex pattern. "
+                "Please make sure the ion mobility key is present in the spectrum_id "
+                "and the value is in a capturing group or disable the relevant feature generator."
+            )
 
 
 def _has_invalid_aminoacids(psm):

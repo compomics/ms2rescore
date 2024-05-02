@@ -165,6 +165,7 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
                     )
                 ]
 
+                # TODO: Use observed m/z?
                 psm_list_run_df["mz"] = psm_list_run_df.apply(
                     lambda x: calculate_mz(x["sequence-tokenized"], x["charge"]), axis=1
                 )  # use precursor m/z from PSMs?
@@ -175,9 +176,8 @@ class IonMobFeatureGenerator(FeatureGeneratorBase):
                 )
                 # calibrate CCS values
                 shift_factor = self.calculate_ccs_shift(psm_list_run_df)
-                psm_list_run_df["ccs_observed"] = psm_list_run_df.apply(
-                    lambda x: x["ccs_observed"] + shift_factor, axis=1
-                )
+                psm_list_run_df["ccs_observed"] + shift_factor
+
                 # predict CCS values
                 tf_ds = to_tf_dataset_inference(
                     psm_list_run_df["mz"],

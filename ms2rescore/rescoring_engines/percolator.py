@@ -20,8 +20,8 @@ If you use Percolator through MS²Rescore, please cite:
 import logging
 import subprocess
 from typing import Any, Dict, Optional
+from copy import deepcopy
 
-import numpy as np
 import psm_utils
 
 from ms2rescore.exceptions import MS2RescoreError
@@ -103,8 +103,15 @@ def rescore(
     # Need to be able to link back to original PSMs, so reindex spectrum IDs, but copy PSM list
     # to avoid modifying original...
     # TODO: Better approach for this?
-    psm_list_reindexed = psm_list.copy()
-    psm_list_reindexed["spectrum_id"] = np.arange(len(psm_list_reindexed))
+
+    psm_list_reindexed = deepcopy(psm_list)
+    psm_list_reindexed.set_ranks()
+    psm_list_reindexed["spectrum_id"] = [
+        f"{psm.get_usi(as_url=False)}_{psm.rank}" for psm in psm_list_reindexed
+    ]
+    spectrum_id_index = {
+        spectrum_id: index for index, spectrum_id in enumerate(psm_list_reindexed["spectrum_id"])
+    }
 
     _write_pin_file(psm_list_reindexed, pin_filepath)
 
@@ -134,10 +141,13 @@ def rescore(
         psm_list,
         percolator_kwargs["results-psms"],
         percolator_kwargs["decoy-results-psms"],
+        spectrum_id_index,
     )
 
 
-def _update_psm_scores(psm_list: psm_utils.PSMList, target_pout: str, decoy_pout: str):
+def _update_psm_scores(
+    psm_list: psm_utils.PSMList, target_pout: str, decoy_pout: str, spectrum_id_index: list
+):
     """
     Update PSM scores with Percolator results.
 
@@ -150,7 +160,9 @@ def _update_psm_scores(psm_list: psm_utils.PSMList, target_pout: str, decoy_pout
     psm_list_percolator = psm_utils.PSMList(psm_list=target_psms.psm_list + decoy_psms.psm_list)
 
     # Sort by reindexed spectrum_id so order matches original PSM list
-    psm_list_percolator[np.argsort(psm_list_percolator["spectrum_id"])]
+    psm_list_percolator = sorted(
+        psm_list_percolator, key=lambda psm: spectrum_id_index[psm["spectrum_id"]]
+    )
 
     if not len(psm_list) == len(psm_list_percolator):
         raise MS2RescoreError(

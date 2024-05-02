@@ -6,7 +6,6 @@ from itertools import chain
 
 from ms2rescore_rs import get_precursor_info
 from psm_utils import PSMList
-from rich.progress import track
 
 from ms2rescore.exceptions import MS2RescoreError
 from ms2rescore.utils import infer_spectrum_path

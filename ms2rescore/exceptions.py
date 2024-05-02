@@ -25,6 +25,12 @@ class ModificationParsingError(IDFileParsingError):
     pass
 
 
+class MissingValuesError(MS2RescoreError):
+    """Missing values in PSMs and/or spectra."""
+
+    pass
+
+
 class ReportGenerationError(MS2RescoreError):
     """Error while generating report."""
 

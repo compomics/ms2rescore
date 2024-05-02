@@ -21,12 +21,10 @@ import os
 from collections import defaultdict
 from inspect import getfullargspec
 from itertools import chain
-from typing import List, Optional, Union
+from typing import List, Union
 
 import numpy as np
-import pandas as pd
 from psm_utils import PSMList
-from psm_utils.io import peptide_record
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
 
@@ -41,8 +39,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         self,
         *args,
         lower_score_is_better: bool = False,
-        calibration_set_size: Union[int, float] = 0.15,
-        spectrum_path: Optional[str] = None,
+        calibration_set_size: Union[int, float, None] = None,
         processes: int = 1,
         **kwargs,
     ) -> None:
@@ -59,9 +56,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         calibration_set_size: int or float
             Amount of best PSMs to use for DeepLC calibration. If this value is lower
             than the number of available PSMs, all PSMs will be used. (default: 0.15)
-        spectrum_path
-            Path to spectrum file or directory with spectrum files. If None, inferred from `run`
-            field in PSMs. Defaults to None.
         processes: {int, None}
             Number of processes to use in DeepLC. Defaults to 1.
         kwargs: dict
@@ -77,7 +71,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
 
         self.lower_psm_score_better = lower_score_is_better
         self.calibration_set_size = calibration_set_size
-        self.spectrum_path = spectrum_path
         self.processes = processes
         self.deeplc_kwargs = kwargs or {}
 
@@ -151,17 +144,15 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                     # Make new PSM list for this run (chain PSMs per spectrum to flat list)
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
-                    logger.debug("Calibrating DeepLC...")
                     psm_list_calibration = self._get_calibration_psms(psm_list_run)
+                    logger.debug(f"Calibrating DeepLC with {len(psm_list_calibration)} PSMs...")
                     self.deeplc_predictor = self.DeepLC(
                         n_jobs=self.processes,
                         verbose=self._verbose,
                         path_model=self.selected_model or self.user_model,
                         **self.deeplc_kwargs,
                     )
-                    self.deeplc_predictor.calibrate_preds(
-                        seq_df=self._psm_list_to_deeplc_peprec(psm_list_calibration)
-                    )
+                    self.deeplc_predictor.calibrate_preds(psm_list_calibration)
                     # Still calibrate for each run, but do not try out all model options.
                     # Just use model that was selected based on first run
                     if not self.selected_model:
@@ -174,11 +165,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                         )
 
                     logger.debug("Predicting retention times...")
-                    predictions = np.array(
-                        self.deeplc_predictor.make_preds(
-                            seq_df=self._psm_list_to_deeplc_peprec(psm_list_run)
-                        )
-                    )
+                    predictions = np.array(self.deeplc_predictor.make_preds(psm_list_run))
                     observations = psm_list_run["retention_time"]
                     rt_diffs_run = np.abs(predictions - observations)
 
@@ -204,25 +191,25 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                         )
                 current_run += 1
 
-    # TODO: Remove when DeepLC supports PSMList directly
-    @staticmethod
-    def _psm_list_to_deeplc_peprec(psm_list: PSMList) -> pd.DataFrame:
-        peprec = peptide_record.to_dataframe(psm_list)
-        peprec = peprec.rename(
-            columns={
-                "observed_retention_time": "tr",
-                "peptide": "seq",
-            }
-        )[["tr", "seq", "modifications"]]
-        return peprec
-
     def _get_calibration_psms(self, psm_list: PSMList):
         """Get N best scoring target PSMs for calibration."""
         psm_list_targets = psm_list[~psm_list["is_decoy"]]
-        n_psms = self._get_number_of_calibration_psms(psm_list_targets)
-        indices = np.argsort(psm_list_targets["score"])
-        indices = indices[:n_psms] if self.lower_psm_score_better else indices[-n_psms:]
-        return psm_list_targets[indices]
+        if self.calibration_set_size:
+            n_psms = self._get_number_of_calibration_psms(psm_list_targets)
+            indices = np.argsort(psm_list_targets["score"])
+            indices = indices[:n_psms] if self.lower_psm_score_better else indices[-n_psms:]
+            return psm_list_targets[indices]
+        else:
+            identified_psms = psm_list_targets[psm_list_targets["qvalue"] <= 0.01]
+            if len(identified_psms) == 0:
+                raise ValueError(
+                    "No target PSMs with q-value <= 0.01 found. Please set calibration set size for calibrating deeplc."
+                )
+            elif (len(identified_psms) < 500) & (self.deeplc_kwargs["deeplc_retrain"]):
+                logger.warning(
+                    " Less than 500 target PSMs with q-value <= 0.01 found for retraining. Consider turning of deeplc_retrain, as this is likely not enough data for retraining."
+                )
+            return identified_psms
 
     def _get_number_of_calibration_psms(self, psm_list):
         """Get number of calibration PSMs given `calibration_set_size` and total number of PSMs."""
