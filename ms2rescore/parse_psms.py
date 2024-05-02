@@ -70,10 +70,6 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
         new_ids = [_match_psm_ids(old_id, pattern) for old_id in psm_list["spectrum_id"]]
         psm_list["spectrum_id"] = new_ids
 
-    # TODO: Temporary fix until implemented in psm_utils
-    # Ensure that spectrum IDs are strings (Pydantic 2.0 does not coerce int to str)
-    psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
-
     return psm_list
 
 
