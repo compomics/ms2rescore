@@ -5,6 +5,7 @@ from typing import Dict, Optional
 
 import numpy as np
 import psm_utils.io
+from mokapot.dataset import LinearPsmDataset
 from psm_utils import PSMList
 
 from ms2rescore import exceptions
@@ -13,6 +14,7 @@ from ms2rescore.parse_psms import parse_psms
 from ms2rescore.parse_spectra import get_missing_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
+from ms2rescore.rescoring_engines.mokapot import add_peptide_confidence, add_psm_confidence
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +106,8 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
         logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
         psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
 
-    # If no rescoring engine is specified, write PSMs and features to PIN file
-    if not config["rescoring_engine"]:
+    # If no rescoring engine is specified or DEBUG, write PSMs and features to PIN file
+    if not config["rescoring_engine"] or config["log_level"] == "debug":
         logger.info(f"Writing added features to PIN file: {output_file_root}.psms.pin")
         psm_utils.io.write_file(
             psm_list,
@@ -113,42 +115,52 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
             filetype="percolator",
             feature_names=all_feature_names,
         )
+
+    if not config["rescoring_engine"]:
+        logger.info("No rescoring engine specified. Skipping rescoring.")
         return None
 
     # Rescore PSMs
-    if "percolator" in config["rescoring_engine"]:
-        percolator.rescore(
-            psm_list,
-            output_file_root=output_file_root,
-            log_level=config["log_level"],
-            processes=config["processes"],
-            percolator_kwargs=config["rescoring_engine"]["percolator"],
-        )
-    elif "mokapot" in config["rescoring_engine"]:
-        if "fasta_file" not in config["rescoring_engine"]["mokapot"]:
-            config["rescoring_engine"]["mokapot"]["fasta_file"] = config["fasta_file"]
-        if "protein_kwargs" in config["rescoring_engine"]["mokapot"]:
-            protein_kwargs = config["rescoring_engine"]["mokapot"].pop("protein_kwargs")
-        else:
-            protein_kwargs = dict()
+    try:
+        if "percolator" in config["rescoring_engine"]:
+            percolator.rescore(
+                psm_list,
+                output_file_root=output_file_root,
+                log_level=config["log_level"],
+                processes=config["processes"],
+                percolator_kwargs=config["rescoring_engine"]["percolator"],
+            )
+        elif "mokapot" in config["rescoring_engine"]:
+            if "fasta_file" not in config["rescoring_engine"]["mokapot"]:
+                config["rescoring_engine"]["mokapot"]["fasta_file"] = config["fasta_file"]
+            if "protein_kwargs" in config["rescoring_engine"]["mokapot"]:
+                protein_kwargs = config["rescoring_engine"]["mokapot"].pop("protein_kwargs")
+            else:
+                protein_kwargs = dict()
 
-        mokapot.rescore(
-            psm_list,
-            output_file_root=output_file_root,
-            protein_kwargs=protein_kwargs,
-            **config["rescoring_engine"]["mokapot"],
-        )
+            mokapot.rescore(
+                psm_list,
+                output_file_root=output_file_root,
+                protein_kwargs=protein_kwargs,
+                **config["rescoring_engine"]["mokapot"],
+            )
+    except exceptions.RescoringError as e:
+        logger.exception(e)
+        rescoring_succeeded = False
     else:
-        logger.info("No known rescoring engine specified. Skipping rescoring.")
+        rescoring_succeeded = True
+        _log_id_psms_after(psm_list, id_psms_before)
 
-    _log_id_psms_after(psm_list, id_psms_before)
+    # Workaround for broken PEP calculation if best PSM is decoy
+    if all(psm_list["pep"] == 1.0):
+        psm_list = _fix_constant_pep(psm_list)
 
     # Write output
     logger.info(f"Writing output to {output_file_root}.psms.tsv...")
     psm_utils.io.write_file(psm_list, output_file_root + ".psms.tsv", filetype="tsv")
 
     # Write report
-    if config["write_report"]:
+    if config["write_report"] and rescoring_succeeded:
         try:
             generate.generate_report(
                 output_file_root, psm_list=psm_list, feature_names=feature_names, use_txt_log=True
@@ -231,3 +243,44 @@ def _log_id_psms_after(psm_list, id_psms_before):
     logger.info(f"Identified {diff_numbers} {diff_word} PSMs at 1% FDR after rescoring.")
 
     return id_psms_after
+
+
+def _fix_constant_pep(psm_list):
+    """Workaround for broken PEP calculation if best PSM is decoy."""
+    logger.warning(
+        "Attempting to fix constant PEP values by removing decoy PSMs that score higher than the "
+        "best target PSM."
+    )
+    max_target_score = psm_list["score"][~psm_list["is_decoy"]].max()
+    higher_scoring_decoys = psm_list["is_decoy"] & (psm_list["score"] > max_target_score)
+
+    if not higher_scoring_decoys.any():
+        logger.warning("No decoys scoring higher than the best target found. Skipping fix.")
+    else:
+        logger.warning(f"Removing {higher_scoring_decoys.sum()} decoy PSMs.")
+
+        psm_list = psm_list[~higher_scoring_decoys]
+
+        # Minimal conversion to LinearPsmDataset
+        psm_df = psm_list.to_dataframe()
+        psm_df = psm_df.reset_index(drop=True).reset_index()
+        psm_df["peptide"] = (
+            psm_df["peptidoform"].astype(str).str.replace(r"(/\d+$)", "", n=1, regex=True)
+        )
+        psm_df["is_target"] = ~psm_df["is_decoy"]
+        lin_psm_data = LinearPsmDataset(
+            psms=psm_df[["index", "peptide", "score", "is_target"]],
+            target_column="is_target",
+            spectrum_columns="index",  # Use artificial index to allow multi-rank rescoring
+            peptide_column="peptide",
+            feature_columns=["score"],
+        )
+
+        # Recalculate confidence
+        new_confidence = lin_psm_data.assign_confidence()
+
+        # Add new confidence estimations to PSMList
+        add_psm_confidence(psm_list, new_confidence)
+        add_peptide_confidence(psm_list, new_confidence)
+
+        return psm_list

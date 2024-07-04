@@ -14,6 +14,7 @@
         },
         "rescoring_engine": {
             "mokapot": {
+                "train_fdr": 0.01,
                 "write_weights": true,
                 "write_txt": true,
                 "write_flashlfq": true

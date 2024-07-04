@@ -35,3 +35,9 @@ class ReportGenerationError(MS2RescoreError):
     """Error while generating report."""
 
     pass
+
+
+class RescoringError(MS2RescoreError):
+    """Error while rescoring PSMs."""
+
+    pass

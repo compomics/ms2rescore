@@ -68,7 +68,11 @@
                 },
                 "psm_file": {
                     "description": "Path to file with peptide-spectrum matches.",
-                    "oneOf": [{ "type": "string" }, { "type": "null" }, { "type": "array", "items": { "type": "string" } }]
+                    "oneOf": [
+                        { "type": "string" },
+                        { "type": "null" },
+                        { "type": "array", "items": { "type": "string" } }
+                    ]
                 },
                 "psm_file_type": {
                     "description": "PSM file type. By default inferred from file extension.",
@@ -159,7 +163,7 @@
                     "default": false
                 },
                 "profile": {
-                    "description": "Write an txt report using cProfile for profiling",
+                    "description": "Write a txt report using cProfile for profiling",
                     "type": "boolean",
                     "default": false
                 }
@@ -263,6 +267,13 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
+                "train_fdr": {
+                    "description": "FDR threshold for training Mokapot",
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.01
+                },
                 "write_weights": {
                     "description": "Write Mokapot weights to a text file",
                     "type": "boolean",

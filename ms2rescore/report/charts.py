@@ -198,6 +198,7 @@ def score_scatter_plot(
     after: mokapot.LinearConfidence,
     level: str = "psms",
     indexer: str = "index",
+    fdr_threshold: float = 0.01,
 ) -> go.Figure:
     """
     Plot PSM scores before and after rescoring.
@@ -242,12 +243,12 @@ def score_scatter_plot(
 
     # Get score thresholds
     score_threshold_before = (
-        ce_psms[ce_psms["mokapot q-value before"] <= 0.01]
+        ce_psms[ce_psms["mokapot q-value before"] <= fdr_threshold]
         .sort_values("mokapot q-value before", ascending=False)["mokapot score before"]
         .iloc[0]
     )
     score_threshold_after = (
-        ce_psms[ce_psms["mokapot q-value after"] <= 0.01]
+        ce_psms[ce_psms["mokapot q-value after"] <= fdr_threshold]
         .sort_values("mokapot q-value after", ascending=False)["mokapot score after"]
         .iloc[0]
     )

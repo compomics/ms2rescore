@@ -66,6 +66,7 @@
       - *string*
       - *null*
   - **`write_report`** *(boolean)*: Write an HTML report with various QC metrics and charts. Default: `false`.
+  - **`profile`** *(boolean)*: Write a txt report using cProfile for profiling. Default: `false`.
 ## Definitions
 
 - <a id="definitions/feature_generator"></a>**`feature_generator`** *(object)*: Feature generator configuration. Can contain additional properties.
@@ -87,6 +88,7 @@
 - <a id="definitions/im2deep"></a>**`im2deep`** *(object)*: Ion mobility feature generator configuration using IM2Deep. Can contain additional properties. Refer to *[#/definitions/feature_generator](#definitions/feature_generator)*.
   - **`reference_dataset`** *(string)*: Path to IM2Deep reference dataset file. Default: `"Meier_unimod.parquet"`.
 - <a id="definitions/mokapot"></a>**`mokapot`** *(object)*: Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function. Can contain additional properties. Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
+  - **`train_fdr`** *(number)*: FDR threshold for training Mokapot. Minimum: `0`. Maximum: `1`. Default: `0.01`.
   - **`write_weights`** *(boolean)*: Write Mokapot weights to a text file. Default: `false`.
   - **`write_txt`** *(boolean)*: Write Mokapot results to a text file. Default: `false`.
   - **`write_flashlfq`** *(boolean)*: Write Mokapot results to a FlashLFQ-compatible file. Default: `false`.
