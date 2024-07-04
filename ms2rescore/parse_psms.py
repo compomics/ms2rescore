@@ -2,6 +2,7 @@ import logging
 import re
 from typing import Dict, Union
 
+import numpy as np
 import psm_utils.io
 from psm_utils import PSMList
 
@@ -25,6 +26,7 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
     """
     # Read PSMs, find decoys, calculate q-values
     psm_list = _read_psms(config, psm_list)
+    psm_list = _remove_invalid_aa(psm_list)
     _find_decoys(config, psm_list)
     _calculate_qvalues(config, psm_list)
     if config["psm_id_rt_pattern"] or config["psm_id_im_pattern"]:
@@ -78,21 +80,20 @@ def _read_psms(config, psm_list):
         return psm_list
     else:
         logger.info("Reading PSMs from file...")
-        current_file = 1
         total_files = len(config["psm_file"])
-        valid_psms_list = []
-        total_psms = 0
-        valid_psms = 0
-        for psm_file in config["psm_file"]:
+        psm_list = []
+        for current_file, psm_file in enumerate(config["psm_file"]):
             logger.info(
-                f"Reading PSMs from PSM file ({current_file}/{total_files}): '{psm_file}'..."
+                f"Reading PSMs from PSM file ({current_file+1}/{total_files}): '{psm_file}'..."
             )
             try:
-                id_file_psm_list = psm_utils.io.read_file(
-                    psm_file,
-                    filetype=config["psm_file_type"],
-                    show_progressbar=True,
-                    **config["psm_reader_kwargs"],
+                psm_list.extend(
+                    psm_utils.io.read_file(
+                        psm_file,
+                        filetype=config["psm_file_type"],
+                        show_progressbar=True,
+                        **config["psm_reader_kwargs"],
+                    )
                 )
             except psm_utils.io.PSMUtilsIOException:
                 raise MS2RescoreConfigurationError(
@@ -101,18 +102,9 @@ def _read_psms(config, psm_list):
                     "https://ms2rescore.readthedocs.io/en/latest/userguide/input-files/"
                     " for more information."
                 )
+            logger.debug(f"Read {len(psm_list)} PSMs from '{psm_file}'.")
 
-            total_psms += len(id_file_psm_list.psm_list)
-            for psm in id_file_psm_list.psm_list:
-                if not _has_invalid_aminoacids(psm):
-                    valid_psms_list.append(psm)
-                    valid_psms += 1
-            current_file += 1
-        if total_psms - valid_psms > 0:
-            logger.warning(
-                f"{total_psms - valid_psms} PSMs with invalid amino acids were removed."
-            )
-        return PSMList(psm_list=valid_psms_list)
+        return PSMList(psm_list=psm_list)
 
 
 def _find_decoys(config, psm_list):
@@ -171,6 +163,7 @@ def _parse_values_spectrum_id(config, psm_list):
             raise MS2RescoreConfigurationError(
                 f"Could not parse retention time from spectrum_id with the "
                 f"{config['psm_id_rt_pattern']} regex pattern. "
+                f"Example spectrum_id: '{psm_list[0].spectrum_id}'\n."
                 "Please make sure the retention time key is present in the spectrum_id "
                 "and the value is in a capturing group or disable the relevant feature generator."
             )
@@ -194,7 +187,16 @@ def _parse_values_spectrum_id(config, psm_list):
             )
 
 
-def _has_invalid_aminoacids(psm):
-    """Check if a PSM contains invalid amino acids."""
+def _remove_invalid_aa(psm_list: PSMList) -> PSMList:
+    """Remove PSMs with invalid amino acids."""
+    logger.debug("Removing PSMs with invalid amino acids...")
+    invalid_psms = np.array(
+        [any(aa in "BJOUXZ" for aa in psm.peptidoform.sequence) for psm in psm_list]
+    )
 
-    return any(aa not in "ACDEFGHIKLMNPQRSTVWY" for aa in psm.peptidoform.sequence)
+    if any(invalid_psms):
+        logger.warning(f"Removed {sum(invalid_psms)} PSMs with invalid amino acids.")
+        return psm_list[~invalid_psms]
+    else:
+        logger.debug("No PSMs with invalid amino acids found.")
+        return psm_list
