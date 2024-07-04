@@ -43,8 +43,7 @@ dependencies = [
     "mokapot>=0.9",
     "ms2pip>=4.0.0-dev10",
     "ms2rescore_rs",
-    "numpy==1.24.3; python_version == '3.11'", # Incompatibility with sklearn, pygam, and TF...
-    "numpy>=1.16.0; python_version != '3.11'",
+    "numpy>=1.16.0",
     "pandas>=1.0",
     "plotly>=5",
     "psm_utils>=0.9",
