@@ -48,7 +48,7 @@ dependencies = [
     "pandas>=1.0",
     "plotly>=5",
     "psm_utils>=0.9",
-    "pyteomics>=4.1.0, <4.7",
+    "pyteomics>=4.7.2",
     "rich>=12",
     "tomli>=2; python_version < '3.11'",
 ]
