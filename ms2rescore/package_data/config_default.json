@@ -33,6 +33,8 @@
         "psm_id_rt_pattern": null,
         "psm_id_im_pattern": null,
         "lower_score_is_better": false,
+        "max_psm_rank_input": 10,
+        "max_psm_rank_output": 1,
         "modification_mapping": {},
         "fixed_modifications": {},
         "processes": -1,

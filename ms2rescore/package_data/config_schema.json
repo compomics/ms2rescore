@@ -131,6 +131,18 @@
                     "type": "boolean",
                     "default": false
                 },
+                "max_psm_rank_input": {
+                    "description": "Maximum rank of PSMs to use as input for rescoring",
+                    "type": "number",
+                    "default": 10,
+                    "minimum": 1
+                },
+                "max_psm_rank_output": {
+                    "description": "Maximum rank of PSMs to return after rescoring, before final FDR calculation",
+                    "type": "number",
+                    "default": 1,
+                    "minimum": 1
+                },
                 "modification_mapping": {
                     "description": "Mapping of modification labels to each replacement label.",
                     "type": "object",

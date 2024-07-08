@@ -223,7 +223,7 @@ def save_model_weights(
 def add_psm_confidence(
     psm_list: psm_utils.PSMList, confidence_results: mokapot.confidence.Confidence
 ) -> None:
-    """Add Mokapot PSM-level confidence estimates to PSM list."""
+    """Add PSM-level confidence estimates to PSM list, updating score, qvalue, pep, and rank."""
     # Reshape confidence estimates to match PSMList
     keys = ["mokapot score", "mokapot q-value", "mokapot PEP"]
     mokapot_values_targets = (
@@ -240,6 +240,9 @@ def add_psm_confidence(
     psm_list["score"] = q[:, 0]
     psm_list["qvalue"] = q[:, 1]
     psm_list["pep"] = q[:, 2]
+
+    # Reset ranks to match new scores
+    psm_list.set_ranks(lower_score_better=False)
 
 
 def add_peptide_confidence(

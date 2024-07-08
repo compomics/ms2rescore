@@ -57,6 +57,8 @@
       - *string*
       - *null*
   - **`lower_score_is_better`** *(boolean)*: Bool indicating if lower score is better. Default: `false`.
+  - **`max_psm_rank_input`** *(number)*: Maximum rank of PSMs to use as input for rescoring. Minimum: `1`. Default: `10`.
+  - **`max_psm_rank_output`** *(number)*: Maximum rank of PSMs to return after rescoring, before final FDR calculation. Minimum: `1`. Default: `1`.
   - **`modification_mapping`** *(object)*: Mapping of modification labels to each replacement label. Default: `{}`.
   - **`fixed_modifications`** *(object)*: Mapping of amino acids with fixed modifications to the modification name. Can contain additional properties. Default: `{}`.
   - **`processes`** *(number)*: Number of parallel processes to use; -1 for all available. Minimum: `-1`. Default: `-1`.
