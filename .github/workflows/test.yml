@@ -31,7 +31,7 @@ jobs:
 
       - name: Build and install ms2rescore package
         run: |
-          pip install .[dev]
+          pip install --only-binary :all: .[dev]
 
       - name: Test with pytest
         run: |
