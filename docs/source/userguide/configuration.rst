@@ -271,6 +271,35 @@ the following configuration can be used:
     max_psm_rank_output = 1
 
 
+Configuring rescoring engines
+=============================
+
+MS²Rescore supports multiple rescoring engines, such as Mokapot and Percolator. The rescoring
+engine can be selected and configured with the ``rescoring_engine`` option. For example, to use
+Mokapot with a custom train_fdr of 0.1%, the following configuration can be used:
+
+.. tab:: JSON
+
+  .. code-block:: json
+
+    "rescoring_engine": {
+      "mokapot": {
+        "train_fdr": 0.001
+      }
+
+.. tab:: TOML
+
+    .. code-block:: toml
+
+      [ms2rescore.rescoring_engine.mokapot]
+      train_fdr = 0.001
+
+
+All options for the rescoring engines can be found in the :ref:`ms2rescore.rescoring_engines`
+section.
+
+
+
 All configuration options
 =========================
 
