@@ -297,15 +297,14 @@ def _calculate_confidence(psm_list: PSMList) -> PSMList:
     )
     psm_df["is_target"] = ~psm_df["is_decoy"]
     lin_psm_data = LinearPsmDataset(
-        psms=psm_df[["index", "peptide", "score", "is_target"]],
+        psms=psm_df[["index", "peptide", "is_target"]],
         target_column="is_target",
         spectrum_columns="index",  # Use artificial index to allow multi-rank rescoring
         peptide_column="peptide",
-        feature_columns=["score"],
     )
 
     # Recalculate confidence
-    new_confidence = lin_psm_data.assign_confidence()
+    new_confidence = lin_psm_data.assign_confidence(scores=psm_list["score"])
 
     # Add new confidence estimations to PSMList
     add_psm_confidence(psm_list, new_confidence)
