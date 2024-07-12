@@ -24,7 +24,7 @@ To use `timsrescore`, follow these steps:
 
 1. Prepare your input files:
     - Ensure that you have the necessary input files, including the PSM file spectrum files
-    - Make sure that the PSM file format from a supported search engine or a standard format like .mzid(:external+psm_utils:ref:`supported file formats <supported file formats>`.)
+    - Make sure that the PSM file format from a supported search engine or a standard format like .mzid(:external+psm_utils:ref:`supported file formats <supported file formats>`).
     - Spectrum files can directly be given as .d or minitdf files from Bruker instruments or first converted to .mzML format.
 
 2. Run `timsrescore`:
@@ -37,13 +37,13 @@ To use `timsrescore`, follow these steps:
           timsrescore -p <path_to_psm_file> -s <path_to_spectrum_file> -o <path_to_output_file>
 
       Replace `<path_to_psm_file>`, `<path_to_tims_file>`, and `<path_to_output_file>` with the actual paths to your input and output files.
-    - By default timsTOF specific models will be used for predictions. Optionally you can further configure settings through a configuration file.
+     _NOTE_ By default timsTOF specific models will be used for predictions. Optionally you can further configure settings through a configuration file. For more information on configuring `timsrescore`, refer to the :doc:`configuration` tab in the user guide.
 
 3. Review the results:
     - Once the `timsrescore` process completes, you will find the rescoring results in the specified output file or if not specified in the same directory as the input files
     - If you want a detailed overview of the performance, you can either give the set `write_report` to `True` in the configuration file, use the `--write_report` option in the command line or run the following command:
   
-  .. code-block:: bash
+      .. code-block:: bash
 
           ms2rescore-report <output_prefix>
 
@@ -58,9 +58,4 @@ Additional Options
 
     timsrescore --help
 
-Conclusion
-----------
 
-In this guide, you learned how to use `timsrescore` in `ms2rescore` to perform rescoring of PSMs using TIMS data. By following the steps outlined above, you can leverage the power of TIMS to enhance the accuracy of your PSM scores.
-
-For more information and advanced usage, refer to the `ms2rescore` documentation.
