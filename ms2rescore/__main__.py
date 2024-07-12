@@ -141,6 +141,13 @@ def _argument_parser() -> argparse.ArgumentParser:
         help="path to FASTA file",
     )
     parser.add_argument(
+        "--write-report",
+        # metavar="BOOL",
+        action="store_true",
+        dest="write_report",
+        help="boolean to enable profiling with cProfile",
+    )
+    parser.add_argument(
         "--profile",
         # metavar="BOOL",
         action="store_true",
