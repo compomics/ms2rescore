@@ -14,6 +14,6 @@ ADD ms2rescore /ms2rescore/ms2rescore
 
 RUN apt-get update \
     && apt install -y procps \
-    && pip install /ms2rescore
+    && pip install /ms2rescore --only-binary :all:
 
 ENTRYPOINT [""]

@@ -36,8 +36,8 @@ To use `timsrescore`, follow these steps:
 
           timsrescore -p <path_to_psm_file> -s <path_to_spectrum_file> -o <path_to_output_file>
 
-      Replace `<path_to_psm_file>`, `<path_to_tims_file>`, and `<path_to_output_file>` with the actual paths to your input and output files.
-     _NOTE_ By default timsTOF specific models will be used for predictions. Optionally you can further configure settings through a configuration file. For more information on configuring `timsrescore`, refer to the :doc:`configuration` tab in the user guide.
+    Replace `<path_to_psm_file>`, `<path_to_tims_file>`, and `<path_to_output_file>` with the actual paths to your input and output files.
+    _NOTE_ By default timsTOF specific models will be used for predictions. Optionally you can further configure settings through a configuration file. For more information on configuring `timsrescore`, refer to the :doc:`configuration` tab in the user guide.
 
 3. Review the results:
     - Once the `timsrescore` process completes, you will find the rescoring results in the specified output file or if not specified in the same directory as the input files
