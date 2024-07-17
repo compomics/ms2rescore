@@ -65,7 +65,11 @@
                 },
                 "psm_file": {
                     "description": "Path to file with peptide-spectrum matches.",
-                    "oneOf": [{ "type": "string" }, { "type": "null" }, { "type": "array", "items": { "type": "string" } }]
+                    "oneOf": [
+                        { "type": "string" },
+                        { "type": "null" },
+                        { "type": "array", "items": { "type": "string" } }
+                    ]
                 },
                 "psm_file_type": {
                     "description": "PSM file type. By default inferred from file extension.",
@@ -112,6 +116,18 @@
                     "type": "boolean",
                     "default": false
                 },
+                "max_psm_rank_input": {
+                    "description": "Maximum rank of PSMs to use as input for rescoring",
+                    "type": "number",
+                    "default": 10,
+                    "minimum": 1
+                },
+                "max_psm_rank_output": {
+                    "description": "Maximum rank of PSMs to return after rescoring, before final FDR calculation",
+                    "type": "number",
+                    "default": 1,
+                    "minimum": 1
+                },
                 "modification_mapping": {
                     "description": "Mapping of modification labels to each replacement label.",
                     "type": "object",
@@ -140,6 +156,11 @@
                 },
                 "write_report": {
                     "description": "Write an HTML report with various QC metrics and charts",
+                    "type": "boolean",
+                    "default": false
+                },
+                "profile": {
+                    "description": "Write a txt report using cProfile for profiling",
                     "type": "boolean",
                     "default": false
                 }
@@ -230,6 +251,13 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
+                "train_fdr": {
+                    "description": "FDR threshold for training Mokapot",
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.01
+                },
                 "write_weights": {
                     "description": "Write Mokapot weights to a text file",
                     "type": "boolean",

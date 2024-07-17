@@ -1,4 +1,6 @@
-FROM ubuntu:focal
+FROM python:3.11
+
+# ARG DEBIAN_FRONTEND=noninteractive
 
 LABEL name="ms2rescore"
 
@@ -11,8 +13,7 @@ ADD MANIFEST.in /ms2rescore/MANIFEST.in
 ADD ms2rescore /ms2rescore/ms2rescore
 
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y python3-pip procps libglib2.0-0 libsm6 libxrender1 libxext6 \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip3 install ms2rescore/
+    && apt install -y procps \
+    && pip install /ms2rescore --only-binary :all:
 
 ENTRYPOINT [""]

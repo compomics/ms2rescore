@@ -48,6 +48,8 @@
       - *string*
       - *null*
   - **`lower_score_is_better`** *(boolean)*: Bool indicating if lower score is better. Default: `false`.
+  - **`max_psm_rank_input`** *(number)*: Maximum rank of PSMs to use as input for rescoring. Minimum: `1`. Default: `10`.
+  - **`max_psm_rank_output`** *(number)*: Maximum rank of PSMs to return after rescoring, before final FDR calculation. Minimum: `1`. Default: `1`.
   - **`modification_mapping`** *(object)*: Mapping of modification labels to each replacement label. Default: `{}`.
   - **`fixed_modifications`** *(object)*: Mapping of amino acids with fixed modifications to the modification name. Can contain additional properties. Default: `{}`.
   - **`processes`** *(number)*: Number of parallel processes to use; -1 for all available. Minimum: `-1`. Default: `-1`.
@@ -57,6 +59,7 @@
       - *string*
       - *null*
   - **`write_report`** *(boolean)*: Write an HTML report with various QC metrics and charts. Default: `false`.
+  - **`profile`** *(boolean)*: Write a txt report using cProfile for profiling. Default: `false`.
 ## Definitions
 
 - <a id="definitions/feature_generator"></a>**`feature_generator`** *(object)*: Feature generator configuration. Can contain additional properties.
@@ -76,6 +79,7 @@
   - **`reference_dataset`** *(string)*: Path to Ionmob reference dataset file. Default: `"Meier_unimod.parquet"`.
   - **`tokenizer`** *(string)*: Path to tokenizer json file. Default: `"tokenizer.json"`.
 - <a id="definitions/mokapot"></a>**`mokapot`** *(object)*: Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function. Can contain additional properties. Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
+  - **`train_fdr`** *(number)*: FDR threshold for training Mokapot. Minimum: `0`. Maximum: `1`. Default: `0.01`.
   - **`write_weights`** *(boolean)*: Write Mokapot weights to a text file. Default: `false`.
   - **`write_txt`** *(boolean)*: Write Mokapot results to a text file. Default: `false`.
   - **`write_flashlfq`** *(boolean)*: Write Mokapot results to a FlashLFQ-compatible file. Default: `false`.

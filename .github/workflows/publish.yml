@@ -29,7 +29,7 @@ jobs:
 
       - name: Test built package
         run: |
-          pip install dist/ms2rescore-*.whl
+          pip install --only-binary :all: dist/ms2rescore-*.whl
           # pytest
           ms2rescore --help
 
@@ -54,7 +54,7 @@ jobs:
       - name: Install package and dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install . pyinstaller
+          pip install --only-binary :all: . pyinstaller
 
       - name: Install Inno Setup
         uses: crazy-max/ghaction-chocolatey@v3

@@ -1,8 +1,8 @@
 import logging
 import re
-from itertools import chain
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 
+import numpy as np
 import psm_utils.io
 from psm_utils import PSMList
 
@@ -24,10 +24,30 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
         PSMList object containing PSMs. If None, PSMs will be read from ``psm_file``.
 
     """
-    # Read PSMs, find decoys, calculate q-values
-    psm_list = _read_psms(config, psm_list)
-    _find_decoys(config, psm_list)
-    _calculate_qvalues(config, psm_list)
+    # Read PSMs
+    try:
+        psm_list = _read_psms(config, psm_list)
+    except psm_utils.io.PSMUtilsIOException:
+        raise MS2RescoreConfigurationError(
+            "Error occurred while reading PSMs. Please check the 'psm_file' and "
+            "'psm_file_type' settings. See "
+            "https://ms2rescore.readthedocs.io/en/latest/userguide/input-files/"
+            " for more information."
+        )
+
+    # Filter by PSM rank
+    psm_list.set_ranks(config["lower_score_is_better"])
+    rank_filter = psm_list["rank"] <= config["max_psm_rank_input"]
+    psm_list = psm_list[rank_filter]
+    logger.info(f"Removed {sum(~rank_filter)} PSMs with rank >= {config['max_psm_rank_input']}.")
+
+    # Remove invalid AAs, find decoys, calculate q-values
+    psm_list = _remove_invalid_aa(psm_list)
+    _find_decoys(psm_list, config["id_decoy_pattern"])
+    _calculate_qvalues(psm_list, config["lower_score_is_better"])
+    if config["psm_id_rt_pattern"] or config["psm_id_im_pattern"]:
+        logger.debug("Parsing retention time and/or ion mobility from PSM identifier...")
+        _parse_values_from_spectrum_id(config, psm_list)
 
     # Store scoring values for comparison later
     for psm in psm_list:
@@ -60,16 +80,12 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
 
     if config["psm_id_pattern"]:
         pattern = re.compile(config["psm_id_pattern"])
-        logger.debug("Applying `psm_id_pattern`...")
+        logger.debug("Applying 'psm_id_pattern'...")
         logger.debug(
-            f"Parsing `{psm_list['spectrum_id'][0]}` to `{_match_psm_ids(psm_list['spectrum_id'][0], pattern)}`"
+            f"Parsing '{psm_list[0].spectrum_id}' to '{_match_psm_ids(psm_list[0].spectrum_id, pattern)}'"
         )
         new_ids = [_match_psm_ids(old_id, pattern) for old_id in psm_list["spectrum_id"]]
         psm_list["spectrum_id"] = new_ids
-
-    # TODO: Temporary fix until implemented in psm_utils
-    # Ensure that spectrum IDs are strings (Pydantic 2.0 does not coerce int to str)
-    psm_list["spectrum_id"] = [str(spec_id) for spec_id in psm_list["spectrum_id"]]
 
     return psm_list
 
@@ -78,49 +94,30 @@ def _read_psms(config, psm_list):
     if isinstance(psm_list, PSMList):
         return psm_list
     else:
-        logger.info("Reading PSMs from file...")
-        current_file = 1
         total_files = len(config["psm_file"])
-        valid_psms_list = []
-        total_psms = 0
-        valid_psms = 0
-        for psm_file in config["psm_file"]:
+        psm_list = []
+        for current_file, psm_file in enumerate(config["psm_file"]):
             logger.info(
-                f"Reading PSMs from PSM file ({current_file}/{total_files}): `{psm_file}`..."
+                f"Reading PSMs from PSM file ({current_file+1}/{total_files}): '{psm_file}'..."
             )
-            try:
-                id_file_psm_list = psm_utils.io.read_file(
+            psm_list.extend(
+                psm_utils.io.read_file(
                     psm_file,
                     filetype=config["psm_file_type"],
                     show_progressbar=True,
                     **config["psm_reader_kwargs"],
                 )
-            except psm_utils.io.PSMUtilsIOException:
-                raise MS2RescoreConfigurationError(
-                    "Error occurred while reading PSMs. Please check the `psm_file` and "
-                    "`psm_file_type` settings. See "
-                    "https://ms2rescore.readthedocs.io/en/latest/userguide/input-files/"
-                    " for more information."
-                )
-
-            total_psms += len(id_file_psm_list.psm_list)
-            for psm in id_file_psm_list.psm_list:
-                if not _has_invalid_aminoacids(psm):
-                    valid_psms_list.append(psm)
-                    valid_psms += 1
-            current_file += 1
-        if total_psms - valid_psms > 0:
-            logger.warning(
-                f"{total_psms - valid_psms} PSMs with invalid amino acids were removed."
             )
-        return PSMList(psm_list=valid_psms_list)
+            logger.debug(f"Read {len(psm_list)} PSMs from '{psm_file}'.")
+
+        return PSMList(psm_list=psm_list)
 
 
-def _find_decoys(config, psm_list):
+def _find_decoys(psm_list: PSMList, id_decoy_pattern: Optional[str] = None):
     """Find decoys in PSMs, log amount, and raise error if none found."""
     logger.debug("Finding decoys...")
-    if config["id_decoy_pattern"]:
-        psm_list.find_decoys(config["id_decoy_pattern"])
+    if id_decoy_pattern:
+        psm_list.find_decoys(id_decoy_pattern)
 
     n_psms = len(psm_list)
     percent_decoys = sum(psm_list["is_decoy"]) / n_psms * 100
@@ -129,18 +126,18 @@ def _find_decoys(config, psm_list):
     if not any(psm_list["is_decoy"]):
         raise MS2RescoreConfigurationError(
             "No decoy PSMs found. Please check if decoys are present in the PSM file and that "
-            "the `id_decoy_pattern` option is correct. See "
+            "the 'id_decoy_pattern' option is correct. See "
             "https://ms2rescore.readthedocs.io/en/latest/userguide/configuration/#selecting-decoy-psms"
             " for more information."
         )
 
 
-def _calculate_qvalues(config, psm_list):
+def _calculate_qvalues(psm_list: PSMList, lower_score_is_better: bool):
     """Calculate q-values for PSMs if not present."""
     # Calculate q-values if not present
     if None in psm_list["qvalue"]:
         logger.debug("Recalculating q-values...")
-        psm_list.calculate_qvalues(reverse=not config["lower_score_is_better"])
+        psm_list.calculate_qvalues(reverse=not lower_score_is_better)
 
 
 def _match_psm_ids(old_id, regex_pattern):
@@ -150,12 +147,50 @@ def _match_psm_ids(old_id, regex_pattern):
         return match[1]
     except (TypeError, IndexError):
         raise MS2RescoreConfigurationError(
-            f"`psm_id_pattern` could not be extracted from PSM spectrum IDs (i.e. {old_id})."
+            f"'psm_id_pattern' could not be extracted from PSM spectrum IDs (i.e. {old_id})."
             " Ensure that the regex contains a capturing group?"
         )
 
 
-def _has_invalid_aminoacids(psm):
-    """Check if a PSM contains invalid amino acids."""
+def _parse_values_from_spectrum_id(
+    psm_list: PSMList,
+    psm_id_rt_pattern: Optional[str] = None,
+    psm_id_im_pattern: Optional[str] = None,
+):
+    """Parse retention time and or ion mobility values from the spectrum_id."""
+    for pattern, label, key in zip(
+        [psm_id_rt_pattern, psm_id_im_pattern],
+        ["retention time", "ion mobility"],
+        ["retention_time", "ion_mobility"],
+    ):
+        if pattern:
+            logger.debug(
+                f"Parsing {label} from spectrum_id with regex pattern " f"{psm_id_rt_pattern}"
+            )
+            try:
+                pattern = re.compile(pattern)
+                psm_list[key] = [
+                    float(pattern.search(psm.spectrum_id).group(1)) for psm in psm_list
+                ]
+            except AttributeError:
+                raise MS2RescoreConfigurationError(
+                    f"Could not parse {label} from spectrum_id with the "
+                    f"{pattern} regex pattern. "
+                    f"Example spectrum_id: '{psm_list[0].spectrum_id}'\n. "
+                    f"Please make sure the {label} key is present in the spectrum_id "
+                    "and the value is in a capturing group or disable the relevant feature generator."
+                )
 
-    return any(aa not in "ACDEFGHIKLMNPQRSTVWY" for aa in psm.peptidoform.sequence)
+
+def _remove_invalid_aa(psm_list: PSMList) -> PSMList:
+    """Remove PSMs with invalid amino acids."""
+    invalid_psms = np.array(
+        [any(aa in "BJOUXZ" for aa in psm.peptidoform.sequence) for psm in psm_list]
+    )
+
+    if any(invalid_psms):
+        logger.warning(f"Removed {sum(invalid_psms)} PSMs with invalid amino acids.")
+        return psm_list[~invalid_psms]
+    else:
+        logger.debug("No PSMs with invalid amino acids found.")
+        return psm_list

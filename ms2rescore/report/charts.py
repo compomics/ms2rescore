@@ -198,6 +198,7 @@ def score_scatter_plot(
     after: mokapot.LinearConfidence,
     level: str = "psms",
     indexer: str = "index",
+    fdr_threshold: float = 0.01,
 ) -> go.Figure:
     """
     Plot PSM scores before and after rescoring.
@@ -214,6 +215,14 @@ def score_scatter_plot(
         Column with index for each PSM, peptide, or protein to use for merging data frames.
 
     """
+    if not before or not after:
+        figure = go.Figure()
+        figure.add_annotation(
+            text="No data available for comparison.",
+            showarrow=False,
+        )
+        return figure
+
     # Restructure data
     merge_columns = [indexer, "mokapot score", "mokapot q-value", "mokapot PEP"]
     ce_psms_targets = pd.merge(
@@ -233,16 +242,22 @@ def score_scatter_plot(
     ce_psms = pd.concat([ce_psms_targets, ce_psms_decoys], axis=0)
 
     # Get score thresholds
-    score_threshold_before = (
-        ce_psms[ce_psms["mokapot q-value before"] <= 0.01]
-        .sort_values("mokapot q-value before", ascending=False)["mokapot score before"]
-        .iloc[0]
-    )
-    score_threshold_after = (
-        ce_psms[ce_psms["mokapot q-value after"] <= 0.01]
-        .sort_values("mokapot q-value after", ascending=False)["mokapot score after"]
-        .iloc[0]
-    )
+    try:
+        score_threshold_before = (
+            ce_psms[ce_psms["mokapot q-value before"] <= fdr_threshold]
+            .sort_values("mokapot q-value before", ascending=False)["mokapot score before"]
+            .iloc[0]
+        )
+    except IndexError:  # No PSMs below threshold
+        score_threshold_before = None
+    try:
+        score_threshold_after = (
+            ce_psms[ce_psms["mokapot q-value after"] <= fdr_threshold]
+            .sort_values("mokapot q-value after", ascending=False)["mokapot score after"]
+            .iloc[0]
+        )
+    except IndexError:  # No PSMs below threshold
+        score_threshold_after = None
 
     # Plot
     fig = px.scatter(
@@ -259,10 +274,12 @@ def score_scatter_plot(
         },
     )
     # draw FDR thresholds
-    fig.add_vline(x=score_threshold_before, line_dash="dash", row=1, col=1)
-    fig.add_hline(y=score_threshold_after, line_dash="dash", row=1, col=1)
-    fig.add_vline(x=score_threshold_before, line_dash="dash", row=2, col=1)
-    fig.add_hline(y=score_threshold_after, line_dash="dash", row=1, col=2)
+    if score_threshold_before:
+        fig.add_vline(x=score_threshold_before, line_dash="dash", row=1, col=1)
+        fig.add_vline(x=score_threshold_before, line_dash="dash", row=2, col=1)
+    if score_threshold_after:
+        fig.add_hline(y=score_threshold_after, line_dash="dash", row=1, col=1)
+        fig.add_hline(y=score_threshold_after, line_dash="dash", row=1, col=2)
 
     return fig
 
@@ -288,6 +305,14 @@ def fdr_plot_comparison(
         Column with index for each PSM, peptide, or protein to use for merging dataframes.
 
     """
+    if not before or not after:
+        figure = go.Figure()
+        figure.add_annotation(
+            text="No data available for comparison.",
+            showarrow=False,
+        )
+        return figure
+
     # Prepare data
     ce_psms_targets_melted = (
         pd.merge(
@@ -336,7 +361,7 @@ def fdr_plot_comparison(
 def identification_overlap(
     before: mokapot.LinearConfidence,
     after: mokapot.LinearConfidence,
-) -> go.Figure():
+) -> go.Figure:
     """
     Plot stacked bar charts of removed, retained, and gained PSMs, peptides, and proteins.
 
@@ -348,8 +373,16 @@ def identification_overlap(
         Mokapot linear confidence results after rescoring.
 
     """
+    if not before or not after:
+        figure = go.Figure()
+        figure.add_annotation(
+            text="No data available for comparison.",
+            showarrow=False,
+        )
+        return figure
+
     levels = before.levels  # ["psms", "peptides", "proteins"] if all available
-    indexers = ["index", "index", "mokapot protein group"]
+    indexers = ["index", "peptide", "mokapot protein group"]
 
     overlap_data = defaultdict(dict)
     for level, indexer in zip(levels, indexers):
@@ -362,7 +395,7 @@ def identification_overlap(
         set_after = set(df_after[df_after["mokapot q-value"] <= 0.01][indexer])
 
         overlap_data["removed"][level] = -len(set_before - set_after)
-        overlap_data["retained"][level] = len(set_before | set_after)
+        overlap_data["retained"][level] = len(set_after.intersection(set_before))
         overlap_data["gained"][level] = len(set_after - set_before)
 
     colors = ["#953331", "#316395", "#319545"]

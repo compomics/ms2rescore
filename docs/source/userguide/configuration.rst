@@ -123,7 +123,7 @@ be configured separately. For instance:
   .. code-block:: json
 
     "fixed_modifications": {
-      "C": "U:Carbamidomethyl"
+      "U:Carbamidomethyl": ["C"]
     }
 
 .. tab:: TOML
@@ -131,13 +131,35 @@ be configured separately. For instance:
     .. code-block:: toml
 
       [ms2rescore.fixed_modifications]
-      "Carbamidomethyl" = ["C"]
+      "U:Carbamidomethyl" = ["C"]
 
 .. tab:: GUI
 
   .. figure:: ../_static/img/gui-fixed-modifications.png
     :width: 500px
     :alt: fixed modifications configuration in GUI
+
+
+Fixed terminal modifications can be added by using the special labels ``N-term`` and ``C-term``.
+For example, to additionally add TMT6plex to the N-terminus and lysine residues, the following
+configuration can be used:
+
+.. tab:: JSON
+
+  .. code-block:: json
+
+    "fixed_modifications": {
+      "U:Carbamidomethyl": ["C"],
+      "U:TMT6plex": ["N-term", "K"]
+    }
+
+.. tab:: TOML
+
+    .. code-block:: toml
+
+      [ms2rescore.fixed_modifications]
+      "U:Carbamidomethyl" = ["C"]
+      "U:TMT6plex" = ["N-term", "K"]
 
 
 .. caution::
@@ -216,6 +238,65 @@ expression pattern that extracts the decoy status from the protein name:
     .. code-block:: toml
 
       decoy_pattern = "DECOY_"
+
+
+Multi-rank rescoring
+====================
+
+Some search engines, such as MaxQuant, report multiple candidate PSMs for the same spectrum.
+MS²Rescore can rescore multiple candidate PSMs per spectrum. This allows for lower-ranking
+candidate PSMs to become the top-ranked PSM after rescoring. This behavior can be controlled with
+the ``max_psm_rank_input`` option.
+
+To ensure a correct FDR control after rescoring, MS²Rescore filters out lower-ranking PSMs before
+final FDR calculation and writing the output files. To allow for lower-ranking PSMs to be included
+in the final output - for instance, to consider chimeric spectra - the ``max_psm_rank_output``
+option can be used.
+
+For example, to rescore the top 5 PSMs per spectrum and output the best PSM after rescoring,
+the following configuration can be used:
+
+.. tab:: JSON
+
+  .. code-block:: json
+
+    "max_psm_rank_input": 5
+    "max_psm_rank_output": 1
+
+.. tab:: TOML
+
+  .. code-block:: toml
+
+    max_psm_rank_input = 5
+    max_psm_rank_output = 1
+
+
+Configuring rescoring engines
+=============================
+
+MS²Rescore supports multiple rescoring engines, such as Mokapot and Percolator. The rescoring
+engine can be selected and configured with the ``rescoring_engine`` option. For example, to use
+Mokapot with a custom train_fdr of 0.1%, the following configuration can be used:
+
+.. tab:: JSON
+
+  .. code-block:: json
+
+    "rescoring_engine": {
+      "mokapot": {
+        "train_fdr": 0.001
+      }
+
+.. tab:: TOML
+
+    .. code-block:: toml
+
+      [ms2rescore.rescoring_engine.mokapot]
+      train_fdr = 0.001
+
+
+All options for the rescoring engines can be found in the :ref:`ms2rescore.rescoring_engines`
+section.
 
 
 
