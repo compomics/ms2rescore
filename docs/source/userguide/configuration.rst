@@ -81,6 +81,19 @@ preferably provide the formula instead of a mass shift, as the mass shift can al
 be calculated from the formula, but not vice-versa, and some feature generators (such as DeepLC)
 require the modification formula.
 
+.. role:: raw-html(raw)
+   :format: html
+
+Formula modification labels can be defined with the ``Formula:`` prefix, followed by each atom
+symbol and its count, denoting which atoms are added or removed by the modification. If no count is
+provided, it is assumed to be 1. For example, ``Formula:HO3P`` is equivalent to ``Formula:H1O3P1``.
+For isotopes, prefix the atom symbol with the isotope number and place the entire block (isotope
+number, atom symbol, and number of atoms) in square brackets. For example, the SILAC 13C(2) 15N(1)
+label (`UNIMOD:2088 <https://unimod.org/modifications_view.php?editid1=2088>`_)
+would be notated as ``Formula:C-2[13C2]N-1[15N]``, meaning that two C atoms are removed, two
+:raw-html:`<sup>13</sup>C` atoms are added, one N atom is removed and one
+:raw-html:`<sup>15</sup>N` atom is added.
+
 And example of the :py:obj:`modification_mapping` could be:
 
 .. tab:: JSON
