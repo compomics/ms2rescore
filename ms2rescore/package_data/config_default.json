@@ -14,6 +14,7 @@
         },
         "rescoring_engine": {
             "mokapot": {
+                "train_fdr": 0.01,
                 "write_weights": true,
                 "write_txt": true,
                 "write_flashlfq": true
@@ -29,12 +30,16 @@
         "id_decoy_pattern": null,
         "psm_id_pattern": null,
         "spectrum_id_pattern": null,
+        "psm_id_rt_pattern": null,
+        "psm_id_im_pattern": null,
         "lower_score_is_better": false,
+        "max_psm_rank_input": 10,
+        "max_psm_rank_output": 1,
         "modification_mapping": {},
         "fixed_modifications": {},
         "processes": -1,
         "rename_to_usi": false,
         "fasta_file": null,
-        "write_report": true
+        "write_report": false
     }
 }

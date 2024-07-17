@@ -1,6 +1,9 @@
 """MS²Rescore: Sensitive PSM rescoring with predicted MS² peak intensities and RTs."""
 
 import argparse
+import cProfile
+import importlib.resources
+import json
 import logging
 import sys
 from pathlib import Path
@@ -10,7 +13,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.text import Text
 
-from ms2rescore import __version__
+from ms2rescore import __version__, package_data
 from ms2rescore.config_parser import parse_configurations
 from ms2rescore.core import rescore
 from ms2rescore.exceptions import MS2RescoreConfigurationError
@@ -33,19 +36,26 @@ LOGGER = logging.getLogger(__name__)
 CONSOLE = Console(record=True)
 
 
-def _print_credits():
+def _print_credits(tims=False):
     """Print software credits to terminal."""
     text = Text()
     text.append("\n")
-    text.append("MS²Rescore", style="bold link https://github.com/compomics/ms2rescore")
+    if tims:
+        text.append("TIMS²Rescore", style="bold link https://github.com/compomics/ms2rescore")
+    else:
+        text.append("MS²Rescore", style="bold link https://github.com/compomics/ms2rescore")
     text.append(f" (v{__version__})\n", style="bold")
+    if tims:
+        text.append("MS²Rescore tuned for Bruker timsTOF instruments.\n", style="italic")
     text.append("Developed at CompOmics, VIB / Ghent University, Belgium.\n")
     text.append("Please cite: ")
     text.append(
-        "Declercq et al. MCP (2022)", style="link https://doi.org/10.1016/j.mcpro.2022.100266"
+        "Buur & Declercq et al. JPR (2024)",
+        style="link https://doi.org/10.1021/acs.jproteome.3c00785",
     )
     text.append("\n")
-    text.stylize("cyan")
+    if tims:
+        text.stylize("#006cb5")
     CONSOLE.print(text)
 
 
@@ -130,6 +140,21 @@ def _argument_parser() -> argparse.ArgumentParser:
         dest="fasta_file",
         help="path to FASTA file",
     )
+    parser.add_argument(
+        "--write-report",
+        # metavar="BOOL",
+        action="store_true",
+        dest="write_report",
+        help="boolean to enable profiling with cProfile",
+    )
+    parser.add_argument(
+        "--profile",
+        # metavar="BOOL",
+        action="store_true",
+        # type=bool,
+        # dest="profile",
+        help="boolean to enable profiling with cProfile",
+    )
 
     return parser
 
@@ -152,18 +177,42 @@ def _setup_logging(passed_level: str, log_file: Union[str, Path]):
     )
 
 
-def main():
+def profile(fnc, filepath):
+    """A decorator that uses cProfile to profile a function"""
+
+    def inner(*args, **kwargs):
+        with cProfile.Profile() as profiler:
+            return_value = fnc(*args, **kwargs)
+        profiler.dump_stats(filepath + ".profile.prof")
+        return return_value
+
+    return inner
+
+
+def main_tims():
+    """Run MS²Rescore command-line interface in TIMS²Rescore mode."""
+    main(tims=True)
+
+
+def main(tims=False):
     """Run MS²Rescore command-line interface."""
-    _print_credits()
+    _print_credits(tims)
 
     # Parse CLI arguments and configuration file
     parser = _argument_parser()
     cli_args = parser.parse_args()
+
+    configurations = []
+    if cli_args.config_file:
+        configurations.append(cli_args.config_file)
+    if tims:
+        configurations.append(
+            json.load(importlib.resources.open_text(package_data, "config_default_tims.json"))
+        )
+    configurations.append(cli_args)
+
     try:
-        if cli_args.config_file:
-            config = parse_configurations([cli_args.config_file, cli_args])
-        else:
-            config = parse_configurations(cli_args)
+        config = parse_configurations(configurations)
     except MS2RescoreConfigurationError as e:
         LOGGER.critical(e)
         sys.exit(1)
@@ -175,7 +224,11 @@ def main():
 
     # Run MS²Rescore
     try:
-        rescore(configuration=config)
+        if cli_args.profile:
+            profiled_rescore = profile(rescore, config["ms2rescore"]["output_path"])
+            profiled_rescore(configuration=config)
+        else:
+            rescore(configuration=config)
     except Exception as e:
         LOGGER.exception(e)
         sys.exit(1)

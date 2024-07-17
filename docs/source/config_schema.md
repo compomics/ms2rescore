@@ -10,6 +10,7 @@
     - **`deeplc`**: Refer to *[#/definitions/deeplc](#definitions/deeplc)*.
     - **`maxquant`**: Refer to *[#/definitions/maxquant](#definitions/maxquant)*.
     - **`ionmob`**: Refer to *[#/definitions/ionmob](#definitions/ionmob)*.
+    - **`im2deep`**: Refer to *[#/definitions/im2deep](#definitions/im2deep)*.
   - **`rescoring_engine`** *(object)*: Rescoring engine to use and its configuration. Leave empty to skip rescoring and write features to file. Default: `{"mokapot": {}}`.
     - **`.*`**: Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
     - **`percolator`**: Refer to *[#/definitions/percolator](#definitions/percolator)*.
@@ -47,7 +48,17 @@
     - **One of**
       - *string*
       - *null*
+  - **`psm_id_rt_pattern`**: Regex pattern to extract retention time from PSM identifier. Requires at least one capturing group. Default: `null`.
+    - **One of**
+      - *string*
+      - *null*
+  - **`psm_id_im_pattern`**: Regex pattern to extract ion mobility from PSM identifier. Requires at least one capturing group. Default: `null`.
+    - **One of**
+      - *string*
+      - *null*
   - **`lower_score_is_better`** *(boolean)*: Bool indicating if lower score is better. Default: `false`.
+  - **`max_psm_rank_input`** *(number)*: Maximum rank of PSMs to use as input for rescoring. Minimum: `1`. Default: `10`.
+  - **`max_psm_rank_output`** *(number)*: Maximum rank of PSMs to return after rescoring, before final FDR calculation. Minimum: `1`. Default: `1`.
   - **`modification_mapping`** *(object)*: Mapping of modification labels to each replacement label. Default: `{}`.
   - **`fixed_modifications`** *(object)*: Mapping of amino acids with fixed modifications to the modification name. Can contain additional properties. Default: `{}`.
   - **`processes`** *(number)*: Number of parallel processes to use; -1 for all available. Minimum: `-1`. Default: `-1`.
@@ -57,6 +68,7 @@
       - *string*
       - *null*
   - **`write_report`** *(boolean)*: Write an HTML report with various QC metrics and charts. Default: `false`.
+  - **`profile`** *(boolean)*: Write a txt report using cProfile for profiling. Default: `false`.
 ## Definitions
 
 - <a id="definitions/feature_generator"></a>**`feature_generator`** *(object)*: Feature generator configuration. Can contain additional properties.
@@ -75,7 +87,10 @@
   - **`ionmob_model`** *(string)*: Path to Ionmob model directory. Default: `"GRUPredictor"`.
   - **`reference_dataset`** *(string)*: Path to Ionmob reference dataset file. Default: `"Meier_unimod.parquet"`.
   - **`tokenizer`** *(string)*: Path to tokenizer json file. Default: `"tokenizer.json"`.
+- <a id="definitions/im2deep"></a>**`im2deep`** *(object)*: Ion mobility feature generator configuration using IM2Deep. Can contain additional properties. Refer to *[#/definitions/feature_generator](#definitions/feature_generator)*.
+  - **`reference_dataset`** *(string)*: Path to IM2Deep reference dataset file. Default: `"Meier_unimod.parquet"`.
 - <a id="definitions/mokapot"></a>**`mokapot`** *(object)*: Mokapot rescoring engine configuration. Additional properties are passed to the Mokapot brew function. Can contain additional properties. Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
+  - **`train_fdr`** *(number)*: FDR threshold for training Mokapot. Minimum: `0`. Maximum: `1`. Default: `0.01`.
   - **`write_weights`** *(boolean)*: Write Mokapot weights to a text file. Default: `false`.
   - **`write_txt`** *(boolean)*: Write Mokapot results to a text file. Default: `false`.
   - **`write_flashlfq`** *(boolean)*: Write Mokapot results to a FlashLFQ-compatible file. Default: `false`.

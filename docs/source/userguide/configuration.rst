@@ -240,6 +240,65 @@ expression pattern that extracts the decoy status from the protein name:
       decoy_pattern = "DECOY_"
 
 
+Multi-rank rescoring
+====================
+
+Some search engines, such as MaxQuant, report multiple candidate PSMs for the same spectrum.
+MS²Rescore can rescore multiple candidate PSMs per spectrum. This allows for lower-ranking
+candidate PSMs to become the top-ranked PSM after rescoring. This behavior can be controlled with
+the ``max_psm_rank_input`` option.
+
+To ensure a correct FDR control after rescoring, MS²Rescore filters out lower-ranking PSMs before
+final FDR calculation and writing the output files. To allow for lower-ranking PSMs to be included
+in the final output - for instance, to consider chimeric spectra - the ``max_psm_rank_output``
+option can be used.
+
+For example, to rescore the top 5 PSMs per spectrum and output the best PSM after rescoring,
+the following configuration can be used:
+
+.. tab:: JSON
+
+  .. code-block:: json
+
+    "max_psm_rank_input": 5
+    "max_psm_rank_output": 1
+
+.. tab:: TOML
+
+  .. code-block:: toml
+
+    max_psm_rank_input = 5
+    max_psm_rank_output = 1
+
+
+Configuring rescoring engines
+=============================
+
+MS²Rescore supports multiple rescoring engines, such as Mokapot and Percolator. The rescoring
+engine can be selected and configured with the ``rescoring_engine`` option. For example, to use
+Mokapot with a custom train_fdr of 0.1%, the following configuration can be used:
+
+.. tab:: JSON
+
+  .. code-block:: json
+
+    "rescoring_engine": {
+      "mokapot": {
+        "train_fdr": 0.001
+      }
+
+.. tab:: TOML
+
+    .. code-block:: toml
+
+      [ms2rescore.rescoring_engine.mokapot]
+      train_fdr = 0.001
+
+
+All options for the rescoring engines can be found in the :ref:`ms2rescore.rescoring_engines`
+section.
+
+
 
 All configuration options
 =========================

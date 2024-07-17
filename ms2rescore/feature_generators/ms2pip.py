@@ -193,7 +193,7 @@ class MS2PIPFeatureGenerator(FeatureGeneratorBase):
                 try:
                     ms2pip_results = correlate(
                         psms=psm_list_run,
-                        spectrum_file=spectrum_filename,
+                        spectrum_file=str(spectrum_filename),
                         spectrum_id_pattern=self.spectrum_id_pattern,
                         model=self.model,
                         ms2_tolerance=self.ms2_tolerance,
