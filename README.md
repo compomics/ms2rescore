@@ -52,7 +52,7 @@ timsTOF fragmentation and IM2Deep for ion mobility separation. Bruker .d and min
 files are directly supported through the [timsrust](https://github.com/MannLabs/timsrust) library.
 
 Checkout our [preprint](https://doi.org/10.1101/2024.05.29.596400) for more information and the
-[TIMS²Rescore documentation](https://ms2rescore.readthedocs.io/userguide/tims2rescore)
+[TIMS²Rescore documentation](https://ms2rescore.readthedocs.io/en/stable/userguide/tims2rescore)
 to get started.
 
 ## Citing
