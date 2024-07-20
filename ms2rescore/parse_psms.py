@@ -47,7 +47,9 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
     _calculate_qvalues(psm_list, config["lower_score_is_better"])
     if config["psm_id_rt_pattern"] or config["psm_id_im_pattern"]:
         logger.debug("Parsing retention time and/or ion mobility from PSM identifier...")
-        _parse_values_from_spectrum_id(config, psm_list)
+        _parse_values_from_spectrum_id(
+            psm_list, config["psm_id_rt_pattern"], config["psm_id_im_pattern"]
+        )
 
     # Store scoring values for comparison later
     for psm in psm_list:
@@ -165,9 +167,7 @@ def _parse_values_from_spectrum_id(
         ["retention_time", "ion_mobility"],
     ):
         if pattern:
-            logger.debug(
-                f"Parsing {label} from spectrum_id with regex pattern " f"{psm_id_rt_pattern}"
-            )
+            logger.debug(f"Parsing {label} from spectrum_id with regex pattern " f"{pattern}")
             try:
                 pattern = re.compile(pattern)
                 psm_list[key] = [
