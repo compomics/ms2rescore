@@ -23,6 +23,16 @@ logger = logging.getLogger(__name__)
 class MaxQuantFeatureGenerator(FeatureGeneratorBase):
     """Generate MaxQuant-derived features."""
 
+    available_features = [
+        "mean_error_top7",
+        "sq_mean_error_top7",
+        "stdev_error_top7",
+        "ln_explained_ion_current",
+        "ln_nterm_ion_current_ratio",
+        "ln_cterm_ion_current_ratio",
+        "ln_ms2_ion_current",
+    ]
+
     def __init__(self, *args, **kwargs) -> None:
         """
         Generate MaxQuant-derived features.
@@ -39,22 +49,15 @@ class MaxQuantFeatureGenerator(FeatureGeneratorBase):
 
         """
         super().__init__(*args, **kwargs)
+        self._feature_names = self.available_features[:]  # Copy list
 
     @property
     def feature_names(self) -> List[str]:
-        return [
-            "mean_error_top7",
-            "sq_mean_error_top7",
-            "stdev_error_top7",
-            "ln_explained_ion_current",
-            "ln_nterm_ion_current_ratio",
-            "ln_cterm_ion_current_ratio",
-            "ln_ms2_ion_current",
-        ]
+        return self._feature_names
 
     def add_features(self, psm_list: PSMList):
         """
-        Add MS²PIP-derived features to PSMs.
+        Add MaxQuant-derived features to PSMs.
 
         Parameters
         ----------
@@ -62,7 +65,14 @@ class MaxQuantFeatureGenerator(FeatureGeneratorBase):
             PSMs to add features to.
 
         """
-        logger.info("Adding MaxQuant-derived features to PSMs.")
+        # Check if all PSMs are from MaxQuant
+        if not self._all_psms_from_maxquant(psm_list):
+            self._feature_names = []  # Set feature names to empty list to indicate none added
+            logger.warning("Not all PSMs are from MaxQuant. Skipping MaxQuant feature generation.")
+            return
+        else:
+            self._feature_names = self.available_features  # Reset feature names
+            logger.info("Adding MaxQuant-derived features to PSMs.")
 
         # Infer mass deviations column name
         for column_name in [
@@ -89,6 +99,11 @@ class MaxQuantFeatureGenerator(FeatureGeneratorBase):
         # Add features to PSMs
         for psm in psm_list:
             psm["rescoring_features"].update(self._compute_features(psm["metadata"]))
+
+    @staticmethod
+    def _all_psms_from_maxquant(psm_list):
+        """Check if the PSMs are from MaxQuant."""
+        return (psm_list["source"] == "msms").all()
 
     def _compute_features(self, psm_metadata):
         """Compute features from derived from intensities and mass errors."""

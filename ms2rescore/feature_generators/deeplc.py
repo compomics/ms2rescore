@@ -27,6 +27,7 @@ import numpy as np
 from psm_utils import PSMList
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
+from ms2rescore.parse_spectra import MSDataType
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
@@ -34,6 +35,8 @@ logger = logging.getLogger(__name__)
 
 class DeepLCFeatureGenerator(FeatureGeneratorBase):
     """DeepLC retention time-based feature generator."""
+
+    required_ms_data = {MSDataType.retention_time}
 
     def __init__(
         self,
@@ -138,9 +141,11 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                 )
 
                 # Disable wild logging to stdout by Tensorflow, unless in debug mode
-                with contextlib.redirect_stdout(
-                    open(os.devnull, "w")
-                ) if not self._verbose else contextlib.nullcontext():
+                with (
+                    contextlib.redirect_stdout(open(os.devnull, "w"))
+                    if not self._verbose
+                    else contextlib.nullcontext()
+                ):
                     # Make new PSM list for this run (chain PSMs per spectrum to flat list)
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
 
