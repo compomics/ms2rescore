@@ -16,6 +16,8 @@ project = "ms2rescore"
 bundle_name = "ms2rescore"
 bundle_identifier = f"{bundle_name}.{__version__}"
 
+extra_requirements = {"ionmob"}
+
 # Requirements config
 skip_requirements_regex = r"^(?:.*\..*)"
 
@@ -28,6 +30,7 @@ requirements = {
     if "; extra ==" not in req  # Exclude optional dependencies
 }
 requirements.update([project, "xgboost"])
+requirements.update(extra_requirements)
 
 hidden_imports = set()
 datas = []
