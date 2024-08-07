@@ -88,7 +88,7 @@ def rescore(
         "decoy-results-proteins": output_file_root + ".percolator.decoy.proteins.pout",
         "weights": output_file_root + ".percolator.weights.tsv",
         "verbose": LOG_LEVEL_MAP[log_level],
-        "num-threads": processes,
+        "num-threads": max(processes, 128),  # Higher values not supported by Percolator
         "post-processing-tdc": True,
     }
     if percolator_kwargs:
