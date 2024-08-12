@@ -4,11 +4,11 @@ import importlib.resources
 import logging
 import multiprocessing
 import os
+import platform
 import sys
 import webbrowser
 from pathlib import Path
 from typing import Dict, List, Tuple
-import platform
 
 import customtkinter as ctk
 from joblib import parallel_backend
@@ -143,6 +143,8 @@ class ConfigFrame(ctk.CTkTabview):
         """MS²Rescore configuration frame."""
         super().__init__(*args, **kwargs)
 
+        self.configure(width=600)
+
         for tab in ["Main", "Advanced", "Feature generators", "Rescoring engine"]:
             self.add(tab)
             self.tab(tab).grid_columnconfigure(0, weight=1)
@@ -222,6 +224,22 @@ class MainConfiguration(ctk.CTkFrame):
             header_labels=["ProForma label", "Amino acids (comma-separated)"],
         )
         self.fixed_modifications.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
+
+        self.fixed_modification_info = ctk.CTkLabel(
+            self,
+            text=(
+                "Only add fixed modifications that are NOT written to the PSM file by the search "
+                "engine. If the search engine writes fixed modifications to the PSM file, as most "
+                "do, leave this field empty. Notably, MaxQuant is one of the few search engines "
+                "that does not write fixed modifications to the PSM file. If you are using "
+                "MaxQuant, you should add the fixed modifications here."
+            ),
+            fg_color="transparent",
+            wraplength=600 - 10,  # width of the frame minus padding; hardcoded for now
+            anchor="w",
+            justify="left",
+        )
+        self.fixed_modification_info.grid(row=6, column=0, pady=(0, 10), sticky="w")
 
     def get(self) -> Dict:
         """Get the configured values as a dictionary."""

@@ -52,7 +52,7 @@ class Function2CTk(ctk.CTk):
 
         # 2x3 grid, only logging column expands with window
         self.grid_columnconfigure(0, weight=0)  # Left: Sidebar
-        self.grid_columnconfigure(1, weight=2)  # Middle: Configuration
+        self.grid_columnconfigure(1, weight=0)  # Middle: Configuration
         self.grid_columnconfigure(2, weight=1)  # Right: Logging
         self.grid_rowconfigure(0, weight=1)
 
