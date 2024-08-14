@@ -17,7 +17,6 @@ from PIL import Image
 from psm_utils.io import FILETYPES
 
 import ms2rescore.gui.widgets as widgets
-import ms2rescore.package_data as pkg_data
 import ms2rescore.package_data.img as pkg_data_img
 from ms2rescore import __version__ as ms2rescore_version
 from ms2rescore.config_parser import parse_configurations
@@ -28,9 +27,6 @@ from ms2rescore.gui.function2ctk import Function2CTk
 with importlib.resources.path(pkg_data_img, "config_icon.png") as resource:
     _IMG_DIR = Path(resource).parent
 
-with importlib.resources.path(pkg_data, "ms2rescore-gui-theme.json") as resource:
-    _THEME_FILE = Path(resource).as_posix()
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -40,8 +36,6 @@ try:
     plt.set_loglevel("warning")
 except ImportError:
     pass
-
-ctk.set_default_color_theme(_THEME_FILE)
 
 # TODO Does this disable multiprocessing everywhere?
 parallel_backend("threading")
