@@ -31,7 +31,7 @@ jobs:
 
       - name: Build and install ms2rescore package
         run: |
-          pip install .[dev]
+          pip install --only-binary :all: .[dev]
 
       - name: Test with pytest
         run: |
@@ -55,7 +55,7 @@ jobs:
       - name: Install package and dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install . pyinstaller
+          pip install --only-binary :all: . pyinstaller
 
       - name: Install Inno Setup
         uses: crazy-max/ghaction-chocolatey@v1

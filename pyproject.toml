@@ -41,15 +41,13 @@ dependencies = [
     "jinja2>=3",
     "lxml>=4.5",
     "mokapot>=0.9",
-    "ms2pip>=4.0.0-dev10",
-    "ms2rescore_rs",
-    "numpy==1.24.3; python_version == '3.11'", # Incompatibility with sklearn, pygam, and TF...
-    "numpy>=1.16.0; python_version != '3.11'",
+    "ms2pip>=4.0.0",
+    "ms2rescore_rs>=0.3.0",
+    "numpy>=1.16.0",
     "pandas>=1.0",
     "plotly>=5",
-    "psm_utils>=0.8",
-    "pydantic>=1.8.2,<2",                      # Fix compatibility with v2 in psm_utils
-    "pyteomics>=4.1.0, <4.7",
+    "psm_utils>=0.9",
+    "pyteomics>=4.7.2",
     "rich>=12",
     "tomli>=2; python_version < '3.11'",
 ]

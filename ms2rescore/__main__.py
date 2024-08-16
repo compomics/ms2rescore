@@ -41,18 +41,24 @@ def _print_credits(tims=False):
     text = Text()
     text.append("\n")
     if tims:
-        text.append("TIMS²Rescore", style="bold link https://github.com/compomics/ms2rescore")
+        text.append("TIMS²Rescore", style="bold link https://github.com/compomics/tims2rescore")
     else:
         text.append("MS²Rescore", style="bold link https://github.com/compomics/ms2rescore")
     text.append(f" (v{__version__})\n", style="bold")
     if tims:
-        text.append("MS²Rescore tuned for Bruker timsTOF instruments.\n", style="italic")
+        text.append("MS²Rescore tuned for timsTOF DDA-PASEF data.\n", style="italic")
     text.append("Developed at CompOmics, VIB / Ghent University, Belgium.\n")
     text.append("Please cite: ")
-    text.append(
-        "Buur & Declercq et al. JPR (2024)",
-        style="link https://doi.org/10.1021/acs.jproteome.3c00785",
-    )
+    if tims:
+        text.append(
+            "Declercq & Devreese et al. bioRxiv (2024)",
+            style="link https://doi.org/10.1101/2024.05.29.596400",
+        )
+    else:
+        text.append(
+            "Buur & Declercq et al. JPR (2024)",
+            style="link https://doi.org/10.1021/acs.jproteome.3c00785",
+        )
     text.append("\n")
     if tims:
         text.stylize("#006cb5")
@@ -139,6 +145,13 @@ def _argument_parser() -> argparse.ArgumentParser:
         type=str,
         dest="fasta_file",
         help="path to FASTA file",
+    )
+    parser.add_argument(
+        "--write-report",
+        # metavar="BOOL",
+        action="store_true",
+        dest="write_report",
+        help="boolean to enable profiling with cProfile",
     )
     parser.add_argument(
         "--profile",

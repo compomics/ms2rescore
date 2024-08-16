@@ -52,8 +52,8 @@ Rescoring engine files:
 | ``<prefix>.<mokapot/percolator>.weights.txt``               | Feature weights, showing feature usage in the rescoring run |
 +-------------------------------------------------------------+-------------------------------------------------------------+
 
-If no rescoring engine is selected (or if Percolator was selected), the following files will also
-be written:
+If no rescoring engine is selected, if Percolator was selected, or in DEBUG mode, the following
+files will also be written:
 
 +-------------------------------------------------------------+-----------------------------------------------------------+
 | File                                                        | Description                                               |

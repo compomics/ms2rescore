@@ -29,7 +29,10 @@ import pandas as pd
 import psm_utils
 from mokapot.brew import brew
 from mokapot.dataset import LinearPsmDataset
+from mokapot.model import PercolatorModel
 from pyteomics.mass import nist_mass
+
+from ms2rescore.exceptions import RescoringError
 
 logger = logging.getLogger(__name__)
 logging.getLogger("numba").setLevel(logging.WARNING)
@@ -39,6 +42,7 @@ def rescore(
     psm_list: psm_utils.PSMList,
     output_file_root: str = "ms2rescore",
     fasta_file: Optional[str] = None,
+    train_fdr: float = 0.01,
     write_weights: bool = False,
     write_txt: bool = False,
     write_flashlfq: bool = False,
@@ -65,6 +69,8 @@ def rescore(
     fasta_file
         Path to FASTA file with protein sequences to use for protein inference. Defaults to
         ``None``.
+    train_fdr
+        FDR to use for training the Mokapot model. Defaults to ``0.01``.
     write_weights
         Write model weights to a text file. Defaults to ``False``.
     write_txt
@@ -91,46 +97,15 @@ def rescore(
 
     # Rescore
     logger.debug(f"Mokapot brew options: `{kwargs}`")
-    confidence_results, models = brew(lin_psm_data, rng=8, **kwargs)
-
-    # Reshape confidence estimates to match PSMList
-    keys = ["mokapot score", "mokapot q-value", "mokapot PEP"]
-    mokapot_values_targets = (
-        confidence_results.confidence_estimates["psms"].set_index("index").sort_index()[keys]
-    )
-    mokapot_values_decoys = (
-        confidence_results.decoy_confidence_estimates["psms"].set_index("index").sort_index()[keys]
-    )
-    q = np.full((len(psm_list), 3), np.nan)
-    q[mokapot_values_targets.index] = mokapot_values_targets.values
-    q[mokapot_values_decoys.index] = mokapot_values_decoys.values
-
-    # Add Mokapot results to PSMList
-    psm_list["score"] = q[:, 0]
-    psm_list["qvalue"] = q[:, 1]
-    psm_list["pep"] = q[:, 2]
-
-    # Repeat for peptide-level scores
-    peptides_targets = confidence_results.confidence_estimates["peptides"].set_index(["peptide"])[
-        keys
-    ]
-    peptides_decoys = confidence_results.decoy_confidence_estimates["peptides"].set_index(
-        ["peptide"]
-    )[keys]
-    peptide_info = pd.concat([peptides_targets, peptides_decoys], axis=0).to_dict(orient="index")
-
-    # Add peptide-level scores to PSM metadata
-    # run_key = "na" if not all(psm.run for psm in psm_list) else None
-    no_charge_pattern = re.compile(r"(/\d+$)")
-    for psm in psm_list:
-        peptide_scores = peptide_info[(no_charge_pattern.sub("", str(psm.peptidoform), 1))]
-        psm.metadata.update(
-            {
-                "peptide_score": peptide_scores["mokapot score"],
-                "peptide_qvalue": peptide_scores["mokapot q-value"],
-                "peptide_pep": peptide_scores["mokapot PEP"],
-            }
+    try:
+        confidence_results, models = brew(
+            lin_psm_data, model=PercolatorModel(train_fdr=train_fdr), rng=8, **kwargs
         )
+    except RuntimeError as e:
+        raise RescoringError("Mokapot could not be run. Please check the input data.") from e
+
+    add_psm_confidence(psm_list, confidence_results)
+    add_peptide_confidence(psm_list, confidence_results)
 
     # Write results
     if write_weights:
@@ -243,6 +218,58 @@ def save_model_weights(
     pd.DataFrame(coefficients, columns=list(feature_names)).to_csv(
         output_file_root + ".mokapot.weights.tsv", sep="\t", index=False
     )
+
+
+def add_psm_confidence(
+    psm_list: psm_utils.PSMList, confidence_results: mokapot.confidence.Confidence
+) -> None:
+    """Add PSM-level confidence estimates to PSM list, updating score, qvalue, pep, and rank."""
+    # Reshape confidence estimates to match PSMList
+    keys = ["mokapot score", "mokapot q-value", "mokapot PEP"]
+    mokapot_values_targets = (
+        confidence_results.confidence_estimates["psms"].set_index("index").sort_index()[keys]
+    )
+    mokapot_values_decoys = (
+        confidence_results.decoy_confidence_estimates["psms"].set_index("index").sort_index()[keys]
+    )
+    q = np.full((len(psm_list), 3), np.nan)
+    q[mokapot_values_targets.index] = mokapot_values_targets.values
+    q[mokapot_values_decoys.index] = mokapot_values_decoys.values
+
+    # Add Mokapot results to PSMList
+    psm_list["score"] = q[:, 0]
+    psm_list["qvalue"] = q[:, 1]
+    psm_list["pep"] = q[:, 2]
+
+    # Reset ranks to match new scores
+    psm_list.set_ranks(lower_score_better=False)
+
+
+def add_peptide_confidence(
+    psm_list: psm_utils.PSMList, confidence_results: mokapot.confidence.Confidence
+) -> None:
+    """Add Mokapot peptide-level confidence estimates to PSM list."""
+    keys = ["mokapot score", "mokapot q-value", "mokapot PEP"]
+    peptide_info = pd.concat(
+        [
+            confidence_results.confidence_estimates["peptides"].set_index("peptide")[keys],
+            confidence_results.decoy_confidence_estimates["peptides"].set_index("peptide")[keys],
+        ],
+        axis=0,
+    ).to_dict(orient="index")
+
+    # Add peptide-level scores to PSM metadata
+    # run_key = "na" if not all(psm.run for psm in psm_list) else None
+    no_charge_pattern = re.compile(r"(/\d+$)")
+    for psm in psm_list:
+        peptide_scores = peptide_info[(no_charge_pattern.sub("", str(psm.peptidoform), 1))]
+        psm.metadata.update(
+            {
+                "peptide_score": peptide_scores["mokapot score"],
+                "peptide_qvalue": peptide_scores["mokapot q-value"],
+                "peptide_pep": peptide_scores["mokapot PEP"],
+            }
+        )
 
 
 def _mz_to_mass(mz: float, charge: int) -> float:

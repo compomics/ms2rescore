@@ -351,7 +351,7 @@ def _get_features_context(
             observed_column="ccs_observed_im2deep",
             xaxis_label="Observed CCS",
             yaxis_label="Predicted CCS",
-            plot_title="Predicted vs. observed CCS",
+            plot_title="Predicted vs. observed CCS - IM2Deep",
         )
 
         context["charts"].append(
@@ -361,6 +361,34 @@ def _get_features_context(
                 "chart": scatter_chart.to_html(**PLOTLY_HTML_KWARGS),
             }
         )
+
+    # ionmob specific charts
+    if "ionmob" in feature_names:
+        try:
+            import deeplc.plot
+
+            scatter_chart = deeplc.plot.scatter(
+                df=features[(~psm_list["is_decoy"]) & (psm_list["qvalue"] <= 0.01)],
+                predicted_column="ccs_predicted",
+                observed_column="ccs_observed",
+                xaxis_label="Observed CCS",
+                yaxis_label="Predicted CCS",
+                plot_title="Predicted vs. observed CCS - ionmob",
+            )
+
+            context["charts"].append(
+                {
+                    "title": TEXTS["charts"]["ionmob_performance"]["title"],
+                    "description": TEXTS["charts"]["ionmob_performance"]["description"],
+                    "chart": scatter_chart.to_html(**PLOTLY_HTML_KWARGS),
+                }
+            )
+
+        # TODO: for now, ionmob plot will only be available if deeplc is installed. Since ionmob does not have a dependency on deeplc, this should be changed in the future.
+        except ImportError:
+            logger.warning(
+                "Could not import deeplc.plot, skipping ionmob CCS prediction performance plot. Please install DeepLC to generate this plot."
+            )
     return context
 
 

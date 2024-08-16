@@ -44,6 +44,17 @@ files:
 MS²Rescore is available as a [desktop application][desktop], a [command line tool][cli], and a
 [modular Python API][python-package].
 
+## TIMS²Rescore: Direct support for DDA-PASEF data
+
+MS²Rescore v3.1+ includes TIMS²Rescore, a usage mode with specialized default configurations for
+DDA-PASEF data from timsTOF instruments. TIMS²Rescore makes use of new MS²PIP prediction models for
+timsTOF fragmentation and IM2Deep for ion mobility separation. Bruker .d and miniTDF spectrum
+files are directly supported through the [timsrust](https://github.com/MannLabs/timsrust) library.
+
+Checkout our [preprint](https://doi.org/10.1101/2024.05.29.596400) for more information and the
+[TIMS²Rescore documentation](https://ms2rescore.readthedocs.io/en/stable/userguide/tims2rescore)
+to get started.
+
 ## Citing
 
 **Latest MS²Rescore publication:**
@@ -54,9 +65,15 @@ MS²Rescore is available as a [desktop application][desktop], a [command line to
 
 **MS²Rescore for immunopeptidomics:**
 
-> **MS2Rescore: Data-driven rescoring dramatically boosts immunopeptide identification rates.**
+> **MS²Rescore: Data-driven rescoring dramatically boosts immunopeptide identification rates.**
 > Arthur Declercq, Robbin Bouwmeester, Aurélie Hirschler, Christine Carapito, Sven Degroeve, Lennart Martens, and Ralf Gabriels.
 > _Molecular & Cellular Proteomics_ (2021) [doi:10.1016/j.mcpro.2022.100266](https://doi.org/10.1016/j.mcpro.2022.100266) <span class="__dimensions_badge_embed__" data-doi="10.1016/j.mcpro.2022.100266" data-hide-zero-citations="true" data-style="small_rectangle"></span>
+
+**MS²Rescore for timsTOF DDA-PASEF data:**
+
+> **TIMS²Rescore: A DDA-PASEF optimized data-driven rescoring pipeline based on MS²Rescore.**
+> Arthur Declercq*, Robbe Devreese*, Jonas Scheid, Caroline Jachmann, Tim Van Den Bossche, Annica Preikschat, David Gomez-Zepeda, Jeewan Babu Rijal, Aurélie Hirschler, Jonathan R Krieger, Tharan Srikumar, George Rosenberger, Dennis Trede, Christine Carapito, Stefan Tenzer, Juliane S Walz, Sven Degroeve, Robbin Bouwmeester, Lennart Martens, and Ralf Gabriels.
+> _bioRxiv_ (2024) [doi:10.1101/2024.05.29.596400](https://doi.org/10.1101/2024.05.29.596400) <span class="__dimensions_badge_embed__" data-doi="10.1101/2024.05.29.596400" data-hide-zero-citations="true" data-style="small_rectangle"></span>
 
 **Original publication describing the concept of rescoring with predicted spectra:**
 

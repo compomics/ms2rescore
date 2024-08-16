@@ -175,6 +175,8 @@ def _update_psm_scores(
         original_psm["qvalue"] = new_psm["qvalue"]
         original_psm["pep"] = new_psm["pep"]
 
+    psm_list.set_ranks(lower_score_better=False)
+
 
 def _write_pin_file(psm_list: psm_utils.PSMList, filepath: str):
     """Write PIN file for rescoring."""
