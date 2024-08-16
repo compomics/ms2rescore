@@ -383,6 +383,9 @@ class FeatureGeneratorConfig(ctk.CTkFrame):
             config["deeplc"] = deeplc_config
         if ionmob_enabled:
             config["ionmob"] = ionmob_config
+        if im2deep_enabled:
+            config["im2deep"] = im2deep_config
+
         return config
 
 
