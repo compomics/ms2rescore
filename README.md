@@ -10,11 +10,6 @@
 
 Modular and user-friendly platform for AI-assisted rescoring of peptide identifications
 
-> ⚠️ Note: This is the documentation for the fully redeveloped version 3.0 of MS²Rescore. While
-> MS²Rescore 3.0 has been drastically improved over the previous version, you might run into some
-> unforeseen issues. Please report any issues you encounter on the [issue tracker][issues] or post
-> your questions on the [GitHub Discussions][discussions] forum.
-
 ## About MS²Rescore
 
 MS²Rescore performs ultra-sensitive peptide identification rescoring with LC-MS predictors such as
