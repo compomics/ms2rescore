@@ -209,12 +209,12 @@ def main(tims=False):
     cli_args = parser.parse_args()
 
     configurations = []
-    if cli_args.config_file:
-        configurations.append(cli_args.config_file)
     if tims:
         configurations.append(
             json.load(importlib.resources.open_text(package_data, "config_default_tims.json"))
         )
+    if cli_args.config_file:
+        configurations.append(cli_args.config_file)
     configurations.append(cli_args)
 
     try:

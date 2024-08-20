@@ -56,8 +56,8 @@ def generate_report(
     Parameters
     ----------
     output_path_prefix
-        Prefix of the MS²Rescore output file names. For example, if the PSM file is
-        ``/path/to/file.psms.tsv``, the prefix is ``/path/to/file.ms2rescore``.
+        Prefix of the MS²Rescore output file names. For example, if the output PSM file is
+        ``/path/to/file.ms2rescore.psms.tsv``, the prefix is ``/path/to/file.ms2rescore``.
     psm_list
         PSMs to be used for the report. If not provided, the PSMs will be read from the
         PSM file that matches the ``output_path_prefix``.
