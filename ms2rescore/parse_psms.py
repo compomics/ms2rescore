@@ -5,6 +5,7 @@ from typing import Dict, Optional, Union
 import numpy as np
 import psm_utils.io
 from psm_utils import PSMList
+from mumble import PSMHandler
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 
@@ -89,6 +90,19 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
         )
         new_ids = [_match_psm_ids(old_id, pattern) for old_id in psm_list["spectrum_id"]]
         psm_list["spectrum_id"] = new_ids
+
+    # Addition of Modifications for mass shifts in the PSMs with Mumble
+    if "mumble" in config["psm_generator"]:
+        logger.debug("Applying modifications for mass shifts using Mumble...")
+        mumble_config = config["psm_generator"]["mumble"]
+        psm_handler = PSMHandler(
+            **mumble_config,  # TODO how do we store config for mumble?
+        )
+        psm_list = psm_handler.add_modified_psms(
+            psm_list, generate_modified_decoys=True, keep_original=True
+        )
+        if mumble_config["output_file"]:
+            psm_handler.write_modified_psm_list(psm_list, mumble_config["output_file"])
 
     return psm_list
 
