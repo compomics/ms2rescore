@@ -70,7 +70,8 @@ def get_confidence_estimates(
     for when, scores in [("before", score_before), ("after", score_after)]:
         try:
             confidence[when] = lin_psm_dataset.assign_confidence(scores=scores)
-        except RuntimeError:
+        except (RuntimeError, IndexError):
             confidence[when] = None
+            logger.warning("Could not assign confidence estimates for %s rescoring.", when)
 
     return confidence["before"], confidence["after"]
