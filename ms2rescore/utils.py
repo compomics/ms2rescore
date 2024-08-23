@@ -1,11 +1,11 @@
 import logging
 import os
-import re
 from glob import glob
 from pathlib import Path
 from typing import Optional, Union
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError
+from ms2rescore_rs import is_supported_file_type
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +66,9 @@ def infer_spectrum_path(
             )
 
     # Match with file extension if not in resolved_path yet
-    if not _is_minitdf(resolved_path) and not re.match(
-        r"\.mgf$|\.mzml$|\.d$", resolved_path, flags=re.IGNORECASE
-    ):
+    if not is_supported_file_type(resolved_path) or not os.path.exists(resolved_path):
         for filename in glob(resolved_path + "*"):
-            if re.match(r".*(\.mgf$|\.mzml$|\.d)", filename, flags=re.IGNORECASE):
+            if is_supported_file_type(filename):
                 resolved_path = filename
                 break
         else:
