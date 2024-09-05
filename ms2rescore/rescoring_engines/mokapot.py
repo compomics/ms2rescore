@@ -85,8 +85,8 @@ def rescore(
     if "write_flashlfq" in kwargs:
         _ = kwargs.pop("write_flashlfq")
         logger.warning(
-            "The Mokapot `write_flashlfq` argument has been deprecated. To write FlashLFQ generic "
-            "TSV, use the MS²Rescore-level `write_flashlfq` option instead."
+            "The `write_flashlfq` argument has moved. To write FlashLFQ generic TSV, use the "
+            "MS²Rescore-level `write_flashlfq` option instead."
         )
 
     # Convert PSMList to Mokapot dataset
@@ -165,10 +165,6 @@ def convert_psm_list(
     feature_df = pd.DataFrame(list(psm_df["rescoring_features"])).astype(float).fillna(0.0)
     feature_df.columns = [f"feature:{f}" for f in feature_df.columns]
     combined_df = pd.concat([psm_df[required_columns], feature_df], axis=1)
-
-    # Ensure filename for FlashLFQ txt output
-    if not combined_df["run"].notnull().all():
-        combined_df["run"] = "na"
 
     feature_names = [f"feature:{f}" for f in feature_names] if feature_names else None
 
