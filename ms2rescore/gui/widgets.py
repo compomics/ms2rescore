@@ -7,33 +7,61 @@ from typing import Union
 import customtkinter as ctk
 
 
-class Heading(ctk.CTkLabel):
+class _Heading(ctk.CTkLabel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.configure(
+            font=ctk.CTkFont(weight="bold"),
             fg_color=("gray80", "gray30"),
             text_color=("black", "white"),
             corner_radius=6,
         )
 
 
-class LabeledEntry(ctk.CTkFrame):
+class _LabeledWidget(ctk.CTkFrame):
+    def __init__(self, *args, label="Label", description=None, wraplength=0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.grid_columnconfigure(0, weight=1)
+
+        self.row_n = 0
+
+        self._label_frame = ctk.CTkFrame(self)
+        self._label_frame.grid_columnconfigure(0, weight=1)
+        self._label_frame.configure(fg_color="transparent")
+        self._label_frame.grid(row=self.row_n, column=0, padx=0, pady=(0, 5), sticky="nsew")
+        self.row_n += 1
+
+        self._label = ctk.CTkLabel(
+            self._label_frame,
+            text=label,
+            font=ctk.CTkFont(weight="bold"),
+            wraplength=wraplength,
+            justify="left",
+            anchor="w",
+        )
+        self._label.grid(row=0, column=0, padx=0, pady=0, sticky="w")
+
+        if description:
+            self._description = ctk.CTkLabel(
+                self._label_frame,
+                text=description,
+                wraplength=wraplength,
+                justify="left",
+                anchor="w",
+            )
+            self._description.grid(row=1, column=0, padx=0, pady=0, sticky="ew")
+
+
+class LabeledEntry(_LabeledWidget):
     def __init__(
         self,
         *args,
-        label="Enter text",
         placeholder_text="Enter text...",
         default_value="",
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.grid_columnconfigure(0, weight=1)
-
         self._variable = ctk.StringVar(value=default_value)
-
-        self._label = ctk.CTkLabel(self, text=label)
-        self._label.grid(row=0, column=0, padx=0, pady=5, sticky="w")
-
         self._entry = ctk.CTkEntry(
             self, placeholder_text=placeholder_text, textvariable=self._variable
         )
@@ -43,11 +71,10 @@ class LabeledEntry(ctk.CTkFrame):
         return self._variable.get()
 
 
-class LabeledEntryTextbox(ctk.CTkFrame):
+class LabeledEntryTextbox(_LabeledWidget):
     def __init__(
         self,
         *args,
-        label="Enter text",
         initial_contents="Enter text here...",
         box_height=100,
         **kwargs,
@@ -56,49 +83,40 @@ class LabeledEntryTextbox(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
 
-        self._label = ctk.CTkLabel(self, text=label, anchor="w")
-        self._label.grid(row=0, column=0, padx=0, pady=5, sticky="ew")
-
         self.text_box = ctk.CTkTextbox(self, height=box_height)
         self.text_box.insert("1.0", initial_contents)
-        self.text_box.grid(row=1, column=0, padx=0, pady=5, sticky="nsew")
+        self.text_box.grid(row=self.row_n, column=0, padx=0, pady=5, sticky="nsew")
+        self.row_n += 1
 
     def get(self):
         return self.text_box.get("0.0", tk.END)
 
 
-class LabeledRadioButtons(ctk.CTkFrame):
-    def __init__(self, *args, label="Select option", options=[], default_value=None, **kwargs):
+class LabeledRadioButtons(_LabeledWidget):
+    def __init__(
+        self,
+        *args,
+        options=[],
+        default_value=None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
-        self.grid_columnconfigure(0, weight=1)
-
         self.value = ctk.StringVar(value=default_value or options[0])
-
-        self._label = ctk.CTkLabel(self, text=label)
-        self._label.grid(row=0, column=0, padx=0, pady=(0, 5), sticky="w")
-
         self._radio_buttons = []
         for i, option in enumerate(options):
             radio_button = ctk.CTkRadioButton(self, text=option, variable=self.value, value=option)
-            radio_button.grid(row=i + 1, column=0, padx=0, pady=(0, 5), sticky="w")
+            radio_button.grid(row=self.row_n, column=0, padx=0, pady=(0, 5), sticky="w")
             self._radio_buttons.append(radio_button)
+            self.row_n += 1
 
     def get(self):
         return self.value.get()
 
 
-class LabeledOptionMenu(ctk.CTkFrame):
-    def __init__(
-        self, *args, vertical=False, label="Select option", values=[], default_value=None, **kwargs
-    ):
+class LabeledOptionMenu(_LabeledWidget):
+    def __init__(self, *args, vertical=False, values=[], default_value=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.grid_columnconfigure(0, weight=1)
-
         self.value = ctk.StringVar(value=default_value or values[0])
-
-        self._label = ctk.CTkLabel(self, text=label)
-        self._label.grid(row=0, column=0, padx=0, pady=0 if vertical else 5, sticky="w")
-
         self._option_menu = ctk.CTkOptionMenu(self, variable=self.value, values=values)
         self._option_menu.grid(
             row=1 if vertical else 0,
@@ -112,16 +130,10 @@ class LabeledOptionMenu(ctk.CTkFrame):
         return self.value.get()
 
 
-class LabeledSwitch(ctk.CTkFrame):
-    def __init__(self, *args, label="Enable/disable", default=False, **kwargs):
+class LabeledSwitch(_LabeledWidget):
+    def __init__(self, *args, default=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.grid_columnconfigure(0, weight=1)
-
         self.value = ctk.StringVar(value="0")
-
-        self._label = ctk.CTkLabel(self, text=label)
-        self._label.grid(row=0, column=0, padx=0, pady=5, sticky="w")
-
         self._switch = ctk.CTkSwitch(self, variable=self.value, text="", onvalue="1", offvalue="0")
         self._switch.grid(row=0, column=1, padx=0, pady=5, sticky="e")
         if default:
@@ -202,20 +214,16 @@ class FloatSpinbox(ctk.CTkFrame):
         self.entry.insert(0, format(value, self.str_format))
 
 
-class LabeledFloatSpinbox(ctk.CTkFrame):
+class LabeledFloatSpinbox(_LabeledWidget):
     def __init__(
         self,
         *args,
-        label="Enter value",
         initial_value=0.0,
         step_size=1,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.grid_columnconfigure(0, weight=1)
-
-        self._label = ctk.CTkLabel(self, text=label)
-        self._label.grid(row=0, column=0, padx=0, pady=5, sticky="w")
 
         self._spinbox = FloatSpinbox(
             self,
@@ -228,15 +236,20 @@ class LabeledFloatSpinbox(ctk.CTkFrame):
         return self._spinbox.get()
 
 
-class LabeledFileSelect(ctk.CTkFrame):
-    def __init__(self, *args, label="Select file", file_option="openfile", **kwargs):
+class LabeledFileSelect(_LabeledWidget):
+    def __init__(
+        self,
+        *args,
+        file_option="openfile",
+        **kwargs,
+    ):
         """
         Advanced file selection widget with entry and file, directory, or save button.
 
         Parameters
         ----------
-        label : str
-            Label text.
+        wraplength : int
+            Maximum line length before wrapping.
         file_option : str
             One of "openfile", "directory", "file/dir", or "savefile. Determines the type of file
             selection dialog that is shown when the button is pressed.
@@ -253,14 +266,12 @@ class LabeledFileSelect(ctk.CTkFrame):
         self._button_1 = None
         self._button_2 = None
 
-        self.grid_columnconfigure(0, weight=1)
-
-        # Subwidgets
-        self._label = ctk.CTkLabel(self, text=label)
-        self._label.grid(row=0, column=0, columnspan=2, padx=0, pady=(5, 0), sticky="w")
+        self._label_frame.grid(
+            row=self.row_n - 1, column=0, columnspan=3, padx=0, pady=(0, 5), sticky="nsew"
+        )  # Override grid placement of _LabeledWidget label frame to span all columns
 
         self._entry = ctk.CTkEntry(self, placeholder_text="Select a file or directory")
-        self._entry.grid(row=1, column=0, padx=0, pady=0, sticky="ew")
+        self._entry.grid(row=self.row_n, column=0, padx=0, pady=5, sticky="ew")
 
         if file_option == "directory":
             self._button_1 = ctk.CTkButton(self, text="Browse directories", command=self._pick_dir)
@@ -279,9 +290,10 @@ class LabeledFileSelect(ctk.CTkFrame):
                 self, text="Path to save file(s)", command=self._save_file
             )
 
-        self._button_1.grid(row=1, column=1, padx=(5, 0), pady=0, sticky="e")
+        self._button_1.grid(row=self.row_n, column=1, padx=(5, 0), pady=5, sticky="e")
         if self._button_2:
-            self._button_2.grid(row=1, column=2, padx=(5, 0), pady=0, sticky="e")
+            self._button_2.grid(row=self.row_n, column=2, padx=(5, 0), pady=5, sticky="e")
+        self.row_n += 1
 
     def get(self):
         """Returns the selected file or directory."""
@@ -312,15 +324,19 @@ class LabeledFileSelect(ctk.CTkFrame):
         self._update_entry()
 
 
-class TableInput(ctk.CTkFrame):
-    def __init__(self, *args, label=None, columns=2, header_labels=["A", "B"], **kwargs):
+class TableInput(_LabeledWidget):
+    def __init__(
+        self,
+        *args,
+        columns=2,
+        header_labels=["A", "B"],
+        **kwargs,
+    ):
         """
         Table input widget with user-configurable number of rows.
 
         Parameters
         ----------
-        label : str
-            Label text.
         columns : int
             Number of columns in the table.
         header_labels : list of str
@@ -328,25 +344,16 @@ class TableInput(ctk.CTkFrame):
 
         """
         super().__init__(*args, **kwargs)
-        self.label = label
         self.columns = columns
         self.header_labels = header_labels
 
         self.uniform_hash = str(random.getrandbits(128))
 
-        self.grid_columnconfigure(0, weight=1)
-
-        # Label
-        if label:
-            self.label = ctk.CTkLabel(self, text=label)
-            self.label.grid(row=0, column=0, pady=(5, 0), sticky="w")
-            label_row = 1
-        else:
-            label_row = 0
-
         # Header row
         header_row = ctk.CTkFrame(self)
-        header_row.grid(row=0 + label_row, column=0, padx=(33, 0), pady=(0, 5), sticky="ew")
+        header_row.grid(row=self.row_n, column=0, padx=(33, 0), pady=(5, 5), sticky="ew")
+        self.row_n += 1
+
         for i, header in enumerate(self.header_labels):
             header_row.grid_columnconfigure(i, weight=1, uniform=self.uniform_hash)
             padx = (0, 5) if i < len(self.header_labels) - 1 else (0, 0)
@@ -364,7 +371,8 @@ class TableInput(ctk.CTkFrame):
         self.input_frame = ctk.CTkFrame(self)
         self.input_frame.uniform_hash = self.uniform_hash
         self.input_frame.grid_columnconfigure(0, weight=1)
-        self.input_frame.grid(row=1 + label_row, column=0, sticky="new")
+        self.input_frame.grid(row=self.row_n, column=0, sticky="new")
+        self.row_n += 1
 
         # Add first row that cannot be removed
         self.add_row()
@@ -372,7 +380,8 @@ class TableInput(ctk.CTkFrame):
 
         # Button to add more rows
         self.add_button = ctk.CTkButton(self, text="+", width=28, command=self.add_row)
-        self.add_button.grid(row=2 + label_row, column=0, pady=(0, 5), sticky="w")
+        self.add_button.grid(row=self.row_n, column=0, pady=(0, 5), sticky="w")
+        self.row_n += 1
 
     def add_row(self):
         row = _TableInputRow(self.input_frame, columns=self.columns)
