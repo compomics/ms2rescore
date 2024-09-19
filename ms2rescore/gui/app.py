@@ -370,6 +370,17 @@ class AdvancedConfiguration(ctk.CTkFrame):
         )
         self.usi.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
 
+        self.write_flashlfq = widgets.LabeledSwitch(
+            self,
+            label="Write FlashLFQ input file",
+            description=(
+                "Write a file that can be used as input for FlashLFQ. This file only contains "
+                "target PSMs that pass the FDR threshold."
+            ),
+            wraplength=CONFIG_WIDTH - 180,
+        )
+        self.write_flashlfq.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
+
         self.generate_report = widgets.LabeledSwitch(
             self,
             label="Generate interactive report",
@@ -380,7 +391,7 @@ class AdvancedConfiguration(ctk.CTkFrame):
             wraplength=CONFIG_WIDTH - 180,
             default=True,
         )
-        self.generate_report.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
+        self.generate_report.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
 
         self.id_decoy_pattern = widgets.LabeledEntry(
             self,
@@ -392,7 +403,7 @@ class AdvancedConfiguration(ctk.CTkFrame):
             ),
             wraplength=CONFIG_WIDTH - 180,
         )
-        self.id_decoy_pattern.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+        self.id_decoy_pattern.grid(row=4, column=0, pady=(0, 10), sticky="nsew")
 
         self.psm_id_pattern = widgets.LabeledEntry(
             self,
@@ -404,7 +415,7 @@ class AdvancedConfiguration(ctk.CTkFrame):
             ),
             wraplength=CONFIG_WIDTH - 180,
         )
-        self.psm_id_pattern.grid(row=4, column=0, pady=(0, 10), sticky="nsew")
+        self.psm_id_pattern.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
 
         self.spectrum_id_pattern = widgets.LabeledEntry(
             self,
@@ -414,7 +425,7 @@ class AdvancedConfiguration(ctk.CTkFrame):
             ),
             wraplength=CONFIG_WIDTH - 180,
         )
-        self.spectrum_id_pattern.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
+        self.spectrum_id_pattern.grid(row=6, column=0, pady=(0, 10), sticky="nsew")
 
         self.processes = widgets.LabeledOptionMenu(
             self,
@@ -428,7 +439,7 @@ class AdvancedConfiguration(ctk.CTkFrame):
             values=[str(x) for x in list(range(1, min(16, multiprocessing.cpu_count()) + 1))],
             default_value=str(min(16, multiprocessing.cpu_count())),
         )
-        self.processes.grid(row=6, column=0, pady=(0, 10), sticky="nsew")
+        self.processes.grid(row=7, column=0, pady=(0, 10), sticky="nsew")
 
         self.file_prefix = widgets.LabeledFileSelect(
             self,
@@ -441,7 +452,7 @@ class AdvancedConfiguration(ctk.CTkFrame):
             ),
             wraplength=CONFIG_WIDTH - 20,
         )
-        self.file_prefix.grid(row=7, column=0, columnspan=2, sticky="nsew")
+        self.file_prefix.grid(row=8, column=0, columnspan=2, sticky="nsew")
 
         self.config_file = widgets.LabeledFileSelect(
             self,
@@ -453,13 +464,14 @@ class AdvancedConfiguration(ctk.CTkFrame):
             ),
             wraplength=CONFIG_WIDTH - 20,
         )
-        self.config_file.grid(row=8, column=0, columnspan=2, sticky="nsew")
+        self.config_file.grid(row=9, column=0, columnspan=2, sticky="nsew")
 
     def get(self) -> Dict:
         """Get the configured values as a dictionary."""
         return {
             "lower_score_is_better": bool(int(self.lower_score.get())),  # str repr of 0 or 1
             "rename_to_usi": self.usi.get(),
+            "write_flashlfq": self.write_flashlfq.get(),
             "write_report": self.generate_report.get(),
             "id_decoy_pattern": self.id_decoy_pattern.get(),
             "psm_id_pattern": self.psm_id_pattern.get(),
@@ -732,12 +744,6 @@ class MokapotRescoringConfiguration(ctk.CTkFrame):
         self.write_txt.grid(row=row_n, column=0, pady=(0, 10), sticky="nsew")
         row_n += 1
 
-        self.write_flashlfq = widgets.LabeledSwitch(
-            self, label="Write file for FlashLFQ", default=False
-        )
-        self.write_flashlfq.grid(row=row_n, column=0, pady=(0, 10), sticky="nsew")
-        row_n += 1
-
         self.fasta_file = widgets.LabeledFileSelect(
             self,
             label="Select FASTA file (optional, required for protein inference)",
@@ -760,7 +766,6 @@ class MokapotRescoringConfiguration(ctk.CTkFrame):
         config = {
             "write_weights": self.write_weights.get(),
             "write_txt": self.write_txt.get(),
-            "write_flashlfq": self.write_flashlfq.get(),
             "fasta_file": self.fasta_file.get(),
             "protein_kwargs": self._parse_protein_kwargs(self.protein_kwargs.get()),
         }
