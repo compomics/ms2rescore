@@ -163,6 +163,16 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     logger.info(f"Writing output to {output_file_root}.psms.tsv...")
     psm_utils.io.write_file(psm_list, output_file_root + ".psms.tsv", filetype="tsv")
 
+    if config["write_flashlfq"]:
+        logger.info(f"Writing output to {output_file_root}.flashlfq.tsv...")
+        psm_utils.io.write_file(
+            psm_list,
+            output_file_root + ".flashlfq.tsv",
+            filetype="flashlfq",
+            fdr_threshold=0.01,
+            only_target=True,  # TODO: Make FDR threshold configurable
+        )
+
     # Write report
     if config["write_report"]:
         try:

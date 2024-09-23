@@ -10,11 +10,6 @@
 
 Modular and user-friendly platform for AI-assisted rescoring of peptide identifications
 
-> ⚠️ Note: This is the documentation for the fully redeveloped version 3.0 of MS²Rescore. While
-> MS²Rescore 3.0 has been drastically improved over the previous version, you might run into some
-> unforeseen issues. Please report any issues you encounter on the [issue tracker][issues] or post
-> your questions on the [GitHub Discussions][discussions] forum.
-
 ## About MS²Rescore
 
 MS²Rescore performs ultra-sensitive peptide identification rescoring with LC-MS predictors such as
@@ -52,8 +47,7 @@ timsTOF fragmentation and IM2Deep for ion mobility separation. Bruker .d and min
 files are directly supported through the [timsrust](https://github.com/MannLabs/timsrust) library.
 
 Checkout our [preprint](https://doi.org/10.1101/2024.05.29.596400) for more information and the
-[TIMS²Rescore documentation](https://ms2rescore.readthedocs.io/en/stable/userguide/tims2rescore)
-to get started.
+[TIMS²Rescore documentation][tims2rescore] to get started.
 
 ## Citing
 
@@ -104,11 +98,11 @@ make a [pull request][pr]!
 [issues]: https://github.com/compomics/ms2rescore/issues/
 [discussions]: https://github.com/compomics/ms2rescore/discussions/
 [pr]: https://github.com/compomics/ms2rescore/pulls/
-[desktop]: https://ms2rescore.readthedocs.io/gui.html
+[desktop]: https://ms2rescore.readthedocs.io/en/stable/gui/
 [desktop-installer]: https://github.com/compomics/ms2rescore/releases/latest
-[cli]: https://ms2rescore.readthedocs.io/cli/cli.html
-[python-package]: https://ms2rescore.readthedocs.io/api/ms2rescore.html
-[docker]: https://ms2rescore.readthedocs.io/installation.html#docker-container
+[cli]: https://ms2rescore.readthedocs.io/en/stable/cli/
+[python-package]: https://ms2rescore.readthedocs.io/en/stable/api/ms2rescore/
+[docker]: https://ms2rescore.readthedocs.io/en/stable/installation#docker-container
 [publication-branch]: https://github.com/compomics/ms2rescore/tree/pub
 [ms2pip]: https://github.com/compomics/ms2pip
 [deeplc]: https://github.com/compomics/deeplc
@@ -116,3 +110,4 @@ make a [pull request][pr]!
 [mokapot]: https://mokapot.readthedocs.io/
 [psm_utils]: https://github.com/compomics/psm_utils
 [file-formats]: https://psm-utils.readthedocs.io/en/stable/#supported-file-formats
+[tims2rescore]: https://ms2rescore.readthedocs.io/en/stable/userguide/tims2Rescore

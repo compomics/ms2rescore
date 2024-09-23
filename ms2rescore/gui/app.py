@@ -4,11 +4,11 @@ import importlib.resources
 import logging
 import multiprocessing
 import os
+import platform
 import sys
 import webbrowser
 from pathlib import Path
 from typing import Dict, List, Tuple
-import platform
 
 import customtkinter as ctk
 from joblib import parallel_backend
@@ -17,7 +17,6 @@ from PIL import Image
 from psm_utils.io import FILETYPES
 
 import ms2rescore.gui.widgets as widgets
-import ms2rescore.package_data as pkg_data
 import ms2rescore.package_data.img as pkg_data_img
 from ms2rescore import __version__ as ms2rescore_version
 from ms2rescore.config_parser import parse_configurations
@@ -27,9 +26,6 @@ from ms2rescore.gui.function2ctk import Function2CTk
 
 with importlib.resources.path(pkg_data_img, "config_icon.png") as resource:
     _IMG_DIR = Path(resource).parent
-
-with importlib.resources.path(pkg_data, "ms2rescore-gui-theme.json") as resource:
-    _THEME_FILE = Path(resource).as_posix()
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -41,10 +37,53 @@ try:
 except ImportError:
     pass
 
-ctk.set_default_color_theme(_THEME_FILE)
-
 # TODO Does this disable multiprocessing everywhere?
 parallel_backend("threading")
+
+CONFIG_WIDTH = 600
+CITATIONS = [
+    (
+        "MS²Rescore: Declercq et al. JPR (2024)",
+        "https://doi.org/10.1021/acs.jproteome.3c00785",
+    ),
+    (
+        "MS²PIP: Declercq et al. NAR (2023)",
+        "https://doi.org/10.1093/nar/gkad335",
+    ),
+    (
+        "DeepLC: Bouwmeester et al. Nat Methods (2021)",
+        "https://doi.org/10.1038/s41592-021-01301-5",
+    ),
+    (
+        "ionmob: Teschner et al. Bioinformatics (2023)",
+        "https://doi.org/10.1093/bioinformatics/btad486",
+    ),
+    (
+        "Mokapot: Fondrie et al. JPR (2021)",
+        "https://doi.org/10.1021/acs.jproteome.0c01010",
+    ),
+    (
+        "Percolator: Käll et al. Nat Methods (2007)",
+        "https://doi.org/10.1038/nmeth1113",
+    ),
+]
+LINKS = [
+    (
+        "User guide",
+        "https://ms2rescore.readthedocs.io/en/stable/userguide/configuration/",
+        "docs",
+    ),
+    (
+        "Discussion forum",
+        "https://github.com/compomics/ms2rescore/discussions/categories/q-a",
+        "comments",
+    ),
+    (
+        "CompOmics/ms2rescore",
+        "https://github.com/compomics/ms2rescore",
+        "github",
+    ),
+]
 
 
 class SideBar(ctk.CTkFrame):
@@ -54,7 +93,7 @@ class SideBar(ctk.CTkFrame):
 
         # Configure layout (three rows, one column)
         self.grid_rowconfigure(0, weight=1)
-        # self.rowconfigure((1,2,3,4,5), weight=1)
+        row_count = 0
 
         # Top row: logo
         self.logo = ctk.CTkImage(
@@ -62,64 +101,65 @@ class SideBar(ctk.CTkFrame):
             size=(130, 130),
         )
         self.logo_label = ctk.CTkLabel(self, text="", image=self.logo)
-        self.logo_label.grid(row=0, column=0, padx=0, pady=(20, 50), sticky="n")
+        self.logo_label.grid(row=row_count, column=0, padx=0, pady=(20, 50), sticky="n")
+        row_count += 1
+
+        # Links
+        self.links = LinkFrame(self, LINKS)
+        self.links.configure(fg_color="transparent")
+        self.links.grid(row=row_count, column=0, padx=20, pady=(0, 10), sticky="nsew")
+        row_count += 1
 
         # Citations
-        self.citations = CitationFrame(
-            self,
-            [
-                (
-                    "MS²Rescore: Declercq et al. 2022 MCP",
-                    "https://doi.org/10.1016/j.mcpro.2022.100266",
-                ),
-                ("MS²PIP: Declercq et al. 2023 NAR", "https://doi.org/10.1093/nar/gkad335"),
-                (
-                    "DeepLC: Bouwmeester et al. 2021 Nat Methods",
-                    "https://doi.org/10.1038/s41592-021-01301-5",
-                ),
-                (
-                    "Mokapot: Fondrie et al. 2021 JPR",
-                    "https://doi.org/10.1021/acs.jproteome.0c01010",
-                ),
-                ("Percolator: Käll et al. 2007 Nat Methods", "https://doi.org/10.1038/nmeth1113"),
-            ],
-        )
+        self.citations = CitationFrame(self, CITATIONS)
         self.citations.configure(fg_color="transparent")
-        self.citations.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
+        self.citations.grid(row=row_count, column=0, padx=20, pady=(0, 10), sticky="nsew")
+        row_count += 1
 
         # Bottom row: Appearance and UI scaling
         self.ui_control = widgets.UIControl(self)
         self.ui_control.configure(fg_color="transparent")
-        self.ui_control.grid(row=2, column=0, padx=20, pady=(0, 10), sticky="ew")
-
-        # Bottom row: GH URL
-        self.github_button = ctk.CTkButton(
-            self,
-            text="compomics/ms2rescore",
-            anchor="w",
-            fg_color="transparent",
-            text_color=("#000000", "#fefdff"),
-            image=ctk.CTkImage(
-                dark_image=Image.open(os.path.join(str(_IMG_DIR), "github-mark-white.png")),
-                light_image=Image.open(os.path.join(str(_IMG_DIR), "github-mark.png")),
-                size=(25, 25),
-            ),
-        )
-        self.github_button.bind(
-            "<Button-1>",
-            lambda e: self.web_callback("https://github.com/compomics/ms2rescore"),
-        )
-        self.github_button.grid(row=4, column=0, padx=20, pady=(10, 10))
+        self.ui_control.grid(row=row_count, column=0, padx=20, pady=(0, 10), sticky="nsew")
+        row_count += 1
 
         # Bottom row: version
-        self.version_label = ctk.CTkLabel(self, text=ms2rescore_version)
-        self.version_label.grid(row=5, column=0, padx=20, pady=(10, 10))
+        self.version_label = ctk.CTkLabel(self, text=f"v{ms2rescore_version}")
+        self.version_label.grid(row=row_count, column=0, padx=20, pady=(10, 10))
+        row_count += 1
+
+
+class LinkFrame(ctk.CTkFrame):
+    def __init__(self, master, links: List[Tuple[str, str, str]], *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.heading = ctk.CTkLabel(
+            self, text="Useful links", font=ctk.CTkFont(weight="bold"), anchor="w"
+        )
+        self.heading.grid(row=0, column=0, padx=0, pady=0, sticky="ew")
+
+        for i, (ref, url, icon) in enumerate(links):
+            button = ctk.CTkButton(
+                self,
+                text=ref,
+                text_color=("#000000", "#fefdff"),
+                hover_color=("#3a7ebf", "#1f538d"),
+                fg_color="transparent",
+                anchor="w",
+                image=ctk.CTkImage(
+                    dark_image=Image.open(os.path.join(str(_IMG_DIR), f"{icon}_icon_white.png")),
+                    light_image=Image.open(os.path.join(str(_IMG_DIR), f"{icon}_icon_black.png")),
+                    size=(20, 20),
+                ),
+                command=lambda x=url: webbrowser.open_new(x),
+            )
+            button.grid(row=i + 1, column=0, padx=0, pady=(0, 5), sticky="ew")
 
 
 class CitationFrame(ctk.CTkFrame):
     def __init__(self, master, citations: List[Tuple[str]], *args, **kwargs):
         super().__init__(master, *args, **kwargs)
-        self.heading = ctk.CTkLabel(self, text="Please cite", anchor="w")
+        self.heading = ctk.CTkLabel(
+            self, text="Please cite", font=ctk.CTkFont(weight="bold"), anchor="w"
+        )
         self.heading.grid(row=0, column=0, padx=0, pady=0, sticky="ew")
 
         self.buttons = []
@@ -143,6 +183,8 @@ class ConfigFrame(ctk.CTkTabview):
         """MS²Rescore configuration frame."""
         super().__init__(*args, **kwargs)
 
+        self.configure(width=CONFIG_WIDTH)
+
         for tab in ["Main", "Advanced", "Feature generators", "Rescoring engine"]:
             self.add(tab)
             self.tab(tab).grid_columnconfigure(0, weight=1)
@@ -150,16 +192,16 @@ class ConfigFrame(ctk.CTkTabview):
         self.set("Main")
 
         self.main_config = MainConfiguration(self.tab("Main"))
-        self.main_config.grid(row=0, column=0, sticky="nsew")
+        self.main_config.grid(row=0, column=0, padx=5, sticky="nsew")
 
         self.advanced_config = AdvancedConfiguration(self.tab("Advanced"))
-        self.advanced_config.grid(row=0, column=0, sticky="nsew")
+        self.advanced_config.grid(row=0, column=0, padx=5, sticky="nsew")
 
         self.fgen_config = FeatureGeneratorConfig(self.tab("Feature generators"))
-        self.fgen_config.grid(row=0, column=0, sticky="nsew")
+        self.fgen_config.grid(row=0, column=0, padx=5, sticky="nsew")
 
         self.rescoring_engine_config = RescoringEngineConfig(self.tab("Rescoring engine"))
-        self.rescoring_engine_config.grid(row=0, column=0, sticky="nsew")
+        self.rescoring_engine_config.grid(row=0, column=0, padx=5, sticky="nsew")
 
     def get(self):
         """Create MS²Rescore config file"""
@@ -184,52 +226,95 @@ class MainConfiguration(ctk.CTkFrame):
 
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
+        row_n = 0
 
-        self.psm_file_config = PSMFileConfigFrame(self)
-        self.psm_file_config.grid(row=0, column=0, pady=(0, 10), sticky="nsew")
+        self.psm_file = widgets.LabeledFileSelect(
+            self,
+            label="Identification file",
+            description=(
+                "Select the PSM file generated by the search engine. This file should contain "
+                "all unfiltered target and decoy identifications. Multiple files can be selected."
+            ),
+            wraplength=CONFIG_WIDTH - 20,
+            file_option="openfiles",
+        )
+        self.psm_file.grid(row=row_n, column=0, pady=(0, 10), sticky="nsew")
+        row_n += 1
+
+        self.psm_file_type = widgets.LabeledOptionMenu(
+            self,
+            vertical=False,
+            label="Identification file type",
+            description=(
+                "Select the file type of the PSM file. The 'infer' option will attempt to infer "
+                "the file type from the file extension. If your file type is not listed, do not "
+                "hesitate to open a feature request on the discussion forum."
+            ),
+            wraplength=CONFIG_WIDTH - 150,
+            values=["infer"] + list(FILETYPES.keys()),
+        )
+        self.psm_file_type.grid(row=row_n, column=0, pady=(0, 10), sticky="nsew")
+        row_n += 1
 
         self.spectrum_path = widgets.LabeledFileSelect(
-            self, label="Select MGF/mzML file or directory", file_option="file/dir"
-        )
-        self.spectrum_path.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
-
-        self.fasta_file = widgets.LabeledFileSelect(
             self,
-            label="Select FASTA file (optional, required for protein inference)",
-            file_option="openfile",
+            label="Spectrum file or directory",
+            description=(
+                "Select the MGF, mzML, or Bruker raw file(s) containing the spectra. If the "
+                "search engine wrote the file names to the PSM file, select the directory "
+                "containing the files. The file path should not contain spaces. "
+            ),
+            wraplength=CONFIG_WIDTH - 20,
+            file_option="file/dir",
         )
-        self.fasta_file.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
-
-        self.processes = widgets.LabeledOptionMenu(
-            self,
-            label="Number of processes",
-            values=[str(x) for x in list(range(-1, multiprocessing.cpu_count() + 1))],
-        )
-        self.processes.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+        self.spectrum_path.grid(row=row_n, column=0, pady=(0, 10), sticky="nsew")
+        row_n += 1
 
         self.modification_mapping = widgets.TableInput(
             self,
             label="Modification mapping",
+            description=(
+                "Map search engine modification labels to ProForma labels (PSI-MOD, UniMod, "
+                "formula, or mass shift). This is required for correct modification parsing. "
+                "If this field is left empty, the search engine labels will be used as is, "
+                "which may lead to incorrect feature generation for modified peptides. "
+                "Check out the user guide for more information."
+            ),
             columns=2,
             header_labels=["Search engine label", "ProForma label"],
+            wraplength=CONFIG_WIDTH - 20,  # width of the frame minus padding; hardcoded for now
         )
-        self.modification_mapping.grid(row=4, column=0, sticky="new")
+        self.modification_mapping.grid(row=row_n, column=0, pady=(0, 10), sticky="new")
+        row_n += 1
 
         self.fixed_modifications = widgets.TableInput(
             self,
-            label="Fixed modifications",
+            label="Fixed modifications (MaxQuant only)",
+            description=(
+                "Add fixed modifications that are not included in the PSM file by the search "
+                "engine. If the search engine writes fixed modifications to the PSM file (as most "
+                "do), leave this field empty. However, if you are using MaxQuant, which does not "
+                "write fixed modifications to the PSM file, you should add them here."
+            ),
             columns=2,
             header_labels=["ProForma label", "Amino acids (comma-separated)"],
+            wraplength=CONFIG_WIDTH - 20,  # width of the frame minus padding; hardcoded for now
         )
-        self.fixed_modifications.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
+        self.fixed_modifications.grid(row=row_n, column=0, pady=(0, 10), sticky="nsew")
+        row_n += 1
 
     def get(self) -> Dict:
         """Get the configured values as a dictionary."""
+        try:
+            # there cannot be spaces in the file path
+            # TODO: Fix this in widgets.LabeledFileSelect
+            psm_files = self.psm_file.get().split(" ")
+        except AttributeError:
+            raise MS2RescoreConfigurationError("No PSM file provided. Please select a file.")
         return {
-            **self.psm_file_config.get(),
+            "psm_file": psm_files,
+            "psm_file_type": self.psm_file_type.get(),
             "spectrum_path": self.spectrum_path.get(),
-            "fasta_file": self.fasta_file.get(),
-            "processes": int(self.processes.get()),
             "modification_mapping": self._parse_modification_mapping(
                 self.modification_mapping.get()
             ),
@@ -256,41 +341,6 @@ class MainConfiguration(ctk.CTkFrame):
         return fixed_modifications or None
 
 
-class PSMFileConfigFrame(ctk.CTkFrame):
-    def __init__(self, *args, **kwargs):
-        """PSM file configuration frame with labeled file select and option menu."""
-        super().__init__(*args, **kwargs)
-
-        self.configure(fg_color="transparent")
-        self.grid_columnconfigure(0, weight=1)
-
-        self.psm_file = widgets.LabeledFileSelect(
-            self, label="Select identification file", file_option="openfiles"
-        )
-        self.psm_file.grid(row=0, column=0, pady=0, padx=(0, 5), sticky="nsew")
-
-        self.psm_file_type = widgets.LabeledOptionMenu(
-            self,
-            vertical=True,
-            label="PSM file type",
-            values=["infer"] + list(FILETYPES.keys()),
-        )
-        self.psm_file_type.grid(row=0, column=1, pady=(5, 0), sticky="nsew")
-
-    def get(self) -> Dict:
-        """Get the configured values as a dictionary."""
-        try:
-            # there cannot be spaces in the file path
-            # TODO: Fix this in widgets.LabeledFileSelect
-            psm_files = self.psm_file.get().split(" ")
-        except AttributeError:
-            raise MS2RescoreConfigurationError("No PSM file provided. Please select a file.")
-        return {
-            "psm_file": psm_files,
-            "psm_file_type": self.psm_file_type.get(),
-        }
-
-
 class AdvancedConfiguration(ctk.CTkFrame):
     def __init__(self, *args, **kwargs):
         """Advanced MS²Rescore configuration frame."""
@@ -299,47 +349,136 @@ class AdvancedConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.lower_score = widgets.LabeledSwitch(self, label="Lower score is better")
+        self.lower_score = widgets.LabeledSwitch(
+            self,
+            label="Lower score is better",
+            description=(
+                "When enabled, a lower search engine score is considered to denote a better PSM."
+            ),
+            wraplength=CONFIG_WIDTH - 180,
+        )
         self.lower_score.grid(row=0, column=0, pady=(0, 10), sticky="nsew")
 
-        self.usi = widgets.LabeledSwitch(self, label="Rename PSM IDs to their USI")
+        self.usi = widgets.LabeledSwitch(
+            self,
+            label="Rename spectrum IDs to USIs",
+            description=(
+                "Rename the spectrum identifiers to Universal Spectrum Identifiers "
+                "(USIs) for full provenance tracking."
+            ),
+            wraplength=CONFIG_WIDTH - 180,
+        )
         self.usi.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
 
-        self.generate_report = widgets.LabeledSwitch(
-            self, label="Generate MS²Rescore report", default=True
+        self.write_flashlfq = widgets.LabeledSwitch(
+            self,
+            label="Write FlashLFQ input file",
+            description=(
+                "Write a file that can be used as input for FlashLFQ. This file only contains "
+                "target PSMs that pass the FDR threshold."
+            ),
+            wraplength=CONFIG_WIDTH - 180,
         )
-        self.generate_report.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
+        self.write_flashlfq.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
 
-        self.id_decoy_pattern = widgets.LabeledEntry(self, label="Decoy protein regex pattern")
-        self.id_decoy_pattern.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+        self.generate_report = widgets.LabeledSwitch(
+            self,
+            label="Generate interactive report",
+            description=(
+                "Generate an interactive report with quality control charts about the MS²Rescore "
+                "run. This report can be viewed in a web browser."
+            ),
+            wraplength=CONFIG_WIDTH - 180,
+            default=True,
+        )
+        self.generate_report.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
 
-        self.psm_id_pattern = widgets.LabeledEntry(self, label="PSM ID regex pattern")
-        self.psm_id_pattern.grid(row=4, column=0, pady=(0, 10), sticky="nsew")
+        self.id_decoy_pattern = widgets.LabeledEntry(
+            self,
+            label="Decoy protein regex pattern",
+            description=(
+                "A regular expression pattern to identify decoy PSMs by the associated protein "
+                "names. Most PSM file types contain a dedicated field indicating decoy PSMs, in "
+                "which case this field can be left empty."
+            ),
+            wraplength=CONFIG_WIDTH - 180,
+        )
+        self.id_decoy_pattern.grid(row=4, column=0, pady=(0, 10), sticky="nsew")
 
-        self.spectrum_id_pattern = widgets.LabeledEntry(self, label="Spectrum ID regex pattern")
-        self.spectrum_id_pattern.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
+        self.psm_id_pattern = widgets.LabeledEntry(
+            self,
+            label="PSM ID regex pattern",
+            description=(
+                "A regular expression pattern to extract the spectrum ID from the IDs in the PSM "
+                "file. In most cases, this field can be left empty. Check the user guide for more "
+                "information."
+            ),
+            wraplength=CONFIG_WIDTH - 180,
+        )
+        self.psm_id_pattern.grid(row=5, column=0, pady=(0, 10), sticky="nsew")
+
+        self.spectrum_id_pattern = widgets.LabeledEntry(
+            self,
+            label="Spectrum ID regex pattern",
+            description=(
+                "Similar to the PSM ID regex pattern, but for the IDs in the spectrum file."
+            ),
+            wraplength=CONFIG_WIDTH - 180,
+        )
+        self.spectrum_id_pattern.grid(row=6, column=0, pady=(0, 10), sticky="nsew")
+
+        self.processes = widgets.LabeledOptionMenu(
+            self,
+            label="Number of parallel processes",
+            description=(
+                "Choose higher values for faster processing, and lower values for less memory "
+                "usage."
+            ),
+            wraplength=CONFIG_WIDTH - 180,
+            # Limit to 16 processes to avoid memory overhead
+            values=[str(x) for x in list(range(1, min(16, multiprocessing.cpu_count()) + 1))],
+            default_value=str(min(16, multiprocessing.cpu_count())),
+        )
+        self.processes.grid(row=7, column=0, pady=(0, 10), sticky="nsew")
 
         self.file_prefix = widgets.LabeledFileSelect(
-            self, label="Filename for output files", file_option="savefile"
+            self,
+            label="Filename for output files",
+            file_option="savefile",
+            description=(
+                "Select the output file prefix. The output files will be saved in the selected "
+                "directory with the selected filename plus a suffix denoting the file type. If "
+                "left empty, this will be based on the PSM file."
+            ),
+            wraplength=CONFIG_WIDTH - 20,
         )
-        self.file_prefix.grid(row=7, column=0, columnspan=2, sticky="nsew")
+        self.file_prefix.grid(row=8, column=0, columnspan=2, sticky="nsew")
 
         self.config_file = widgets.LabeledFileSelect(
-            self, label="Configuration file", file_option="openfile"
+            self,
+            label="Configuration file",
+            file_option="openfile",
+            description=(
+                "Select a configuration file. Any options that are left empty in the application "
+                "will be filled in with values from this file."
+            ),
+            wraplength=CONFIG_WIDTH - 20,
         )
-        self.config_file.grid(row=8, column=0, columnspan=2, sticky="nsew")
+        self.config_file.grid(row=9, column=0, columnspan=2, sticky="nsew")
 
     def get(self) -> Dict:
         """Get the configured values as a dictionary."""
         return {
             "lower_score_is_better": bool(int(self.lower_score.get())),  # str repr of 0 or 1
             "rename_to_usi": self.usi.get(),
+            "write_flashlfq": self.write_flashlfq.get(),
+            "write_report": self.generate_report.get(),
             "id_decoy_pattern": self.id_decoy_pattern.get(),
             "psm_id_pattern": self.psm_id_pattern.get(),
             "spectrum_id_pattern": self.spectrum_id_pattern.get(),
+            "processes": int(self.processes.get()),
             "output_path": self.file_prefix.get(),
             "config_file": self.config_file.get(),
-            "write_report": self.generate_report.get(),
         }
 
 
@@ -397,7 +536,7 @@ class BasicFeatureConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="Basic features")
+        self.title = widgets._Heading(self, text="Basic features")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.enabled = widgets.LabeledSwitch(self, label="Enable Basic features", default=True)
@@ -418,7 +557,7 @@ class MS2PIPConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="MS²PIP")
+        self.title = widgets._Heading(self, text="MS²PIP (spectrum intensity prediction)")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.enabled = widgets.LabeledSwitch(self, label="Enable MS²PIP", default=True)
@@ -455,7 +594,7 @@ class DeepLCConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="DeepLC")
+        self.title = widgets._Heading(self, text="DeepLC (retention time prediction)")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.enabled = widgets.LabeledSwitch(self, label="Enable DeepLC", default=True)
@@ -510,7 +649,7 @@ class IonmobConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="Ionmob")
+        self.title = widgets._Heading(self, text="Ionmob (ion mobility prediction)")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.enabled = widgets.LabeledSwitch(self, label="Enable Ionmob", default=False)
@@ -539,7 +678,7 @@ class Im2DeepConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="im2deep")
+        self.title = widgets._Heading(self, text="IM2Deep (ion mobility prediction)")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.enabled = widgets.LabeledSwitch(self, label="Enable im2deep", default=False)
@@ -579,7 +718,7 @@ class RescoringEngineConfig(ctk.CTkFrame):
         if self.radio_button.get().lower() == "mokapot":
             return {self.radio_button.get().lower(): self.mokapot_config.get()}
         elif self.radio_button.get().lower() == "percolator":
-            return {self.radio_button.get().lower(): self.mokapot_config.get()}
+            return {self.radio_button.get().lower(): self.percolator_config.get()}
 
 
 class MokapotRescoringConfiguration(ctk.CTkFrame):
@@ -589,22 +728,29 @@ class MokapotRescoringConfiguration(ctk.CTkFrame):
 
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
+        row_n = 0
 
-        self.title = widgets.Heading(self, text="Mokapot coffeeguration")
-        self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
+        self.title = widgets._Heading(self, text="Mokapot coffeeguration")
+        self.title.grid(row=row_n, column=0, columnspan=2, pady=(0, 5), sticky="ew")
+        row_n += 1
 
         self.write_weights = widgets.LabeledSwitch(
             self, label="Write model weights to file", default=True
         )
-        self.write_weights.grid(row=1, column=0, pady=(0, 10), sticky="nsew")
+        self.write_weights.grid(row=row_n, column=0, pady=(0, 10), sticky="nsew")
+        row_n += 1
 
         self.write_txt = widgets.LabeledSwitch(self, label="Write TXT output files", default=True)
-        self.write_txt.grid(row=2, column=0, pady=(0, 10), sticky="nsew")
+        self.write_txt.grid(row=row_n, column=0, pady=(0, 10), sticky="nsew")
+        row_n += 1
 
-        self.write_flashlfq = widgets.LabeledSwitch(
-            self, label="Write file for FlashLFQ", default=False
+        self.fasta_file = widgets.LabeledFileSelect(
+            self,
+            label="Select FASTA file (optional, required for protein inference)",
+            file_option="openfile",
         )
-        self.write_flashlfq.grid(row=3, column=0, pady=(0, 10), sticky="nsew")
+        self.fasta_file.grid(row=row_n, column=0, pady=(0, 10), sticky="nsew")
+        row_n += 1
 
         self.protein_kwargs = widgets.TableInput(
             self,
@@ -612,14 +758,15 @@ class MokapotRescoringConfiguration(ctk.CTkFrame):
             columns=2,
             header_labels=["Parameter", "Value"],
         )
-        self.protein_kwargs.grid(row=4, column=0, sticky="nsew")
+        self.protein_kwargs.grid(row=row_n, column=0, sticky="nsew")
+        row_n += 1
 
     def get(self) -> Dict:
         """Return the configuration as a dictionary."""
         config = {
             "write_weights": self.write_weights.get(),
             "write_txt": self.write_txt.get(),
-            "write_flashlfq": self.write_flashlfq.get(),
+            "fasta_file": self.fasta_file.get(),
             "protein_kwargs": self._parse_protein_kwargs(self.protein_kwargs.get()),
         }
         return config
@@ -642,7 +789,7 @@ class PercolatorRescoringConfiguration(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        self.title = widgets.Heading(self, text="Percolator coffeeguration")
+        self.title = widgets._Heading(self, text="Percolator coffeeguration")
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="ew")
 
         self.weights_file = widgets.LabeledFileSelect(
@@ -665,6 +812,8 @@ def function(config):
         config_list = [config]
     config = parse_configurations(config_list)
     rescore(configuration=config)
+    if config["ms2rescore"]["write_report"]:
+        webbrowser.open_new_tab(config["ms2rescore"]["output_path"] + ".report.html")
 
 
 def app():
@@ -677,6 +826,7 @@ def app():
     root.protocol("WM_DELETE_WINDOW", sys.exit)
     dpi = root.winfo_fpixels("1i")
     root.geometry(f"{int(15*dpi)}x{int(10*dpi)}")
+    root.minsize(int(13 * dpi), int(9 * dpi))
     root.title("MS²Rescore")
     if platform.system() != "Linux":
         root.wm_iconbitmap(os.path.join(str(_IMG_DIR), "program_icon.ico"))
