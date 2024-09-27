@@ -88,7 +88,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
                 # Disable wild logging to stdout by TensorFlow, unless in debug mode
                 with (
-                    contextlib.redirect_stdout(open(os.devnull, "w"))
+                    contextlib.redirect_stdout(open(os.devnull, "w", encoding="utf-8"))
                     if not self._verbose
                     else contextlib.nullcontext()
                 ):
