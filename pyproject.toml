@@ -47,6 +47,7 @@ dependencies = [
     "pandas>=1",
     "plotly>=5",
     "psm_utils>=1.1",
+    "pyopenms>=3.0,<3.2",  # See openms/openms#7600
     "pyteomics>=4.7.2",
     "rich>=12",
     "tomli>=2; python_version < '3.11'",
