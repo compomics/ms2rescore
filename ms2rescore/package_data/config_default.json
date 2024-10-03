@@ -16,7 +16,8 @@
             "mokapot": {
                 "train_fdr": 0.01,
                 "write_weights": true,
-                "write_txt": true
+                "write_txt": true,
+                "save_models": true
             }
         },
         "config_file": null,

@@ -19,6 +19,7 @@ If you use Mokapot through MS²Rescore, please cite:
 
 """
 
+import os
 import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
@@ -29,7 +30,7 @@ import pandas as pd
 import psm_utils
 from mokapot.brew import brew
 from mokapot.dataset import LinearPsmDataset
-from mokapot.model import PercolatorModel
+from mokapot.model import Model, PercolatorModel, load_model
 from pyteomics.mass import nist_mass
 
 from ms2rescore.exceptions import RescoringError
@@ -45,6 +46,7 @@ def rescore(
     train_fdr: float = 0.01,
     write_weights: bool = False,
     write_txt: bool = False,
+    save_models: bool = False,
     protein_kwargs: Optional[Dict[str, Any]] = None,
     **kwargs: Any,
 ) -> None:
@@ -123,6 +125,10 @@ def rescore(
     if write_txt:
         confidence_results.to_txt(file_root=output_file_root, decoys=True)
 
+    if save_models:
+        for i, model in enumerate(models):
+            model.save(output_file_root + f".mokapot.model_{i}.pkl")
+    
 
 def convert_psm_list(
     psm_list: psm_utils.PSMList,

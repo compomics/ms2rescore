@@ -16,7 +16,8 @@
         "rescoring_engine": {
             "mokapot": {
                 "write_weights": true,
-                "write_txt": true
+                "write_txt": true,
+                "save_models": true
             }
         },
         "psm_file": null

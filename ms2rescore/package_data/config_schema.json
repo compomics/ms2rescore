@@ -300,6 +300,11 @@
                     "description": "Write Mokapot results to a text file",
                     "type": "boolean",
                     "default": false
+                },
+                "save_models": {
+                    "description": "Save Mokapot models to a pickle file",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         },
