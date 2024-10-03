@@ -19,7 +19,6 @@ If you use Mokapot through MS²Rescore, please cite:
 
 """
 
-import os
 import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
@@ -30,7 +29,7 @@ import pandas as pd
 import psm_utils
 from mokapot.brew import brew
 from mokapot.dataset import LinearPsmDataset
-from mokapot.model import Model, PercolatorModel, load_model
+from mokapot.model import PercolatorModel
 from pyteomics.mass import nist_mass
 
 from ms2rescore.exceptions import RescoringError
