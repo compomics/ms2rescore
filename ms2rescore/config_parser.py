@@ -133,7 +133,7 @@ def parse_configurations(configurations: List[Union[dict, str, Path, Namespace]]
         else:
             raise ValueError(
                 "Configuration should be a dictionary, argparse Namespace, or path to a "
-                "configuration file."
+                f"configuration file. Got: {config.__class__.__name__}"
             )
 
     # Parse configurations

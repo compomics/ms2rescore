@@ -802,7 +802,7 @@ def function(config):
     """Function to be executed in a separate process."""
     config = config.copy()
     if config["ms2rescore"]["config_file"]:
-        config_list = [[config["ms2rescore"]["config_file"], config]]
+        config_list = [config["ms2rescore"]["config_file"], config]
     else:
         config_list = [config]
     config = parse_configurations(config_list)
