@@ -89,7 +89,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
                 # Disable wild logging to stdout by TensorFlow, unless in debug mode
                 with (
                     contextlib.redirect_stdout(open(os.devnull, "w", encoding="utf-8"))
-                    if not self._verbose
+                    if not self._verbose and os.devnull is not None
                     else contextlib.nullcontext()
                 ):
                     # Make new PSM list for this run (chain PSMs per spectrum to flat list)
