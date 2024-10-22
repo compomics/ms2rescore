@@ -183,6 +183,11 @@
                     "description": "Write a txt report using cProfile for profiling",
                     "type": "boolean",
                     "default": false
+                },
+                "rescoring_features": {
+                    "description": "Features to include for rescoring",
+                    "type": "array",
+                    "default": ["all"]
                 }
             }
         }
@@ -262,6 +267,68 @@
                     "description": "Path to tokenizer json file",
                     "type": "string",
                     "default": "tokenizer.json"
+                }
+            }
+        },
+        "peak_fgen": {
+            "$ref": "#/definitions/feature_generator",
+            "description": "Peak feature generator",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "ion_types": {
+                    "description": "Type of ions to try and annotate",
+                    "type": "array",
+                    "default": [
+                        "a1",
+                        "a2",
+                        "b1",
+                        "b2",
+                        "c1",
+                        "c2",
+                        "y1",
+                        "y2",
+                        "z1",
+                        "z2",
+                        "x1",
+                        "x2",
+                        "p1",
+                        "p2",
+                        "p3"
+                    ]
+                },
+                "neutral_losses": {
+                    "description": "Neutral losses to include for annotation",
+                    "type": "array",
+                    "default": [
+                        "",
+                        "-H2O1"
+                    ]
+                },
+                "max_workers": {
+                    "description": "Parallel processes to use for annotation",
+                    "type": "integer",
+                    "default":-1
+                },
+                "ion_types_evidence": {
+                    "description": "Ion types to consider for fragmentation site evidence",
+                    "type": "array",
+                    "default": ["b1", "y1", "b2", "y2"]
+                },
+                "neutral_losses_evidence": {
+                    "description": "Neutral losses to consider for fragmentation site evidence",
+                    "type": "array",
+                    "default": ["", "-H2O1"]
+                },
+                "fragment_tol_mass": {
+                    "description": "Fragmentation tolerance mass for hyperscore calculation",
+                    "type": "integer",
+                    "default": 20
+                },
+                "fragment_tol_mode": {
+                    "description": "Fragmentation tolerance mode",
+                    "type": "string",
+                    "default": "ppm"
                 }
             }
         },
