@@ -66,7 +66,7 @@ def infer_spectrum_path(
             )
 
     # Match with file extension if not in resolved_path yet
-    if not _is_minitdf(resolved_path) and not re.match(
+    if not _is_minitdf(resolved_path) and not re.search(
         r"\.mgf$|\.mzml$|\.d$", resolved_path, flags=re.IGNORECASE
     ):
         for filename in glob(resolved_path + "*"):
