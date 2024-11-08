@@ -95,15 +95,14 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
     if "mumble" in config["psm_generator"]:
         logger.debug("Applying modifications for mass shifts using Mumble...")
         mumble_config = config["psm_generator"]["mumble"]
-        for psm in psm_list:
-            psm["rescoring_features"].pop("expmass", None)
-            psm["rescoring_features"].pop("calcmass", None)
-            psm["rescoring_features"].pop("peptide_len", None)
-            psm["rescoring_features"].pop("matched_peaks", None)
-            psm["rescoring_features"].pop("longest_b", None)
-            psm["rescoring_features"].pop("longest_y", None)
-            psm["rescoring_features"].pop("longest_y_pct", None)
-            psm["rescoring_features"].pop("matched_intensity_pct", None)
+
+        # Check if psm_list[0].rescoring_features is empty or not
+        if psm_list[0].rescoring_features:
+            logger.debug("Removing psm_file rescoring features from PSMs...")
+            # psm_list.remove_rescoring_features() # TODO add this to psm_utils
+            for psm in psm_list:
+                psm.rescoring_features = {}
+
         psm_handler = PSMHandler(
             **mumble_config,  # TODO how do we store config for mumble?
         )
