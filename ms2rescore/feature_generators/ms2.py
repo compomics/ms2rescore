@@ -5,19 +5,19 @@ MS2-based feature generator.
 
 import logging
 import re
-from typing import List, Optional, Union
-from itertools import chain
 from collections import defaultdict
-
+from itertools import chain
+from typing import List, Optional, Union
 
 import numpy as np
-from psm_utils import PSMList
-from pyteomics import mass, mzml, mgf
-from rustyms import RawSpectrum, LinearPeptide, FragmentationModel, MassMode
+import pyopenms as oms
+from psm_utils import PSM, Peptidoform, PSMList
+from pyteomics import mass, mgf, mzml
+from rustyms import FragmentationModel, LinearPeptide, MassMode, RawSpectrum
 
+from ms2rescore.exceptions import ParseSpectrumError
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
 from ms2rescore.utils import infer_spectrum_path
-from ms2rescore.exceptions import ParseSpectrumError
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
         fragmentation_model: str = "All",
         mass_mode: str = "Monoisotopic",
         processes: int = 1,
+        calculate_hyperscore: bool = True,  # Allow optional ?
         **kwargs,
     ) -> None:
         """
@@ -66,6 +67,7 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
         self.fragmentation_model = FRAGMENTATION_MODELS[fragmentation_model.lower()]
         self.mass_mode = MASS_MODES[mass_mode.lower()]
         self.processes = processes
+        self.calculate_hyperscore = calculate_hyperscore
 
     @property
     def feature_names(self) -> List[str]:
@@ -82,6 +84,7 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
             "matched_y_ions",
             "matched_y_ions_pct",
             "matched_ions_pct",
+            "hyperscore",
         ]
 
     def add_features(self, psm_list: PSMList) -> None:
@@ -129,6 +132,22 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
             psm.rescoring_features.update(
                 self._calculate_spectrum_features(psm, annotated_spectrum)
             )
+
+            if self.calculate_hyperscore:
+                # Filters out peaks which are unnannotated (can be specified, but keep at b-y ions of any charge ?)
+                mz_list, intensity_list = _annotated_spectrum_to_mzint(
+                    annotated_spectrum=annotated_spectrum
+                )
+                psm.rescoring_features.update(
+                    {
+                        "hyperscore": calculate_hyperscore(
+                            psm=psm, observed_mz=mz_list, observed_intensity=intensity_list
+                        )
+                    }
+                )
+
+            else:
+                psm.rescoring_features.update({"hyperscore": np.nan})
         # with multiprocessing.Pool(self.processes) as pool:
         #     counts_failed = 0
         #     for psm, features in zip(
@@ -253,7 +272,157 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
 
         return annotated_spectrum.spectrum
 
+    def _calculate_hyperscore(self, psm, spectrum):
+        pass
+
+    def _calculate_fragmentation_features(self, psm, annotated_spectrum):
+        pass
+
 
 # TODO: keep this here?
 def modification_evidence():
     return
+
+
+def _annotated_spectrum_to_mzint(annotated_spectrum, ion_types=["b", "y"]):
+
+    mz_list = []
+    intensity_list = []
+
+    for peak in annotated_spectrum:
+
+        annotations = peak.annotation
+        for fragment in annotations:
+            ion = fragment.ion
+            if ion[0] not in ion_types:
+                continue
+
+            mz_list.append(peak.experimental_mz)
+            intensity_list.append(peak.intensity)
+            break
+
+    return mz_list, intensity_list
+
+
+def _peptidoform_to_oms(peptidoform: Peptidoform) -> tuple[oms.AASequence, Optional[int]]:
+    """
+    Parse a peptidoform object to pyOpenMS compatible format.
+
+    Parameter
+    ---------
+    Peptidoform: Peptidoform
+        Peptide string in Peptidoform format
+
+    Returns
+    -------
+    AASequence (pyOpenMS):
+        A peptide sequence in pyOpenMS format
+    int:
+        charge of the peptide
+    """
+
+    n_term = peptidoform.properties["n_term"]
+    peptide_oms_str = f"[{sum([mod.mass for mod in n_term])}]" if n_term else ""
+
+    for aa, mods in peptidoform.parsed_sequence:
+        peptide_oms_str += aa
+        if isinstance(mods, list):
+            peptide_oms_str += f"[{sum([mod.mass for mod in mods])}]"
+
+    c_term = peptidoform.properties["c_term"]
+    peptide_oms_str += f"[{sum([mod.mass for mod in c_term])}]" if c_term else ""
+
+    peptide_oms = oms.AASequence.fromString(peptide_oms_str)
+
+    return peptide_oms
+
+
+def _peptidoform_to_theoretical_spectrum(peptidoform: str) -> oms.MSSpectrum:
+    """
+    Create a theoretical spectrum from a peptide sequence.
+
+    Parameter
+    ---------
+    peptide: str
+        Peptide sequence in proforma format
+    engine: str
+        The engine to use to create theoretical spectrum.
+        Can only be 'pyopenms' or 'spectrum-utils' (default)
+
+    Return
+    ------
+    MSSpectrum
+        Spectrum object in pyOpenMS format
+    """
+    # Reformat peptide sequence in pyOpenMS format
+    peptide_oms = _peptidoform_to_oms(peptidoform=peptidoform)
+
+    # Initialize the required objects to create the spectrum
+    spectrum = oms.MSSpectrum()
+    tsg = oms.TheoreticalSpectrumGenerator()
+    p = oms.Param()
+
+    p.setValue("add_b_ions", "true")
+    p.setValue("add_metainfo", "true")
+    tsg.setParameters(param=p)
+
+    # Create the theoretical spectrum
+    tsg.getSpectrum(spec=spectrum, peptide=peptide_oms, min_charge=1, max_charge=2)
+    return spectrum
+
+
+def calculate_hyperscore(
+    psm: PSM,
+    observed_mz: List[float],
+    observed_intensity: List[float],
+    fragment_tol_mass=20,
+    fragment_tol_mode="ppm",
+):
+    """
+    Calculate the hyperscore as defined in the X!Tandem search engine.
+
+    It is a metric of how good two spectra match with each other (matching peaks).
+
+    Parameters
+    ----------
+    psm: psm_utils.PSM
+        The PSM used to extract 'spectrum_id' (for MGF spectrum extraction)
+        and 'Peptidoform' (the peptide sequence)
+    observed_mz: List[float]
+        List of observed mz values with matching order as observed intensity
+    observed_intensity: List[float]
+        List of observed intensity values
+    fragment_tol_mass: int
+        The allowed tolerance to match peaks
+    fragment_tol_mode: str
+        'ppm' for parts-per-million mode. 'Da' for fragment_tol_mass in Dalton.
+    Return
+    ------
+    int
+        The hyperscore
+    """
+    if fragment_tol_mode == "ppm":
+        fragment_mass_tolerance_unit_ppm = True
+    elif fragment_tol_mode == "Da":
+        fragment_mass_tolerance_unit_ppm = False
+    else:
+        raise Exception(
+            "fragment_tol_mode can only take 'Da' or 'ppm'. {} was provided.".format(
+                fragment_tol_mode
+            )
+        )
+    if len(observed_intensity) == 0:
+        logging.warning(f"PSM ({psm.spectrum_id}) has no annotated peaks.")
+        return 0.0
+
+    theoretical_spectrum = _peptidoform_to_theoretical_spectrum(peptidoform=psm.peptidoform)
+    observed_spectrum_oms = oms.MSSpectrum()
+    observed_spectrum_oms.set_peaks([observed_mz, observed_intensity])
+    hyperscore = oms.HyperScore()
+    result = hyperscore.compute(
+        fragment_mass_tolerance=fragment_tol_mass,
+        fragment_mass_tolerance_unit_ppm=fragment_mass_tolerance_unit_ppm,
+        exp_spectrum=observed_spectrum_oms,
+        theo_spectrum=theoretical_spectrum,
+    )
+    return result
