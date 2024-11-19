@@ -23,12 +23,19 @@ import pandas as pd
 import tensorflow as tf
 from psm_utils import Peptidoform, PSMList
 
-from ms2rescore.feature_generators.base import FeatureGeneratorBase, FeatureGeneratorException
+from ms2rescore.feature_generators.base import (
+    FeatureGeneratorBase,
+    FeatureGeneratorException,
+)
 
 try:
     from ionmob import __file__ as ionmob_file
     from ionmob.preprocess.data import to_tf_dataset_inference
-    from ionmob.utilities.chemistry import VARIANT_DICT, calculate_mz, reduced_mobility_to_ccs
+    from ionmob.utilities.chemistry import (
+        VARIANT_DICT,
+        calculate_mz,
+        reduced_mobility_to_ccs,
+    )
     from ionmob.utilities.tokenization import tokenizer_from_json
     from ionmob.utilities.utility import get_ccs_shift
 except ImportError:

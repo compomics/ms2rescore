@@ -14,7 +14,10 @@ from ms2rescore.parse_psms import parse_psms
 from ms2rescore.parse_spectra import get_missing_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
-from ms2rescore.rescoring_engines.mokapot import add_peptide_confidence, add_psm_confidence
+from ms2rescore.rescoring_engines.mokapot import (
+    add_peptide_confidence,
+    add_psm_confidence,
+)
 
 logger = logging.getLogger(__name__)
 

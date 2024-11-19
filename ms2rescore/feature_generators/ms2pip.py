@@ -37,7 +37,10 @@ from ms2pip.result import ProcessingResult
 from psm_utils import PSMList
 from rich.progress import track
 
-from ms2rescore.feature_generators.base import FeatureGeneratorBase, FeatureGeneratorException
+from ms2rescore.feature_generators.base import (
+    FeatureGeneratorBase,
+    FeatureGeneratorException,
+)
 from ms2rescore.utils import infer_spectrum_path
 
 logger = logging.getLogger(__name__)

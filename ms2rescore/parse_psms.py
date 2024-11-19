@@ -4,8 +4,8 @@ from typing import Dict, Optional, Union
 
 import numpy as np
 import psm_utils.io
-from psm_utils import PSMList
 from mumble import PSMHandler
+from psm_utils import PSMList
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError
 
