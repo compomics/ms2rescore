@@ -123,9 +123,6 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
         # Run DeepLC for each spectrum file
         current_run = 1
         total_runs = sum(len(runs) for runs in psm_dict.values())
-        if self.calibration_set:
-            logger.info("Loading calibration set...")
-            self.calibration_set = read_file(self.calibration_set, filetype="tsv")
         for runs in psm_dict.values():
             # Reset DeepLC predictor for each collection of runs
             self.deeplc_predictor = None
@@ -150,12 +147,7 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
                 ):
                     # Make new PSM list for this run (chain PSMs per spectrum to flat list)
                     psm_list_run = PSMList(psm_list=list(chain.from_iterable(psms.values())))
-                    if self.calibration_set:
-                        psm_list_calibration = self.calibration_set[
-                            self.calibration_set["run"] == run
-                        ]
-                    else:
-                        psm_list_calibration = self._get_calibration_psms(psm_list_run)
+                    psm_list_calibration = self._get_calibration_psms(psm_list_run)
                     logger.debug(f"Calibrating DeepLC with {len(psm_list_calibration)} PSMs...")
                     self.deeplc_predictor = self.DeepLC(
                         n_jobs=self.processes,
@@ -204,7 +196,10 @@ class DeepLCFeatureGenerator(FeatureGeneratorBase):
 
     def _get_calibration_psms(self, psm_list: PSMList):
         """Get N best scoring target PSMs for calibration."""
-        psm_list_targets = psm_list[~psm_list["is_decoy"]]
+        psm_list_targets = psm_list[
+            ~psm_list["is_decoy"]
+            & [metadata.get("original_psm", True) for metadata in psm_list["metadata"]]
+        ]
         if self.calibration_set_size:
             n_psms = self._get_number_of_calibration_psms(psm_list_targets)
             indices = np.argsort(psm_list_targets["score"])
