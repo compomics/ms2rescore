@@ -1,6 +1,9 @@
 # ReScore
 
-Use features calculated from comparing experimental spectra with computationally generated spectra (see [MS2PIP](https://github.com/sdgroeve/ms2pip_c)) to re-score peptide identifications using [Percolator](https://github.com/percolator/percolator/). If you are interested in reproducing the results shown in [_Accurate peptide fragmentation predictions allow data driven approaches to replace and improve upon proteomics search engine scoring functions (bioRxiv)_](https://www.biorxiv.org/content/early/2018/10/03/428805), please refer to the [wiki page](https://github.com/anasilviacs/rescore/wiki/Reproducing-manuscript-results).
+Use features calculated from comparing experimental spectra with computationally generated spectra (see [MS2PIP](https://github.com/sdgroeve/ms2pip_c)) to re-score peptide identifications using [Percolator](https://github.com/percolator/percolator/). If you are interested in reproducing the results shown in
+the manuscript, please refer to the wiki directory.
+
+> Accurate peptide fragmentation predictions allow data driven approaches to replace and improve upon proteomics search engine scoring functions. Ana S C Silva, Robbin Bouwmeester, Lennart Martens, and Sven Degroeve. _Bioinformatics_ (2019) [doi:10.1093/bioinformatics/btz383](https://doi.org/10.1093/bioinformatics/btz383)
 
 ## Prerequisites
 
