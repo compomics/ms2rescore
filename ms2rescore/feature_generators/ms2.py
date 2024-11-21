@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 FRAGMENTATION_MODELS = {
     "cidhcd": FragmentationModel.CidHcd,
-    "etcid": FragmentationModel.Etcid,
     "etd": FragmentationModel.Etd,
     "ethcd": FragmentationModel.Ethcd,
     "all": FragmentationModel.All,
@@ -148,28 +147,6 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
 
             else:
                 psm.rescoring_features.update({"hyperscore": np.nan})
-        # with multiprocessing.Pool(self.processes) as pool:
-        #     counts_failed = 0
-        #     for psm, features in zip(
-        #         psm_list,
-        #         track(
-        #             pool.imap(
-        #                 self._calculate_spectrum_features_wrapper,
-        #                 zip(psm_list, annotated_spectra),
-        #                 chunksize=1000,
-        #             ),
-        #             total=len(psm_list),
-        #             description="Calculating MS2 features...",
-        #             transient=True,
-        #         ),
-        #     ):
-        #         if features:
-        #             psm.rescoring_features.update(features)
-
-        #         else:
-        #             counts_failed += 1
-        # if counts_failed > 0:
-        #     logger.warning(f"Failed to calculate features for {counts_failed} PSMs")
 
     @staticmethod
     def _read_spectrum_file(spectrum_filepath: str) -> Union[mzml.PreIndexedMzML, mgf.IndexedMGF]:
@@ -246,10 +223,6 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
             / (len(b_ions_matched) + len(y_ions_matched)),
         }
 
-    def _calculate_spectrum_features_wrapper(self, psm_spectrum_tuple):
-        psm, spectrum = psm_spectrum_tuple
-        return self._calculate_spectrum_features(psm, spectrum)
-
     def _annotate_spectrum(self, psm, pyteomics_spectrum):
 
         spectrum = RawSpectrum(
@@ -271,17 +244,6 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
             return []
 
         return annotated_spectrum.spectrum
-
-    def _calculate_hyperscore(self, psm, spectrum):
-        pass
-
-    def _calculate_fragmentation_features(self, psm, annotated_spectrum):
-        pass
-
-
-# TODO: keep this here?
-def modification_evidence():
-    return
 
 
 def _annotated_spectrum_to_mzint(annotated_spectrum, ion_types=["b", "y"]):

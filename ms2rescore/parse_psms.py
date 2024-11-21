@@ -104,13 +104,9 @@ def parse_psms(config: Dict, psm_list: Union[PSMList, None]) -> PSMList:
                 psm.rescoring_features = {}
 
         psm_handler = PSMHandler(
-            **mumble_config,  # TODO how do we store config for mumble?
+            **mumble_config,
         )
-        psm_list = psm_handler.add_modified_psms(
-            psm_list, generate_modified_decoys=True, keep_original=True
-        )
-        if mumble_config["output_file"]:
-            psm_handler.write_modified_psm_list(psm_list, mumble_config["output_file"])
+        psm_list = psm_handler.add_modified_psms(psm_list)
 
     return psm_list
 
