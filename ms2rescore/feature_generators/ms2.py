@@ -12,8 +12,11 @@ from typing import List, Optional, Union
 import numpy as np
 import pyopenms as oms
 from psm_utils import PSM, Peptidoform, PSMList
+from psm_utils.peptidoform import PeptidoformException
+from pyteomics.proforma import ProFormaError
 from pyteomics import mass, mgf, mzml
 from rustyms import FragmentationModel, LinearPeptide, MassMode, RawSpectrum
+from pathlib import Path
 
 from ms2rescore.exceptions import ParseSpectrumError
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
@@ -67,6 +70,7 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
         self.mass_mode = MASS_MODES[mass_mode.lower()]
         self.processes = processes
         self.calculate_hyperscore = calculate_hyperscore
+
 
     @property
     def feature_names(self) -> List[str]:
@@ -137,19 +141,20 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
                 mz_list, intensity_list = _annotated_spectrum_to_mzint(
                     annotated_spectrum=annotated_spectrum
                 )
+                hyperscore = calculate_hyperscore(
+                    psm=psm, observed_mz=mz_list, observed_intensity=intensity_list
+                )
+                if hyperscore is None:
+                    continue
                 psm.rescoring_features.update(
                     {
-                        "hyperscore": calculate_hyperscore(
-                            psm=psm, observed_mz=mz_list, observed_intensity=intensity_list
-                        )
+                        "hyperscore": hyperscore
                     }
                 )
 
-            else:
-                psm.rescoring_features.update({"hyperscore": np.nan})
 
     @staticmethod
-    def _read_spectrum_file(spectrum_filepath: str) -> Union[mzml.PreIndexedMzML, mgf.IndexedMGF]:
+    def _read_spectrum_file(spectrum_filepath: Path) -> Union[mzml.PreIndexedMzML, mgf.IndexedMGF]:
 
         if spectrum_filepath.suffix.lower() == ".mzml":
             return mzml.PreIndexedMzML(str(spectrum_filepath))
@@ -235,8 +240,9 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
             intensity_array=pyteomics_spectrum["intensity array"],
         )
         try:
+            linear_peptide = LinearPeptide(psm.peptidoform.proforma.split("/")[0])
             annotated_spectrum = spectrum.annotate(
-                peptide=LinearPeptide(psm.peptidoform.proforma.split("/")[0]),
+                peptide=linear_peptide,
                 model=self.fragmentation_model,
                 mode=self.mass_mode,
             )
@@ -246,6 +252,9 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
         return annotated_spectrum.spectrum
 
 
+############################
+### HYPERSCORE FUNCTIONS ###
+############################
 def _annotated_spectrum_to_mzint(annotated_spectrum, ion_types=["b", "y"]):
 
     mz_list = []
@@ -268,35 +277,87 @@ def _annotated_spectrum_to_mzint(annotated_spectrum, ion_types=["b", "y"]):
 
 def _peptidoform_to_oms(peptidoform: Peptidoform) -> tuple[oms.AASequence, Optional[int]]:
     """
-    Parse a peptidoform object to pyOpenMS compatible format.
+    Parse a peptide sequence in proforma format to pyOpenMS compatible format.
+
+    Only supports UNIMOD format.
 
     Parameter
     ---------
-    Peptidoform: Peptidoform
-        Peptide string in Peptidoform format
+    peptide: str
+        Peptide string in proforma format
 
     Returns
     -------
     AASequence (pyOpenMS):
         A peptide sequence in pyOpenMS format
-    int:
-        charge of the peptide
     """
+    peptide = peptidoform.proforma
 
-    n_term = peptidoform.properties["n_term"]
-    peptide_oms_str = f"[{sum([mod.mass for mod in n_term])}]" if n_term else ""
+    # Reformat unimod modifications
+    pattern_unimod = r"\[UNIMOD:(\d+)\]"
 
-    for aa, mods in peptidoform.parsed_sequence:
-        peptide_oms_str += aa
-        if isinstance(mods, list):
-            peptide_oms_str += f"[{sum([mod.mass for mod in mods])}]"
+    def replace_unimod(match):
+        return f"(UniMod:{match.group(1)})"
 
-    c_term = peptidoform.properties["c_term"]
-    peptide_oms_str += f"[{sum([mod.mass for mod in c_term])}]" if c_term else ""
+    peptide_oms_str = re.sub(
+        pattern=pattern_unimod, repl=replace_unimod, string=peptide
+    )
 
-    peptide_oms = oms.AASequence.fromString(peptide_oms_str)
+    # Parse N-terminal modifications
+    if ")-" in peptide_oms_str:
+        peptide_oms_list = peptide_oms_str.split(")-")
+        nterm_modification, peptide_oms_str = peptide_oms_list[-2], peptide_oms_list[-1]
+        nterm_modification += ")"
+        peptide_oms_str = "." + nterm_modification + peptide_oms_str + "."
+    elif "]-" in peptide_oms_str:
+        peptide_oms_list = peptide_oms_str.split("]-")
+        nterm_modification, peptide_oms_str = peptide_oms_list[-2], peptide_oms_list[-1]
+        nterm_modification += "]"
+        peptide_oms_str = "." + nterm_modification + peptide_oms_str + "."
 
-    return peptide_oms
+    # Split the charge from the peptide string
+    if "/" in peptide_oms_str:
+        peptide_oms_str, _ = peptide_oms_str.split("/")
+
+    try:
+        peptide_oms = oms.AASequence.fromString(peptide_oms_str)
+        return peptide_oms
+
+    except:
+        return
+
+
+# def _peptidoform_to_oms(peptidoform: Peptidoform) -> tuple[oms.AASequence, Optional[int]]:
+#     """
+#     Parse a peptidoform object to pyOpenMS compatible format.
+
+#     Parameter
+#     ---------
+#     Peptidoform: Peptidoform
+#         Peptide string in Peptidoform format
+
+#     Returns
+#     -------
+#     AASequence (pyOpenMS):
+#         A peptide sequence in pyOpenMS format
+#     int:
+#         charge of the peptide
+#     """
+
+#     n_term = peptidoform.properties["n_term"]
+#     peptide_oms_str = f"[{sum([mod.mass for mod in n_term])}]" if n_term else ""
+
+#     for aa, mods in peptidoform.parsed_sequence:
+#         peptide_oms_str += aa
+#         if isinstance(mods, list):
+#             peptide_oms_str += f"[{sum([mod.mass for mod in mods])}]"
+
+#     c_term = peptidoform.properties["c_term"]
+#     peptide_oms_str += f"[{sum([mod.mass for mod in c_term])}]" if c_term else ""
+
+#     peptide_oms = oms.AASequence.fromString(peptide_oms_str)
+
+#     return peptide_oms
 
 
 def _peptidoform_to_theoretical_spectrum(peptidoform: str) -> oms.MSSpectrum:
@@ -318,6 +379,8 @@ def _peptidoform_to_theoretical_spectrum(peptidoform: str) -> oms.MSSpectrum:
     """
     # Reformat peptide sequence in pyOpenMS format
     peptide_oms = _peptidoform_to_oms(peptidoform=peptidoform)
+    if peptide_oms is None:
+        return
 
     # Initialize the required objects to create the spectrum
     spectrum = oms.MSSpectrum()
@@ -375,9 +438,16 @@ def calculate_hyperscore(
         )
     if len(observed_intensity) == 0:
         logging.warning(f"PSM ({psm.spectrum_id}) has no annotated peaks.")
-        return 0.0
+        return
 
     theoretical_spectrum = _peptidoform_to_theoretical_spectrum(peptidoform=psm.peptidoform)
+    # This is mainly the cause of the modification not being allowed according to pyopenms
+    # pyOpenMS sets stringent criteria on modification being placed on annotated amino acids
+    # according to the unimod database
+    if theoretical_spectrum is None:
+        logging.warning(f'Peptidoform has either unsupported modifications or is being placed on non-allowed residue: {psm.peptidoform.proforma}')
+        return
+
     observed_spectrum_oms = oms.MSSpectrum()
     observed_spectrum_oms.set_peaks([observed_mz, observed_intensity])
     hyperscore = oms.HyperScore()
@@ -388,3 +458,8 @@ def calculate_hyperscore(
         theo_spectrum=theoretical_spectrum,
     )
     return result
+
+
+###########################
+### FRAG SITE FUNCTIONS ###
+###########################
