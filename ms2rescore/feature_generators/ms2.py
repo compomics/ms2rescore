@@ -22,6 +22,10 @@ from ms2rescore.exceptions import ParseSpectrumError
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
 from ms2rescore.utils import infer_spectrum_path
 
+from .missing_fragmentations.evidence import PeptideEvidence
+from .missing_fragmentations.missing_frag_fgen import SpectrumVector
+from .missing_fragmentations.utils import ion_dict_to_matrix
+
 logger = logging.getLogger(__name__)
 
 FRAGMENTATION_MODELS = {
@@ -48,6 +52,9 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
         mass_mode: str = "Monoisotopic",
         processes: int = 1,
         calculate_hyperscore: bool = True,  # Allow optional ?
+        include_mf: bool = True,  # Allow optional ? This is very slow at the moment
+        mf_ion_types: list = ['b1', 'b2', 'y1', 'y2'],
+        mf_neutral_losses: list = ['', '-H2O1'],
         **kwargs,
     ) -> None:
         """
@@ -70,7 +77,9 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
         self.mass_mode = MASS_MODES[mass_mode.lower()]
         self.processes = processes
         self.calculate_hyperscore = calculate_hyperscore
-
+        self.include_mf = include_mf
+        self.mf_ion_types = mf_ion_types
+        self.mf_neutral_losses = mf_neutral_losses
 
     @property
     def feature_names(self) -> List[str]:
@@ -136,6 +145,7 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
                 self._calculate_spectrum_features(psm, annotated_spectrum)
             )
 
+            # Recalculate the hyperscore using the pyopnems function
             if self.calculate_hyperscore:
                 # Filters out peaks which are unnannotated (can be specified, but keep at b-y ions of any charge ?)
                 mz_list, intensity_list = _annotated_spectrum_to_mzint(
@@ -149,6 +159,30 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
                 psm.rescoring_features.update(
                     {
                         "hyperscore": hyperscore
+                    }
+                )
+
+            # Include fragmentation-evidence features
+            if self.include_mf:
+
+                theoretical_fragments = LinearPeptide(
+                    psm.peptidoform.proforma.split("/")[0]
+                ).generate_theoretical_fragments(2, self.fragmentation_model)
+
+                # Infer the spectral evidence for the peptide sequence
+                peptide_evidence = psm_to_peptide_evidence(
+                    psm=psm,
+                    annotated_spectrum=annotated_spectrum,
+                    theoretical_fragments=theoretical_fragments,
+                    ion_types=self.mf_ion_types,
+                    neutral_losses=self.mf_neutral_losses
+                )
+                mf_evidence_features = calculate_evidence_features(peptide_evidence.evidence)
+                psm.rescoring_features.update(mf_evidence_features)
+                psm.metadata.update(
+                    {
+                        "missing_frag_indices": peptide_evidence.get_ambiguous_tag_idx(),
+                        "missing_frag_tags": peptide_evidence.ambiguous_tags
                     }
                 )
 
@@ -463,3 +497,85 @@ def calculate_hyperscore(
 ###########################
 ### FRAG SITE FUNCTIONS ###
 ###########################
+def psm_to_peptide_evidence(
+        psm,
+        annotated_spectrum,
+        theoretical_fragments,
+        ion_types,
+        neutral_losses
+):
+    sv = SpectrumVector(
+        ion_types=ion_types,
+        neutral_losses=neutral_losses
+    )
+    sv.parse(
+        psm=psm,
+        annot_spec=annotated_spectrum,
+        theo_frags=theoretical_fragments
+    )
+
+    # Parse the spectrum_vector to matrix format
+    ion_matrix = sv.to_ion_matrix()
+
+    # Infer sequence evidence from spectrum matrix
+    pe = PeptideEvidence(
+        peptidoform=sv.peptidoform,
+        ion_matrix=ion_matrix,
+        evidence_labels=[
+            ion_type + nl 
+            for ion_type in ion_types 
+            for nl in neutral_losses
+        ]
+    )
+    return pe
+    
+
+def calculate_evidence_features(
+        evidence
+):
+    # Ensure it's a boolean array
+    arr = np.asarray(evidence, dtype=bool)
+    
+    # Number of consecutive False entries starting from the start
+    consecutive_false_start = np.argmax(arr) if not arr.all() else 0
+
+    # Number of consecutive False entries starting from the end
+    consecutive_false_end = np.argmax(arr[::-1]) if not arr.all() else 0
+
+    # Number of False entries in the array
+    num_false_entries = np.size(arr) - np.sum(arr)
+
+    # Percentage of False entries in the array
+    percentage_false = num_false_entries / len(arr) *100
+
+    # Finding the longest sequence of consecutive False values
+    # Identify the regions where values change (False <-> True)
+    # Create an array to mark transitions
+    if not arr.all():
+        # Extend the array with True at both ends to handle edge cases
+        padded_arr = np.r_[True, arr, True]
+        diff_arr = np.diff(padded_arr.astype(int)) # Transitions
+        false_starts = np.flatnonzero(diff_arr == -1)
+        false_ends = np.flatnonzero(diff_arr == 1)
+        longest_false_seq = (false_ends - false_starts).max() if len(false_starts) > 0 else 0
+    else:
+        longest_false_seq = 0
+
+    # Number of islands of False entries (bounded by True or at boundaries)
+    # This means we count all transitions from True to False.
+    # Adjusting the island definition to include boundary cases:
+    if not arr.all():
+        # A False island starts at -1 or at the beginning of the array
+        # and ends at 1 or the end of the array
+        num_false_islands = len(false_starts)
+    else:
+        num_false_islands = 0
+
+    return {
+        'missing_frag_from_n': consecutive_false_start,
+        'missing_frag_from_c': consecutive_false_end,
+        'missing_frag_sites': num_false_entries,
+        'missing_frag_pct': percentage_false,
+        'missing_frag_longest_sequence': longest_false_seq,
+        'missing_frag_count': num_false_islands
+    }
