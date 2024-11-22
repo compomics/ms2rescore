@@ -138,20 +138,14 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
 
             if self.calculate_hyperscore:
                 # Filters out peaks which are unnannotated (can be specified, but keep at b-y ions of any charge ?)
-                mz_list, intensity_list = _annotated_spectrum_to_mzint(
-                    annotated_spectrum=annotated_spectrum
+                b, y = get_by_fragments(annotated_spectrum)
+                hs = calculate_hyperscore(
+                    n_y=len(y),
+                    n_b=len(b),
+                    y_ion_intensities=y,
+                    b_ion_intensities=b
                 )
-                hyperscore = calculate_hyperscore(
-                    psm=psm, observed_mz=mz_list, observed_intensity=intensity_list
-                )
-                if hyperscore is None:
-                    continue
-                psm.rescoring_features.update(
-                    {
-                        "hyperscore": hyperscore
-                    }
-                )
-
+                psm.rescoring_features.update({'hyperscore': hs})
 
     @staticmethod
     def _read_spectrum_file(spectrum_filepath: Path) -> Union[mzml.PreIndexedMzML, mgf.IndexedMGF]:
@@ -251,215 +245,75 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
 
         return annotated_spectrum.spectrum
 
-
-############################
-### HYPERSCORE FUNCTIONS ###
-############################
-def _annotated_spectrum_to_mzint(annotated_spectrum, ion_types=["b", "y"]):
-
-    mz_list = []
-    intensity_list = []
-
-    for peak in annotated_spectrum:
-
-        annotations = peak.annotation
-        for fragment in annotations:
-            ion = fragment.ion
-            if ion[0] not in ion_types:
-                continue
-
-            mz_list.append(peak.experimental_mz)
-            intensity_list.append(peak.intensity)
-            break
-
-    return mz_list, intensity_list
-
-
-def _peptidoform_to_oms(peptidoform: Peptidoform) -> tuple[oms.AASequence, Optional[int]]:
+ 
+def factorial(n):
     """
-    Parse a peptide sequence in proforma format to pyOpenMS compatible format.
-
-    Only supports UNIMOD format.
-
-    Parameter
-    ---------
-    peptide: str
-        Peptide string in proforma format
-
-    Returns
-    -------
-    AASequence (pyOpenMS):
-        A peptide sequence in pyOpenMS format
+    Compute factorial of n using a loop.
+    Parameters:
+        n (int): Non-negative integer.
+    Returns:
+        int: Factorial of n.
     """
-    peptide = peptidoform.proforma
-
-    # Reformat unimod modifications
-    pattern_unimod = r"\[UNIMOD:(\d+)\]"
-
-    def replace_unimod(match):
-        return f"(UniMod:{match.group(1)})"
-
-    peptide_oms_str = re.sub(
-        pattern=pattern_unimod, repl=replace_unimod, string=peptide
-    )
-
-    # Parse N-terminal modifications
-    if ")-" in peptide_oms_str:
-        peptide_oms_list = peptide_oms_str.split(")-")
-        nterm_modification, peptide_oms_str = peptide_oms_list[-2], peptide_oms_list[-1]
-        nterm_modification += ")"
-        peptide_oms_str = "." + nterm_modification + peptide_oms_str + "."
-    elif "]-" in peptide_oms_str:
-        peptide_oms_list = peptide_oms_str.split("]-")
-        nterm_modification, peptide_oms_str = peptide_oms_list[-2], peptide_oms_list[-1]
-        nterm_modification += "]"
-        peptide_oms_str = "." + nterm_modification + peptide_oms_str + "."
-
-    # Split the charge from the peptide string
-    if "/" in peptide_oms_str:
-        peptide_oms_str, _ = peptide_oms_str.split("/")
-
-    try:
-        peptide_oms = oms.AASequence.fromString(peptide_oms_str)
-        return peptide_oms
-
-    except:
-        return
-
-
-# def _peptidoform_to_oms(peptidoform: Peptidoform) -> tuple[oms.AASequence, Optional[int]]:
-#     """
-#     Parse a peptidoform object to pyOpenMS compatible format.
-
-#     Parameter
-#     ---------
-#     Peptidoform: Peptidoform
-#         Peptide string in Peptidoform format
-
-#     Returns
-#     -------
-#     AASequence (pyOpenMS):
-#         A peptide sequence in pyOpenMS format
-#     int:
-#         charge of the peptide
-#     """
-
-#     n_term = peptidoform.properties["n_term"]
-#     peptide_oms_str = f"[{sum([mod.mass for mod in n_term])}]" if n_term else ""
-
-#     for aa, mods in peptidoform.parsed_sequence:
-#         peptide_oms_str += aa
-#         if isinstance(mods, list):
-#             peptide_oms_str += f"[{sum([mod.mass for mod in mods])}]"
-
-#     c_term = peptidoform.properties["c_term"]
-#     peptide_oms_str += f"[{sum([mod.mass for mod in c_term])}]" if c_term else ""
-
-#     peptide_oms = oms.AASequence.fromString(peptide_oms_str)
-
-#     return peptide_oms
-
-
-def _peptidoform_to_theoretical_spectrum(peptidoform: str) -> oms.MSSpectrum:
-    """
-    Create a theoretical spectrum from a peptide sequence.
-
-    Parameter
-    ---------
-    peptide: str
-        Peptide sequence in proforma format
-    engine: str
-        The engine to use to create theoretical spectrum.
-        Can only be 'pyopenms' or 'spectrum-utils' (default)
-
-    Return
-    ------
-    MSSpectrum
-        Spectrum object in pyOpenMS format
-    """
-    # Reformat peptide sequence in pyOpenMS format
-    peptide_oms = _peptidoform_to_oms(peptidoform=peptidoform)
-    if peptide_oms is None:
-        return
-
-    # Initialize the required objects to create the spectrum
-    spectrum = oms.MSSpectrum()
-    tsg = oms.TheoreticalSpectrumGenerator()
-    p = oms.Param()
-
-    p.setValue("add_b_ions", "true")
-    p.setValue("add_metainfo", "true")
-    tsg.setParameters(param=p)
-
-    # Create the theoretical spectrum
-    tsg.getSpectrum(spec=spectrum, peptide=peptide_oms, min_charge=1, max_charge=2)
-    return spectrum
-
-
-def calculate_hyperscore(
-    psm: PSM,
-    observed_mz: List[float],
-    observed_intensity: List[float],
-    fragment_tol_mass=20,
-    fragment_tol_mode="ppm",
-):
-    """
-    Calculate the hyperscore as defined in the X!Tandem search engine.
-
-    It is a metric of how good two spectra match with each other (matching peaks).
-
-    Parameters
-    ----------
-    psm: psm_utils.PSM
-        The PSM used to extract 'spectrum_id' (for MGF spectrum extraction)
-        and 'Peptidoform' (the peptide sequence)
-    observed_mz: List[float]
-        List of observed mz values with matching order as observed intensity
-    observed_intensity: List[float]
-        List of observed intensity values
-    fragment_tol_mass: int
-        The allowed tolerance to match peaks
-    fragment_tol_mode: str
-        'ppm' for parts-per-million mode. 'Da' for fragment_tol_mass in Dalton.
-    Return
-    ------
-    int
-        The hyperscore
-    """
-    if fragment_tol_mode == "ppm":
-        fragment_mass_tolerance_unit_ppm = True
-    elif fragment_tol_mode == "Da":
-        fragment_mass_tolerance_unit_ppm = False
-    else:
-        raise Exception(
-            "fragment_tol_mode can only take 'Da' or 'ppm'. {} was provided.".format(
-                fragment_tol_mode
-            )
-        )
-    if len(observed_intensity) == 0:
-        logging.warning(f"PSM ({psm.spectrum_id}) has no annotated peaks.")
-        return
-
-    theoretical_spectrum = _peptidoform_to_theoretical_spectrum(peptidoform=psm.peptidoform)
-    # This is mainly the cause of the modification not being allowed according to pyopenms
-    # pyOpenMS sets stringent criteria on modification being placed on annotated amino acids
-    # according to the unimod database
-    if theoretical_spectrum is None:
-        logging.warning(f'Peptidoform has either unsupported modifications or is being placed on non-allowed residue: {psm.peptidoform.proforma}')
-        return
-
-    observed_spectrum_oms = oms.MSSpectrum()
-    observed_spectrum_oms.set_peaks([observed_mz, observed_intensity])
-    hyperscore = oms.HyperScore()
-    result = hyperscore.compute(
-        fragment_mass_tolerance=fragment_tol_mass,
-        fragment_mass_tolerance_unit_ppm=fragment_mass_tolerance_unit_ppm,
-        exp_spectrum=observed_spectrum_oms,
-        theo_spectrum=theoretical_spectrum,
-    )
+    result = 1
+    for i in range(1, n + 1):
+        result *= i
     return result
+ 
+def calculate_hyperscore(n_y, n_b, y_ion_intensities, b_ion_intensities):
+    """
+    Calculate the hyperscore for a peptide-spectrum match.
+    Parameters:
+        n_y (int): Number of matched y-ions.
+        n_b (int): Number of matched b-ions.
+        y_ion_intensities (list): Intensities of matched y-ions.
+        b_ion_intensities (list): Intensities of matched b-ions.
+    Returns:
+        float: Calculated hyperscore.
+    """
+    # Calculate the product of y-ion and b-ion intensities
+    product_y = np.sum(y_ion_intensities) if y_ion_intensities else 1
+    product_b = np.sum(b_ion_intensities) if b_ion_intensities else 1
+ 
+    # Calculate factorial using custom function
+    factorial_y = factorial(n_y)
+    factorial_b = factorial(n_b)
+ 
+    # Compute hyperscore
+    hyperscore = np.log(factorial_y * factorial_b * (product_y+product_b))
+    return hyperscore
 
+def infer_fragment_identity(frag, allow_ion_types=['b', 'y']):
+    ion = frag.ion
 
-###########################
-### FRAG SITE FUNCTIONS ###
-###########################
+    is_allowed = False
+    for allowed_ion_type in allow_ion_types:
+        if allowed_ion_type in ion:
+            is_allowed=True
+            break
+    
+    if not is_allowed:
+        return False
+    # Radicals
+    if "·" in ion:
+        return False
+    if frag.neutral_loss is not None:
+        return False
+    if frag.charge > 2:
+        return False
+    
+    return ion[0]
+
+def get_by_fragments(annotated_spectrum):
+    b_intensities = []
+    y_intensities = []
+    for peak in annotated_spectrum:
+        
+        for fragment in peak.annotation:
+
+            ion_type = infer_fragment_identity(fragment)
+            
+            if ion_type == 'b':
+                b_intensities.append(peak.intensity)
+            if ion_type == 'y':
+                y_intensities.append(peak.intensity)
+    return b_intensities, y_intensities
