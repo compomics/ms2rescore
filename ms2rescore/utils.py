@@ -103,7 +103,7 @@ def filter_mumble_psms(psm_list: PSMList) -> PSMList:
     """
     keep = [None] * len(psm_list)
     original_hit = np.array([metadata.get("original_hit") for metadata in psm_list["metadata"]])
-    spectrum_indices = np.array([psm.spectrum for psm in psm_list])
+    spectrum_indices = np.array([psm.spectrum_id for psm in psm_list])
     runs = np.array([psm.run for psm in psm_list])
     if "matched_ions_pct" in psm_list[0].rescoring_features:
         matched_ions = [psm.rescoring_features["matched_ions_pct"] for psm in psm_list]
@@ -116,7 +116,7 @@ def filter_mumble_psms(psm_list: PSMList) -> PSMList:
             keep[i] = True
         else:
             original_matched_ions_pct = np.logical_and.reduce(
-                [original_hit, spectrum_indices == psm.spectrum_index, runs == psm.run]
+                [original_hit, spectrum_indices == psm.spectrum_id, runs == psm.run]
             )
             if original_matched_ions_pct > matched_ions[i]:
                 keep[i] = False
