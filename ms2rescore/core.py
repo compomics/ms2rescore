@@ -18,6 +18,7 @@ from ms2rescore.rescoring_engines.mokapot import (
     add_peptide_confidence,
     add_psm_confidence,
 )
+from ms2rescore.utils import filter_mumble_psms
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,10 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
             f"rescoring feature(s), {missing_features}."
         )
     psm_list = psm_list[psms_with_features]
+
+    if "mumble" in config["psm_generator"]:
+        # Remove PSMS that have a less matched ions than the original hit
+        psm_list = filter_mumble_psms(psm_list)
 
     # Write feature names to file
     _write_feature_names(feature_names, output_file_root)
@@ -251,7 +256,10 @@ def _write_feature_names(feature_names, output_file_root):
 def _log_id_psms_before(psm_list: PSMList, fdr: float = 0.01, max_rank: int = 1) -> int:
     """Log #PSMs identified before rescoring."""
     id_psms_before = (
-        (psm_list["qvalue"] <= 0.01) & (psm_list["rank"] <= max_rank) & (~psm_list["is_decoy"])
+        (psm_list["qvalue"] <= 0.01)
+        & (psm_list["rank"] <= max_rank)
+        & (~psm_list["is_decoy"])
+        & ([metadata.get("original_psm", True) for metadata in psm_list["metadata"]])
     ).sum()
     logger.info(
         f"Found {id_psms_before} identified PSMs with rank <= {max_rank} at {fdr} FDR before "

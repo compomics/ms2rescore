@@ -4,8 +4,10 @@ import re
 from glob import glob
 from pathlib import Path
 from typing import Optional, Union
+import numpy as np
 
 from ms2rescore.exceptions import MS2RescoreConfigurationError
+from psm_utils import PSMList
 
 logger = logging.getLogger(__name__)
 
@@ -93,3 +95,32 @@ def _is_minitdf(spectrum_file: str) -> bool:
     files = set(Path(spectrum_file).glob("*ms2spectrum.bin"))
     files.update(Path(spectrum_file).glob("*ms2spectrum.parquet"))
     return len(files) >= 2
+
+
+def filter_mumble_psms(psm_list: PSMList) -> PSMList:
+    """
+    Filter out PSMs with mumble in the peptide sequence.
+    """
+    keep = [None] * len(psm_list)
+    original_hit = np.array([metadata.get("original_hit") for metadata in psm_list["metadata"]])
+    spectrum_indices = np.array([psm.spectrum for psm in psm_list])
+    runs = np.array([psm.run for psm in psm_list])
+    if "matched_ions_pct" in psm_list[0].rescoring_features:
+        matched_ions = [psm.rescoring_features["matched_ions_pct"] for psm in psm_list]
+    else:
+        return psm_list
+    for i, psm in enumerate(psm_list):
+        if isinstance(keep[i], bool):
+            continue
+        elif original_hit[i]:
+            keep[i] = True
+        else:
+            original_matched_ions_pct = np.logical_and.reduce(
+                [original_hit, spectrum_indices == psm.spectrum_index, runs == psm.run]
+            )
+            if original_matched_ions_pct > matched_ions[i]:
+                keep[i] = False
+            else:
+                keep[i] = True
+    logger.debug(f"Filtered out {len(psm_list) - sum(keep)} mumble PSMs.")
+    return psm_list[keep]
