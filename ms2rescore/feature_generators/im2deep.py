@@ -17,7 +17,7 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from im2deep.calibrate import im2ccs
+from im2deep.utils import im2ccs
 from im2deep.im2deep import predict_ccs
 from psm_utils import PSMList
 
