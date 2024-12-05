@@ -139,9 +139,9 @@ def _get_precursor_values(
             precursor_dict[run_name] = precursors
 
     # Reshape precursor values into arrays matching PSM list
-    mzs = np.array([precursor_dict[psm.run][psm.spectrum_id].mz for psm in psm_list])
-    rts = np.array([precursor_dict[psm.run][psm.spectrum_id].rt for psm in psm_list])
-    ims = np.array([precursor_dict[psm.run][psm.spectrum_id].im for psm in psm_list])
+    mzs = np.array(precursor_dict[psm.run][psm.spectrum_id].mz for psm in psm_list)
+    rts = np.array(precursor_dict[psm.run][psm.spectrum_id].rt for psm in psm_list)
+    ims = np.array(precursor_dict[psm.run][psm.spectrum_id].im for psm in psm_list)
 
     return mzs, rts, ims
 

@@ -49,7 +49,7 @@ class MaxQuantFeatureGenerator(FeatureGeneratorBase):
 
         """
         super().__init__(*args, **kwargs)
-        self._feature_names = self.available_features[:]  # Copy list
+        self._feature_names = self.available_features.copy()
 
     @property
     def feature_names(self) -> List[str]:
