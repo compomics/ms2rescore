@@ -17,7 +17,7 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from im2deep.calibrate import im2ccs
+from im2deep.utils import im2ccs
 from im2deep.im2deep import predict_ccs
 from psm_utils import PSMList
 
@@ -91,7 +91,7 @@ class IM2DeepFeatureGenerator(FeatureGeneratorBase):
 
                 # Disable wild logging to stdout by TensorFlow, unless in debug mode
                 with (
-                    contextlib.redirect_stdout(open(os.devnull, "w"))
+                    contextlib.redirect_stdout(open(os.devnull, "w", encoding="utf-8"))
                     if not self._verbose
                     else contextlib.nullcontext()
                 ):

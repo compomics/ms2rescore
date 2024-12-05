@@ -45,7 +45,6 @@ def rescore(
     train_fdr: float = 0.01,
     write_weights: bool = False,
     write_txt: bool = False,
-    write_flashlfq: bool = False,
     protein_kwargs: Optional[Dict[str, Any]] = None,
     **kwargs: Any,
 ) -> None:
@@ -57,8 +56,7 @@ def rescore(
     :py:class:`~mokapot.dataset.LinearPsmDataset`, and then optionally adds protein information
     from a FASTA file. The dataset is then passed to the :py:func:`~mokapot.brew` function, which
     returns the new scores, q-values, and PEPs. These are then written back to the original
-    :py:class:`~psm_utils.psm_list.PSMList`. Optionally, results can be written to a Mokapot text
-    file, a FlashLFQ-compatible file, or the model weights can be saved.
+    :py:class:`~psm_utils.psm_list.PSMList`.
 
     Parameters
     ----------
@@ -75,8 +73,6 @@ def rescore(
         Write model weights to a text file. Defaults to ``False``.
     write_txt
         Write Mokapot results to a text file. Defaults to ``False``.
-    write_flashlfq
-        Write Mokapot results to a FlashLFQ-compatible file. Defaults to ``False``.
     protein_kwargs
         Keyword arguments to pass to the :py:meth:`~mokapot.dataset.LinearPsmDataset.add_proteins`
         method.
@@ -85,6 +81,13 @@ def rescore(
 
     """
     _set_log_levels()
+
+    if "write_flashlfq" in kwargs:
+        _ = kwargs.pop("write_flashlfq")
+        logger.warning(
+            "The `write_flashlfq` argument has moved. To write FlashLFQ generic TSV, use the "
+            "MS²Rescore-level `write_flashlfq` option instead."
+        )
 
     # Convert PSMList to Mokapot dataset
     lin_psm_data = convert_psm_list(psm_list)
@@ -119,10 +122,6 @@ def rescore(
             )
     if write_txt:
         confidence_results.to_txt(file_root=output_file_root, decoys=True)
-    if write_flashlfq:
-        # TODO: How do we validate that the RTs are in minutes?
-        confidence_results.psms["retention_time"] = confidence_results.psms["retention_time"] * 60
-        confidence_results.to_flashlfq(output_file_root + ".mokapot.flashlfq.txt")
 
 
 def convert_psm_list(
@@ -166,10 +165,6 @@ def convert_psm_list(
     feature_df = pd.DataFrame(list(psm_df["rescoring_features"])).astype(float).fillna(0.0)
     feature_df.columns = [f"feature:{f}" for f in feature_df.columns]
     combined_df = pd.concat([psm_df[required_columns], feature_df], axis=1)
-
-    # Ensure filename for FlashLFQ txt output
-    if not combined_df["run"].notnull().all():
-        combined_df["run"] = "na"
 
     feature_names = [f"feature:{f}" for f in feature_names] if feature_names else None
 

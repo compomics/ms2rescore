@@ -16,8 +16,7 @@
             "mokapot": {
                 "train_fdr": 0.01,
                 "write_weights": true,
-                "write_txt": true,
-                "write_flashlfq": true
+                "write_txt": true
             }
         },
         "config_file": null,
@@ -40,6 +39,7 @@
         "processes": -1,
         "rename_to_usi": false,
         "fasta_file": null,
+        "write_flashlfq": false,
         "write_report": false
     }
 }

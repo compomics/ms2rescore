@@ -244,13 +244,13 @@ expression pattern that extracts the decoy status from the protein name:
 
   .. code-block:: json
 
-    "decoy_pattern": "DECOY_"
+    "id_decoy_pattern": "DECOY_"
 
 .. tab:: TOML
 
     .. code-block:: toml
 
-      decoy_pattern = "DECOY_"
+      id_decoy_pattern = "DECOY_"
 
 
 Multi-rank rescoring

@@ -67,6 +67,7 @@
     - **One of**
       - *string*
       - *null*
+  - **`write_flashlfq`** *(boolean)*: Write results to a FlashLFQ-compatible file. Default: `false`.
   - **`write_report`** *(boolean)*: Write an HTML report with various QC metrics and charts. Default: `false`.
   - **`profile`** *(boolean)*: Write a txt report using cProfile for profiling. Default: `false`.
 ## Definitions
@@ -93,7 +94,6 @@
   - **`train_fdr`** *(number)*: FDR threshold for training Mokapot. Minimum: `0`. Maximum: `1`. Default: `0.01`.
   - **`write_weights`** *(boolean)*: Write Mokapot weights to a text file. Default: `false`.
   - **`write_txt`** *(boolean)*: Write Mokapot results to a text file. Default: `false`.
-  - **`write_flashlfq`** *(boolean)*: Write Mokapot results to a FlashLFQ-compatible file. Default: `false`.
 - <a id="definitions/percolator"></a>**`percolator`** *(object)*: Percolator rescoring engine configuration. Can contain additional properties. Refer to *[#/definitions/rescoring_engine](#definitions/rescoring_engine)*.
   - **`init-weights`**: Weights file for scoring function. Default: `false`.
     - **One of**

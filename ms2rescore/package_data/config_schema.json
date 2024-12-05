@@ -169,6 +169,11 @@
                     "description": "Path to FASTA file with protein sequences to use for protein inference",
                     "oneOf": [{ "type": "string" }, { "type": "null" }]
                 },
+                "write_flashlfq": {
+                    "description": "Write results to a FlashLFQ-compatible file",
+                    "type": "boolean",
+                    "default": false
+                },
                 "write_report": {
                     "description": "Write an HTML report with various QC metrics and charts",
                     "type": "boolean",
@@ -293,11 +298,6 @@
                 },
                 "write_txt": {
                     "description": "Write Mokapot results to a text file",
-                    "type": "boolean",
-                    "default": false
-                },
-                "write_flashlfq": {
-                    "description": "Write Mokapot results to a FlashLFQ-compatible file",
                     "type": "boolean",
                     "default": false
                 }

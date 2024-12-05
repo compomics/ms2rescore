@@ -7,9 +7,6 @@
         },
         "log_level": "debug",
         "processes": 16,
-        "feature_generators": {
-            "basic": {}
-        },
         "rescoring_engine": {
             "mokapot": {
                 "fasta_file": "examples/proteins/uniprot-proteome-human-contaminants.fasta",
