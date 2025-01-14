@@ -3,7 +3,6 @@ import logging
 from multiprocessing import cpu_count
 from typing import Dict, Optional
 
-import numpy as np
 import psm_utils.io
 from mokapot.dataset import LinearPsmDataset
 from psm_utils import PSMList
@@ -11,7 +10,7 @@ from psm_utils import PSMList
 from ms2rescore import exceptions
 from ms2rescore.feature_generators import FEATURE_GENERATORS
 from ms2rescore.parse_psms import parse_psms
-from ms2rescore.parse_spectra import get_missing_values
+from ms2rescore.parse_spectra import add_precursor_values
 from ms2rescore.report import generate
 from ms2rescore.rescoring_engines import mokapot, percolator
 from ms2rescore.rescoring_engines.mokapot import (
@@ -66,20 +65,28 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     )
 
     # Add missing precursor info from spectrum file if needed
-    psm_list = _fill_missing_precursor_info(psm_list, config)
+    available_ms_data = add_precursor_values(
+        psm_list, config["spectrum_path"], config["spectrum_id_pattern"]
+    )
 
     # Add rescoring features
     for fgen_name, fgen_config in config["feature_generators"].items():
-        # TODO: Handle this somewhere else, more generally?
-        if fgen_name == "maxquant" and not (psm_list["source"] == "msms").all():
-            logger.warning(
-                "MaxQuant feature generator requires PSMs from a MaxQuant msms.txt file. Skipping "
-                "this feature generator."
-            )
-            continue
+        # Compile configuration
         conf = config.copy()
         conf.update(fgen_config)
         fgen = FEATURE_GENERATORS[fgen_name](**conf)
+
+        # Check if required MS data is available
+        missing_ms_data = fgen.required_ms_data - available_ms_data
+        if missing_ms_data:
+            logger.warning(
+                f"Skipping feature generator {fgen_name} because required MS data is missing: "
+                f"{missing_ms_data}. Ensure that the required MS data is present in the input "
+                "files or disable the feature generator."
+            )
+            continue
+
+        # Add features
         fgen.add_features(psm_list)
         logger.debug(f"Adding features from {fgen_name}: {set(fgen.feature_names)}")
         feature_names[fgen_name] = set(fgen.feature_names)
@@ -110,6 +117,7 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     # Write feature names to file
     _write_feature_names(feature_names, output_file_root)
 
+    # Rename PSMs to USIs if requested
     if config["rename_to_usi"]:
         logging.debug(f"Creating USIs for {len(psm_list)} PSMs")
         psm_list["spectrum_id"] = [psm.get_usi(as_url=False) for psm in psm_list]
@@ -189,51 +197,6 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
             )
         except exceptions.ReportGenerationError as e:
             logger.exception(e)
-
-
-def _fill_missing_precursor_info(psm_list: PSMList, config: Dict) -> PSMList:
-    """Fill missing precursor info from spectrum file if needed."""
-    # Check if required
-    # TODO: avoid hard coding feature generators in some way
-    rt_required = ("deeplc" in config["feature_generators"]) and any(
-        v is None or v == 0 or np.isnan(v) for v in psm_list["retention_time"]
-    )
-    im_required = (
-        "ionmob" in config["feature_generators"] or "im2deep" in config["feature_generators"]
-    ) and any(v is None or v == 0 or np.isnan(v) for v in psm_list["ion_mobility"])
-    logger.debug(f"RT required: {rt_required}, IM required: {im_required}")
-
-    # Add missing values
-    if rt_required or im_required:
-        logger.info("Parsing missing retention time and/or ion mobility values from spectra...")
-        get_missing_values(psm_list, config, rt_required=rt_required, im_required=im_required)
-
-    # Check if values are now present
-    for value_name, required in [("retention_time", rt_required), ("ion_mobility", im_required)]:
-        if required and (
-            0.0 in psm_list[value_name]
-            or None in psm_list[value_name]
-            or np.isnan(psm_list[value_name]).any()
-        ):
-            if all(v is None or v == 0.0 or np.isnan(v) for v in psm_list[value_name]):
-                raise exceptions.MissingValuesError(
-                    f"Could not find any '{value_name}' values in PSM or spectrum files. Disable "
-                    f"feature generators that require '{value_name}' or ensure that the values are "
-                    "present in the input files."
-                )
-            else:
-                missing_value_psms = psm_list[
-                    [v is None or np.isnan(v) for v in psm_list[value_name]]
-                ]
-                logger.warning(
-                    f"Found {len(missing_value_psms)} PSMs with missing '{value_name}' values. "
-                    "These PSMs will be removed."
-                )
-                psm_list = psm_list[
-                    [v is not None and not np.isnan(v) for v in psm_list[value_name]]
-                ]
-
-    return psm_list
 
 
 def _filter_by_rank(psm_list: PSMList, max_rank: int, lower_score_better: bool) -> PSMList:

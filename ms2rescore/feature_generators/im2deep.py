@@ -17,11 +17,12 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from im2deep.calibrate import im2ccs
+from im2deep.utils import im2ccs
 from im2deep.im2deep import predict_ccs
 from psm_utils import PSMList
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
+from ms2rescore.parse_spectra import MSDataType
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 class IM2DeepFeatureGenerator(FeatureGeneratorBase):
     """IM2Deep collision cross section feature generator."""
+
+    required_ms_data = {MSDataType.ion_mobility}
 
     def __init__(
         self,

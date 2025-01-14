@@ -23,10 +23,8 @@ import pandas as pd
 import tensorflow as tf
 from psm_utils import Peptidoform, PSMList
 
-from ms2rescore.feature_generators.base import (
-    FeatureGeneratorBase,
-    FeatureGeneratorException,
-)
+from ms2rescore.feature_generators.base import FeatureGeneratorBase, FeatureGeneratorException
+from ms2rescore.parse_spectra import MSDataType
 
 try:
     from ionmob import __file__ as ionmob_file
@@ -61,6 +59,8 @@ if IONMOB_INSTALLED:
 
 class IonMobFeatureGenerator(FeatureGeneratorBase):
     """Ionmob collisional cross section (CCS)-based feature generator."""
+
+    required_ms_data = {MSDataType.ion_mobility}
 
     def __init__(
         self,
