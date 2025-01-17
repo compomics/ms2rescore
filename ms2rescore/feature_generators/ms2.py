@@ -7,13 +7,12 @@ import logging
 import re
 from collections import defaultdict
 from itertools import chain
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 from psm_utils import PSMList
-from pyteomics import mass, mgf, mzml
 from rustyms import FragmentationModel, LinearPeptide, MassMode, RawSpectrum
-from pathlib import Path
+from ms2rescore_rs import get_ms2_spectra
 
 from ms2rescore.exceptions import ParseSpectrumError
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
@@ -68,7 +67,6 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
         self.processes = processes
         self.calculate_hyperscore = calculate_hyperscore
 
-
     @property
     def feature_names(self) -> List[str]:
         return [
@@ -109,26 +107,22 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
     def _calculate_features(self, psm_list: PSMList, spectrum_file: str) -> List:
         """Retrieve annotated spectra for all psms."""
 
-        spectrum_reader = self._read_spectrum_file(spectrum_file)
-
+        spectra = get_ms2_spectra(str(spectrum_file))
         spectrum_id_pattern = re.compile(
             self.spectrum_id_pattern if self.spectrum_id_pattern else r"(.*)"
         )
-
         try:
-            mapper = {
-                spectrum_id_pattern.search(spectrum_id).group(1): spectrum_id
-                for spectrum_id in spectrum_reader._offset_index.mapping["spectrum"].keys()
+            spectra_dict = {
+                spectrum_id_pattern.search(spectrum.identifier).group(1): spectrum
+                for spectrum in spectra
             }
         except AttributeError:
             raise ParseSpectrumError(
                 "Could not parse spectrum IDs using ´spectrum_id_pattern´. Please make sure that there is a capturing in the pattern."
             )
-        annotated_spectra = [
-            self._annotate_spectrum(psm, spectrum_reader.get_by_id(mapper[psm.spectrum_id]))
-            for psm in psm_list
-        ]
-        for psm, annotated_spectrum in zip(psm_list, annotated_spectra):
+
+        for psm in psm_list:
+            annotated_spectrum = self._annotate_spectrum(psm, spectra_dict[psm.spectrum_id])
             psm.rescoring_features.update(
                 self._calculate_spectrum_features(psm, annotated_spectrum)
             )
@@ -137,20 +131,9 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
                 # Filters out peaks which are unnannotated (can be specified, but keep at b-y ions of any charge ?)
                 b, y = get_by_fragments(annotated_spectrum)
                 hs = calculate_hyperscore(
-                    n_y=len(y),
-                    n_b=len(b),
-                    y_ion_intensities=y,
-                    b_ion_intensities=b
+                    n_y=len(y), n_b=len(b), y_ion_intensities=y, b_ion_intensities=b
                 )
-                psm.rescoring_features.update({'hyperscore': hs})
-
-    @staticmethod
-    def _read_spectrum_file(spectrum_filepath: Path) -> Union[mzml.PreIndexedMzML, mgf.IndexedMGF]:
-
-        if spectrum_filepath.suffix.lower() == ".mzml":
-            return mzml.PreIndexedMzML(str(spectrum_filepath))
-        elif spectrum_filepath.suffix.lower() == ".mgf":
-            return mgf.IndexedMGF(str(spectrum_filepath))
+                psm.rescoring_features.update({"hyperscore": hs})
 
     @staticmethod
     def _longest_ion_sequence(lst):
@@ -219,16 +202,16 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
             / (len(b_ions_matched) + len(y_ions_matched)),
         }
 
-    def _annotate_spectrum(self, psm, pyteomics_spectrum):
+    def _annotate_spectrum(self, psm, spectrum):
 
         spectrum = RawSpectrum(
             title=psm.spectrum_id,
             num_scans=1,
             rt=psm.retention_time,
             precursor_charge=psm.get_precursor_charge(),
-            precursor_mass=mass.calculate_mass(psm.peptidoform.composition),
-            mz_array=pyteomics_spectrum["m/z array"],
-            intensity_array=pyteomics_spectrum["intensity array"],
+            precursor_mass=spectrum.precursor.mz,
+            mz_array=spectrum.mz,
+            intensity_array=spectrum.intensity,
         )
         try:
             linear_peptide = LinearPeptide(psm.peptidoform.proforma.split("/")[0])
@@ -242,7 +225,7 @@ class MS2FeatureGenerator(FeatureGeneratorBase):
 
         return annotated_spectrum.spectrum
 
- 
+
 def factorial(n):
     """
     Compute factorial of n using a loop.
@@ -255,7 +238,8 @@ def factorial(n):
     for i in range(1, n + 1):
         result *= i
     return result
- 
+
+
 def calculate_hyperscore(n_y, n_b, y_ion_intensities, b_ion_intensities):
     """
     Calculate the hyperscore for a peptide-spectrum match.
@@ -270,24 +254,25 @@ def calculate_hyperscore(n_y, n_b, y_ion_intensities, b_ion_intensities):
     # Calculate the product of y-ion and b-ion intensities
     product_y = np.sum(y_ion_intensities) if y_ion_intensities else 1
     product_b = np.sum(b_ion_intensities) if b_ion_intensities else 1
- 
+
     # Calculate factorial using custom function
     factorial_y = factorial(n_y)
     factorial_b = factorial(n_b)
- 
+
     # Compute hyperscore
-    hyperscore = np.log(factorial_y * factorial_b * (product_y+product_b))
+    hyperscore = np.log(factorial_y * factorial_b * (product_y + product_b))
     return hyperscore
 
-def infer_fragment_identity(frag, allow_ion_types=['b', 'y']):
+
+def infer_fragment_identity(frag, allow_ion_types=["b", "y"]):
     ion = frag.ion
 
     is_allowed = False
     for allowed_ion_type in allow_ion_types:
         if allowed_ion_type in ion:
-            is_allowed=True
+            is_allowed = True
             break
-    
+
     if not is_allowed:
         return False
     # Radicals
@@ -297,20 +282,21 @@ def infer_fragment_identity(frag, allow_ion_types=['b', 'y']):
         return False
     if frag.charge > 2:
         return False
-    
+
     return ion[0]
+
 
 def get_by_fragments(annotated_spectrum):
     b_intensities = []
     y_intensities = []
     for peak in annotated_spectrum:
-        
+
         for fragment in peak.annotation:
 
             ion_type = infer_fragment_identity(fragment)
-            
-            if ion_type == 'b':
+
+            if ion_type == "b":
                 b_intensities.append(peak.intensity)
-            if ion_type == 'y':
+            if ion_type == "y":
                 y_intensities.append(peak.intensity)
     return b_intensities, y_intensities

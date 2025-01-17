@@ -95,30 +95,55 @@ def _is_minitdf(spectrum_file: str) -> bool:
     return len(files) >= 2
 
 
-def filter_mumble_psms(psm_list: PSMList) -> PSMList:
+def filter_mumble_psms(psm_list: PSMList, threshold=1) -> PSMList:
     """
-    Filter out PSMs with mumble in the peptide sequence.
+    Filter out mumble PSMs with `matched_ions_pct` lower than the original hit.
+
+    Parameters
+    ----------
+    psm_list : PSMList
+        List of PSMs to filter
+    threshold : float, optional
+        Threshold to lower the maximum matched_ions_pct of the original hit
     """
-    keep = [None] * len(psm_list)
-    original_hit = np.array([metadata.get("original_hit") for metadata in psm_list["metadata"]])
+    # Extract relevant fields from the PSM list
+    original_hit = np.array([metadata.get("original_psm") for metadata in psm_list["metadata"]])
     spectrum_indices = np.array([psm.spectrum_id for psm in psm_list])
     runs = np.array([psm.run for psm in psm_list])
-    if "matched_ions_pct" in psm_list[0].rescoring_features:
-        matched_ions = [psm.rescoring_features["matched_ions_pct"] for psm in psm_list]
-    else:
+
+    # Check if matched_ions_pct exists
+    if "matched_ions_pct" not in psm_list[0].rescoring_features:
         return psm_list
-    for i, psm in enumerate(psm_list):
-        if isinstance(keep[i], bool):
-            continue
-        elif original_hit[i]:
-            keep[i] = True
-        else:
-            original_matched_ions_pct = np.logical_and.reduce(
-                [original_hit, spectrum_indices == psm.spectrum_id, runs == psm.run]
-            )
-            if original_matched_ions_pct > matched_ions[i]:
-                keep[i] = False
-            else:
-                keep[i] = True
-    logger.debug(f"Filtered out {len(psm_list) - sum(keep)} mumble PSMs.")
+
+    matched_ions = np.array([psm.rescoring_features["matched_ions_pct"] for psm in psm_list])
+
+    # Create unique keys for each (run, spectrum_id)
+    unique_keys = np.core.defchararray.add(runs.astype(str), spectrum_indices.astype(str))
+    unique_keys_indices, inverse_indices = np.unique(unique_keys, return_inverse=True)
+
+    # Initialize an array to store the `matched_ions_pct` of original hits per group
+    original_matched_ions_pct = np.full(
+        len(unique_keys_indices), -np.inf
+    )  # Default to -inf for groups without original hits
+
+    # Assign the `matched_ions_pct` of original hits to their groups
+    np.maximum.at(
+        original_matched_ions_pct, inverse_indices[original_hit], matched_ions[original_hit]
+    )
+
+    # lower the maximum with the threshold
+    original_matched_ions_pct = original_matched_ions_pct * threshold
+
+    # Broadcast the original `matched_ions_pct` back to all PSMs in each group
+    original_matched_ions_for_all = original_matched_ions_pct[inverse_indices]
+
+    # Determine the filtering condition
+    keep = np.logical_or(
+        original_hit,  # Always keep original hits
+        matched_ions
+        >= original_matched_ions_for_all,  # Keep hits with `matched_ions_pct` >= the original
+    )
+
+    # Filter PSMs
+    logger.debug(f"Filtered out {len(psm_list) - np.sum(keep)} mumble PSMs.")
     return psm_list[keep]

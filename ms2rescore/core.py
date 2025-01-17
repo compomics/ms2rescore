@@ -111,8 +111,10 @@ def rescore(configuration: Dict, psm_list: Optional[PSMList] = None) -> None:
     psm_list = psm_list[psms_with_features]
 
     if "mumble" in config["psm_generator"]:
-        # Remove PSMS that have a less matched ions than the original hit
-        psm_list = filter_mumble_psms(psm_list)
+        # Remove PSMs where matched_ions_pct drops 25% below the original hit
+        psm_list = filter_mumble_psms(psm_list, threshold=0.75)
+        # Currently replace the score with the hyperscore for Mumble
+        # psm_list["score"] = [ft["hyperscore"] for ft in psm_list["rescoring_features"]] # TODO: This is a temporary fix
 
     # Write feature names to file
     _write_feature_names(feature_names, output_file_root)
@@ -288,7 +290,9 @@ def _calculate_confidence(psm_list: PSMList) -> PSMList:
     )
 
     # Recalculate confidence
-    new_confidence = lin_psm_data.assign_confidence(scores=psm_list["score"])
+    new_confidence = lin_psm_data.assign_confidence(
+        scores=list(psm_list["score"])
+    )  # explicity make it a list to avoid TypingError: Failed in nopython mode pipeline (step: nopython frontend) in mokapot
 
     # Add new confidence estimations to PSMList
     add_psm_confidence(psm_list, new_confidence)
