@@ -51,6 +51,7 @@ dependencies = [
     "rich>=12",
     "tomli>=2; python_version < '3.11'",
     "rustyms>=0.8.3",
+    "mumble-mod @ git+https://github.com/compomics/mumble.git@f435e91",
 ]
 
 [project.optional-dependencies]
