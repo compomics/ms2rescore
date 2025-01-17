@@ -10,10 +10,7 @@ from itertools import chain
 from typing import List, Optional, Union
 
 import numpy as np
-import pyopenms as oms
-from psm_utils import PSM, Peptidoform, PSMList
-from psm_utils.peptidoform import PeptidoformException
-from pyteomics.proforma import ProFormaError
+from psm_utils import PSMList
 from pyteomics import mass, mgf, mzml
 from rustyms import FragmentationModel, LinearPeptide, MassMode, RawSpectrum
 from pathlib import Path
