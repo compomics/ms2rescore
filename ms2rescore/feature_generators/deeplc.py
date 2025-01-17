@@ -25,7 +25,6 @@ from typing import List, Union
 
 import numpy as np
 from psm_utils import PSMList
-from psm_utils.io import read_file
 
 from ms2rescore.feature_generators.base import FeatureGeneratorBase
 from ms2rescore.parse_spectra import MSDataType
