@@ -150,6 +150,7 @@ def _argument_parser() -> argparse.ArgumentParser:
         "--write-report",
         # metavar="BOOL",
         action="store_true",
+        default=None,
         dest="write_report",
         help="boolean to enable profiling with cProfile",
     )
@@ -157,6 +158,7 @@ def _argument_parser() -> argparse.ArgumentParser:
         "--profile",
         # metavar="BOOL",
         action="store_true",
+        default=None,
         # type=bool,
         # dest="profile",
         help="boolean to enable profiling with cProfile",
